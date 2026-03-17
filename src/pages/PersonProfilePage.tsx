@@ -343,7 +343,13 @@ export default function PersonProfilePage() {
         {/* Flags */}
         {flags.length > 0 && (
           <div className="mt-3">
-            <FlagResolver flags={flags} onUpdate={() => id && loadOwner(id)} />
+            <FlagResolver
+              flags={flags}
+              tableName="owners"
+              recordId={owner.id}
+              onUpdate={() => id && loadOwner(id)}
+              onEditField={() => openEdit()}
+            />
           </div>
         )}
       </div>

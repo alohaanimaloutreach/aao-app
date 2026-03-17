@@ -277,7 +277,12 @@ export default function LocationProfilePage() {
         {/* Flags */}
         {flags.length > 0 && (
           <div className="mt-3">
-            <FlagResolver flags={flags} onUpdate={() => id && loadLocation(id)} />
+            <FlagResolver
+              flags={flags}
+              tableName="locations"
+              recordId={location.id}
+              onUpdate={() => id && loadLocation(id)}
+            />
           </div>
         )}
       </div>

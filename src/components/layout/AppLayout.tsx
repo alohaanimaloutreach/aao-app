@@ -29,7 +29,7 @@ export default function AppLayout() {
           <div className="test-mode-banner bg-amber-400 text-amber-900 px-4 py-2 flex items-center justify-between text-xs font-bold tracking-wide">
             <div className="flex items-center gap-2">
               <FlaskConical className="w-4 h-4" />
-              TEST MODE — Data created now is tagged for easy cleanup
+              TEST MODE — Nothing you do here will affect real data
             </div>
             <button onClick={() => setTestMode(false)} className="p-1 hover:bg-amber-500/30 rounded" aria-label="Exit test mode">
               <X className="w-3.5 h-3.5" />

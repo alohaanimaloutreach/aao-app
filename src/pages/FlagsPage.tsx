@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  Flag, Check, PawPrint, User, MapPin, X, MessageSquare,
+  Flag, Check, PawPrint, User, MapPin, X, MessageSquare, Loader2,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDate } from '../lib/format';
+import { getSmartActions, type SmartAction } from '../lib/flagActions';
 import EmptyState from '../components/shared/EmptyState';
 
 interface FlagRow {
@@ -28,43 +29,15 @@ const TABLE_CONFIG: Record<string, { label: string; icon: any; path: string; col
   locations: { label: 'Location', icon: MapPin, path: '/locations', color: 'bg-ember/10 text-ember' },
 };
 
-const RESOLUTION_ACTIONS = [
-  {
-    value: 'verified_correct',
-    label: 'Verified, no changes needed',
-    description: 'Reviewed the record and confirmed the data is correct',
-  },
-  {
-    value: 'updated_record',
-    label: 'Reviewed and updated',
-    description: 'Made corrections to the record based on this flag',
-  },
-  {
-    value: 'needs_field_followup',
-    label: 'Needs follow up in the field',
-    description: 'Cannot resolve from the app, needs an in person check',
-  },
-  {
-    value: 'duplicate_handled',
-    label: 'Duplicate handled',
-    description: 'Merged, removed, or reassigned a duplicate record',
-  },
-  {
-    value: 'not_applicable',
-    label: 'Not applicable',
-    description: 'This flag does not apply or is no longer relevant',
-  },
-];
-
 type FilterTab = 'unresolved' | 'resolved' | 'all';
 type TableFilter = '' | 'animals' | 'owners' | 'locations';
 
 export default function FlagsPage() {
   const { session, user, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [flags, setFlags] = useState<FlagRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
-  const [selectedAction, setSelectedAction] = useState('');
   const [resolutionNote, setResolutionNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<FilterTab>('unresolved');
@@ -126,40 +99,54 @@ export default function FlagsPage() {
 
   function openResolve(flagId: string) {
     setResolvingId(flagId);
-    setSelectedAction('');
     setResolutionNote('');
   }
 
   function cancelResolve() {
     setResolvingId(null);
-    setSelectedAction('');
     setResolutionNote('');
   }
 
-  async function submitResolve() {
-    if (!user || !resolvingId || !selectedAction) return;
+  async function handleSmartAction(flag: FlagRow, action: SmartAction) {
+    if (!user) return;
     setSaving(true);
+
+    // Execute mutation if the action has one
+    if (action.mutation) {
+      await action.mutation({ recordId: flag.record_id, userId: user.id });
+    }
+
+    // Resolve the flag
+    const note = resolutionNote.trim() || null;
     await supabase.from('flags').update({
       resolved: true,
       resolved_by: user.id,
       resolved_at: new Date().toISOString(),
-      resolution_action: selectedAction,
-      resolution_note: resolutionNote.trim() || null,
-    }).eq('id', resolvingId);
+      resolution_action: action.value,
+      resolution_note: note ? `${action.label} — ${note}` : action.label,
+    }).eq('id', flag.id);
 
     setFlags(prev => prev.map(f =>
-      f.id === resolvingId
+      f.id === flag.id
         ? {
             ...f,
             resolved: true,
             resolved_at: new Date().toISOString(),
-            resolution_action: selectedAction,
-            resolution_note: resolutionNote.trim() || null,
+            resolution_action: action.value,
+            resolution_note: note ? `${action.label} — ${note}` : action.label,
           }
         : f
     ));
     setSaving(false);
     cancelResolve();
+
+    // For navigate actions, go to the profile page
+    if (action.type === 'navigate' && action.editField) {
+      const config = TABLE_CONFIG[flag.table_name];
+      if (config) {
+        navigate(`${config.path}/${flag.record_id}`);
+      }
+    }
   }
 
   const filtered = useMemo(() => {
@@ -189,10 +176,6 @@ export default function FlagsPage() {
     return counts;
   }, [flags]);
 
-  function getActionLabel(value: string | null) {
-    if (!value) return null;
-    return RESOLUTION_ACTIONS.find(a => a.value === value)?.label ?? value;
-  }
 
   return (
     <div>
@@ -330,9 +313,9 @@ export default function FlagsPage() {
                       <span className="text-sm text-muted">
                         {formatDate(flag.created_at)}
                       </span>
-                      {flag.resolved && flag.resolution_action && (
+                      {flag.resolved && flag.resolution_note && (
                         <span className="text-sm text-primary font-medium">
-                          {getActionLabel(flag.resolution_action)}
+                          {flag.resolution_note}
                         </span>
                       )}
                       {flag.resolved && flag.resolved_at && (
@@ -341,12 +324,6 @@ export default function FlagsPage() {
                         </span>
                       )}
                     </div>
-                    {flag.resolved && flag.resolution_note && (
-                      <div className="flex items-start gap-1.5 mt-1.5 text-sm text-muted bg-sand/60 rounded-lg px-2.5 py-1.5">
-                        <MessageSquare className="w-3 h-3 shrink-0 mt-0.5" />
-                        {flag.resolution_note}
-                      </div>
-                    )}
                   </div>
 
                   {/* Actions */}
@@ -369,7 +346,7 @@ export default function FlagsPage() {
                   </div>
                 </div>
 
-                {/* Resolution panel */}
+                {/* Smart resolution panel */}
                 {isResolving && (
                   <div className="border-t border-night/5 p-4 bg-sand/30 rounded-b-2xl">
                     <div className="flex items-center justify-between mb-3">
@@ -383,32 +360,32 @@ export default function FlagsPage() {
                       </button>
                     </div>
 
-                    {/* Action choices */}
+                    {/* Smart action choices */}
                     <div className="space-y-1.5 mb-3">
-                      {RESOLUTION_ACTIONS.map(action => (
+                      {getSmartActions(flag.reason, flag.table_name).map(action => (
                         <button
                           key={action.value}
-                          onClick={() => setSelectedAction(action.value)}
-                          className={`w-full text-left px-3.5 py-2.5 rounded-xl border transition-all ${
-                            selectedAction === action.value
-                              ? 'border-primary bg-primary/8 shadow-sm'
-                              : 'border-night/5 bg-white hover:border-night/10'
+                          onClick={() => handleSmartAction(flag, action)}
+                          disabled={saving}
+                          className={`w-full text-left px-3.5 py-2.5 rounded-xl border transition-all disabled:opacity-40 ${
+                            action.type === 'mutation'
+                              ? 'border-primary/20 bg-white hover:bg-primary/5 hover:border-primary/30'
+                              : action.type === 'navigate'
+                                ? 'border-sky-200 bg-white hover:bg-sky-50 hover:border-sky-300'
+                                : 'border-night/5 bg-white hover:border-night/10'
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
-                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              selectedAction === action.value
-                                ? 'border-primary bg-primary'
-                                : 'border-muted/30'
-                            }`}>
-                              {selectedAction === action.value && (
-                                <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-night">{action.label}</p>
-                              <p className="text-sm text-muted">{action.description}</p>
-                            </div>
+                            {saving ? (
+                              <Loader2 className="w-4 h-4 animate-spin shrink-0 text-muted" />
+                            ) : (
+                              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                action.type === 'mutation' ? 'bg-primary' : action.type === 'navigate' ? 'bg-sky-500' : 'bg-muted/40'
+                              }`} />
+                            )}
+                            <p className={`text-sm ${action.type === 'mutation' ? 'font-medium text-night' : 'text-night'}`}>
+                              {action.label}
+                            </p>
                           </div>
                         </button>
                       ))}
@@ -423,34 +400,17 @@ export default function FlagsPage() {
                         type="text"
                         value={resolutionNote}
                         onChange={(e) => setResolutionNote(e.target.value)}
-                        placeholder="e.g. Confirmed with owner on 3/15, birthdate is correct"
+                        placeholder="e.g. Confirmed with owner on 3/15"
                         className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
                       />
                     </div>
 
-                    {/* Submit */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={cancelResolve}
-                        className="flex-1 py-2.5 text-sm font-medium text-muted bg-white border border-night/8 rounded-xl hover:bg-sand transition-all"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={submitResolve}
-                        disabled={!selectedAction || saving}
-                        className="flex-1 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-hover rounded-xl shadow-sm disabled:opacity-30 transition-all flex items-center justify-center gap-1.5"
-                      >
-                        {saving ? (
-                          'Saving...'
-                        ) : (
-                          <>
-                            <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-                            Mark Resolved
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    <button
+                      onClick={cancelResolve}
+                      className="w-full py-2 text-sm font-medium text-muted hover:text-night transition-colors"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 )}
               </div>

@@ -1,13 +1,16 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { PawPrint } from 'lucide-react';
+import { useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { PawPrint, List, Map, Loader2, Plus, X, Check, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useTestMode } from '../lib/testMode';
+import { isTestMode } from '../lib/testMode';
 import { daysSince } from '../lib/format';
 import AnimalCard, { type AnimalCardData } from '../components/animals/AnimalCard';
 import AnimalFilters, { type AnimalFilterState, DEFAULT_FILTERS } from '../components/animals/AnimalFilters';
 import EmptyState from '../components/shared/EmptyState';
+
+const MapInner = lazy(() => import('../components/animals/DogLocationMapInner'));
 
 interface RawAnimal {
   id: string;
@@ -33,14 +36,22 @@ interface RawAnimal {
 const BATCH_SIZE = 40;
 
 export default function AnimalsPage() {
-  const { isAdmin, session } = useAuth();
+  const { isAdmin, session, user } = useAuth();
   const { testMode } = useTestMode();
   const [searchParams, setSearchParams] = useSearchParams();
   const [animals, setAnimals] = useState<RawAnimal[]>([]);
   const [situations, setSituations] = useState<Record<string, { status: string }>>({});
   const [lastSeenMap, setLastSeenMap] = useState<Record<string, string>>({});
   const [profilePhotos, setProfilePhotos] = useState<Record<string, string>>({});
-  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+  const [locations, setLocations] = useState<{ id: string; name: string; latitude: number | null; longitude: number | null }[]>([]);
+  const [view, setView] = useState<'list' | 'map'>('list');
+  const [showAddAnimal, setShowAddAnimal] = useState(false);
+  const [newAnimalName, setNewAnimalName] = useState('');
+  const [newAnimalType, setNewAnimalType] = useState('dog');
+  const [newAnimalSex, setNewAnimalSex] = useState('unknown');
+  const [newAnimalSize, setNewAnimalSize] = useState('unknown');
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<AnimalFilterState>(() => {
     const initial = { ...DEFAULT_FILTERS };
     if (searchParams.get('urgent') === '1') initial.urgentOnly = true;
@@ -77,13 +88,12 @@ export default function AnimalsPage() {
         .order('event_date', { ascending: false }),
       supabase
         .from('locations')
-        .select('id, name')
+        .select('id, name, latitude, longitude')
         .eq('archived', false)
         .order('name'),
       supabase
         .from('photos')
-        .select('animal_id, storage_path')
-        .eq('is_profile', true)
+        .select('animal_id, storage_path, is_profile, taken_at, created_at')
         .not('animal_id', 'is', null),
     ]);
 
@@ -96,11 +106,19 @@ export default function AnimalsPage() {
     });
     setSituations(sitMap);
 
-    // Build last seen map (most recent care event per animal)
+    // Build last seen map (most recent care event OR photo date per animal)
     const lsMap: Record<string, string> = {};
     (lastSeenRes.data ?? []).forEach((ce: any) => {
       if (!lsMap[ce.animal_id]) {
         lsMap[ce.animal_id] = ce.event_date;
+      }
+    });
+    // Also consider photo dates (taken_at or created_at) for last seen
+    (photoRes.data ?? []).forEach((p: any) => {
+      if (!p.animal_id) return;
+      const photoDate = p.taken_at ?? p.created_at;
+      if (photoDate && (!lsMap[p.animal_id] || photoDate > lsMap[p.animal_id])) {
+        lsMap[p.animal_id] = photoDate;
       }
     });
     setLastSeenMap(lsMap);
@@ -108,7 +126,7 @@ export default function AnimalsPage() {
     // Build profile photo map
     const ppMap: Record<string, string> = {};
     (photoRes.data ?? []).forEach((p: any) => {
-      if (p.animal_id && p.storage_path) {
+      if (p.animal_id && p.storage_path && p.is_profile) {
         ppMap[p.animal_id] = p.storage_path;
       }
     });
@@ -199,6 +217,55 @@ export default function AnimalsPage() {
 
   const visible = filtered.slice(0, visibleCount);
 
+  // Build location coordinate lookup
+  const locCoords = useMemo(() => {
+    const map: Record<string, { lat: number; lng: number }> = {};
+    locations.forEach((l) => {
+      if (l.latitude && l.longitude) map[l.id] = { lat: Number(l.latitude), lng: Number(l.longitude) };
+    });
+    return map;
+  }, [locations]);
+
+  // Map pins for animals with location coordinates
+  const mapPins = useMemo(() => {
+    return filtered
+      .filter((a) => a.primary_location_id && locCoords[a.primary_location_id])
+      .map((a) => ({
+        id: a.id,
+        type: 'home' as const,
+        label: a.name ?? a.aao_id,
+        detail: a.primary_location?.name ?? null,
+        date: null,
+        lat: locCoords[a.primary_location_id!].lat,
+        lng: locCoords[a.primary_location_id!].lng,
+      }));
+  }, [filtered, locCoords]);
+
+  async function handleAddAnimal() {
+    if (!newAnimalName.trim() || !user) return;
+    setAddSubmitting(true);
+    const { data, error } = await supabase
+      .from('animals')
+      .insert({
+        name: newAnimalName.trim(),
+        animal_type: newAnimalType,
+        sex: newAnimalSex,
+        size_category: newAnimalSize,
+        fixed_status: 'unknown',
+        is_test: isTestMode(),
+      })
+      .select('id')
+      .single();
+    setAddSubmitting(false);
+    if (error) return;
+    setShowAddAnimal(false);
+    setNewAnimalName('');
+    setNewAnimalType('dog');
+    setNewAnimalSex('unknown');
+    setNewAnimalSize('unknown');
+    if (data) navigate(`/animals/${data.id}`);
+  }
+
   // Map to card data
   const cardData: AnimalCardData[] = visible.map((a) => ({
     id: a.id,
@@ -225,6 +292,22 @@ export default function AnimalsPage() {
           <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">Animals</h1>
           <p className="text-muted mt-0.5">Animal registry and profiles</p>
         </div>
+        <div className="flex gap-1 bg-white rounded-xl border border-night/5 p-1">
+          <button
+            onClick={() => setView('list')}
+            className={`p-2 rounded-lg transition-all ${view === 'list' ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-night'}`}
+            aria-label="List view"
+          >
+            <List className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setView('map')}
+            className={`p-2 rounded-lg transition-all ${view === 'map' ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-night'}`}
+            aria-label="Map view"
+          >
+            <Map className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <AnimalFilters
@@ -247,6 +330,32 @@ export default function AnimalsPage() {
             </div>
           ))}
         </div>
+      ) : view === 'map' ? (
+        mapPins.length === 0 ? (
+          <div className="mt-4">
+            <EmptyState
+              icon={MapPin}
+              title="No animals with locations on map"
+              description="Animals need a location with coordinates to appear on the map"
+              iconColor="text-primary"
+            />
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-night/5 overflow-hidden mt-4">
+            <div className="h-[28rem] md:h-[36rem]">
+              <Suspense fallback={
+                <div className="h-full flex items-center justify-center text-muted text-sm gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading map...
+                </div>
+              }>
+                <MapInner pins={mapPins} />
+              </Suspense>
+            </div>
+            <div className="px-5 py-2.5 border-t border-night/5 text-xs text-muted">
+              {mapPins.length} animal{mapPins.length !== 1 ? 's' : ''} shown
+            </div>
+          </div>
+        )
       ) : cardData.length === 0 ? (
         <div className="mt-4">
           <EmptyState
@@ -280,6 +389,81 @@ export default function AnimalsPage() {
             </p>
           )}
         </>
+      )}
+
+      {/* Add Animal FAB */}
+      <button
+        onClick={() => setShowAddAnimal(true)}
+        className="fixed bottom-20 md:bottom-6 right-4 md:right-6 h-12 bg-primary hover:bg-primary-hover text-white rounded-2xl shadow-[0_4px_16px_rgba(110,168,50,0.35)] hover:shadow-[0_6px_20px_rgba(110,168,50,0.45)] flex items-center justify-center gap-2 px-5 transition-all duration-200 z-30 hover:scale-105 active:scale-95"
+        aria-label="Add new animal"
+      >
+        <Plus className="w-4 h-4" strokeWidth={2} />
+        <span className="text-sm font-semibold">Add Animal</span>
+      </button>
+
+      {/* Add Animal modal */}
+      {showAddAnimal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Add animal">
+          <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-night/5 shrink-0">
+              <h2 className="font-heading font-bold text-night text-base">Add Animal</h2>
+              <button onClick={() => setShowAddAnimal(false)} className="p-2 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-muted mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={newAnimalName}
+                  onChange={(e) => setNewAnimalName(e.target.value)}
+                  placeholder="Animal name"
+                  className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                  autoFocus
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-muted mb-1">Type</label>
+                  <select value={newAnimalType} onChange={(e) => setNewAnimalType(e.target.value)} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30">
+                    <option value="dog">Dog</option>
+                    <option value="cat">Cat</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted mb-1">Sex</label>
+                  <select value={newAnimalSex} onChange={(e) => setNewAnimalSex(e.target.value)} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30">
+                    <option value="unknown">Unknown</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted mb-1">Size</label>
+                <select value={newAnimalSize} onChange={(e) => setNewAnimalSize(e.target.value)} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30">
+                  <option value="unknown">Unknown</option>
+                  <option value="small">Small</option>
+                  <option value="medium">Medium</option>
+                  <option value="large">Large</option>
+                  <option value="xlarge">XL</option>
+                </select>
+              </div>
+            </div>
+            <div className="p-5 border-t border-night/5 shrink-0">
+              <button
+                onClick={handleAddAnimal}
+                disabled={!newAnimalName.trim() || addSubmitting}
+                className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold text-sm rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.25)] disabled:opacity-30 transition-all flex items-center justify-center gap-2"
+              >
+                {addSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                {addSubmitting ? 'Creating...' : 'Create Animal'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

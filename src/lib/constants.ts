@@ -1,6 +1,7 @@
 // Situation status display config
 export const SITUATION_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   supported_in_place: { label: 'Supported in Place', bg: 'bg-primary/12', text: 'text-primary', dot: 'bg-primary' },
+  in_aao_care:        { label: 'In AAO Care', bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-500' },
   medical_hold:       { label: 'Medical Hold', bg: 'bg-ember/12', text: 'text-ember', dot: 'bg-ember' },
   in_transition:      { label: 'In Transition', bg: 'bg-gold/15', text: 'text-yellow-700', dot: 'bg-gold' },
   in_foster:          { label: 'In Foster', bg: 'bg-sky-100', text: 'text-sky-700', dot: 'bg-sky-500' },

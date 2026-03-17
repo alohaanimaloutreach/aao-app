@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import {
   PawPrint, Users, MapPin, Flag, AlertTriangle, Clock, CalendarHeart,
   Pencil, ArrowRight, Eye, Stethoscope, Package, ListOrdered,
-  CircleStop, Play, FlaskConical, X, StickyNote, BarChart3, ChevronDown,
+  CircleStop, Play, FlaskConical, X, StickyNote, BarChart3, ChevronDown, Scissors,
 } from 'lucide-react';
 import { formatRelative, daysSince, formatDate } from '../lib/format';
 import { HAVENT_SEEN_DAYS } from '../lib/constants';
@@ -23,7 +23,7 @@ interface Stats {
 
 interface Alert {
   id: string;
-  type: 'havent_seen' | 'urgent_medical' | 'lost_contact' | 'flagged';
+  type: 'havent_seen' | 'urgent_medical' | 'lost_contact' | 'flagged' | 'sn_ready';
   title: string;
   description: string;
   link: string;
@@ -75,7 +75,7 @@ export default function DashboardPage() {
     let ownersCountQ = supabase.from('owners').select('id', { count: 'exact', head: true }).eq('archived', false);
     let outreachCountQ = supabase.from('outreach_events').select('id', { count: 'exact', head: true }).gte('event_date', monthStart);
     let foodQ = supabase.from('outreach_events').select('total_food_lbs').gte('event_date', monthStart);
-    let allAnimalsQ = supabase.from('animals').select('id, name, aao_id, urgent_medical, deceased').eq('archived', false).eq('deceased', false);
+    let allAnimalsQ = supabase.from('animals').select('id, name, aao_id, urgent_medical, interested_in_fixing, deceased').eq('archived', false).eq('deceased', false);
     let careQ = supabase.from('care_events').select('animal_id, event_date').order('event_date', { ascending: false });
     let recentCareQ = supabase.from('care_events').select('id, animal_id, event_date, care_types, animal:animals(name, aao_id), author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
     let recentNotesQ = supabase.from('field_notes').select('id, animal_id, owner_id, location_id, note, created_at, author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
@@ -173,6 +173,20 @@ export default function DashboardPage() {
         link: '/animals?status=lost_contact',
         color: 'border-amber-300/30 bg-amber-50',
         icon: Eye,
+      });
+    }
+
+    // Ready for spay/neuter
+    const snReady = (allAnimalsRes.data ?? []).filter((a: any) => a.interested_in_fixing === 'interested');
+    if (snReady.length > 0) {
+      alertList.push({
+        id: 'sn_ready',
+        type: 'sn_ready',
+        title: `${snReady.length} animal${snReady.length > 1 ? 's' : ''} ready for spay/neuter`,
+        description: snReady.slice(0, 3).map((a: any) => a.name ?? a.aao_id).join(', ') + (snReady.length > 3 ? ` and ${snReady.length - 3} more` : ''),
+        link: '/animals?snReady=1',
+        color: 'border-primary/30 bg-primary/6',
+        icon: Scissors,
       });
     }
 
@@ -415,7 +429,7 @@ export default function DashboardPage() {
             )}
             <button
               onClick={() => setShowEndConfirm(true)}
-              className="px-3 py-2.5 bg-white border border-night/10 rounded-xl text-sm font-medium text-muted hover:text-ember hover:border-ember/20 transition-all flex items-center gap-1.5 shrink-0"
+              className="px-3 py-2.5 bg-ember hover:bg-ember/90 rounded-xl text-sm font-semibold text-white transition-all flex items-center gap-1.5 shrink-0"
             >
               <CircleStop className="w-4 h-4" />
               End Event

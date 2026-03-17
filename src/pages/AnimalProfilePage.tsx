@@ -5,7 +5,7 @@ import {
   PawPrint,
   Edit3,
   AlertTriangle,
-  Package,
+  Scissors,
   MapPin,
   User,
   Phone,
@@ -114,6 +114,9 @@ export default function AnimalProfilePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'timeline' | 'map' | 'details' | 'photos'>('timeline');
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [fosterPrompt, setFosterPrompt] = useState(false);
+  const [fosterName, setFosterName] = useState('');
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Record<string, any>>({});
   const [editSaving, setEditSaving] = useState(false);
@@ -171,7 +174,18 @@ export default function AnimalProfilePage() {
     if (sitRes.data) setSituations(sitRes.data);
     if (photoRes.data) setPhotos(photoRes.data);
     if (flagRes.data) setFlags(flagRes.data);
-    if (lastSeenRes.data?.[0]) setLastSeen(lastSeenRes.data[0].event_date);
+
+    // Last seen = most recent of care_event date or photo upload date
+    const careDate = lastSeenRes.data?.[0]?.event_date ?? null;
+    const photoDate = photoRes.data?.length
+      ? photoRes.data.reduce((latest: string | null, p: any) => {
+          const d = p.taken_at ?? p.created_at;
+          if (!d) return latest;
+          return !latest || d > latest ? d : latest;
+        }, null as string | null)
+      : null;
+    const bestDate = [careDate, photoDate].filter(Boolean).sort().pop() ?? null;
+    setLastSeen(bestDate);
 
     setLoading(false);
   }
@@ -333,7 +347,7 @@ export default function AnimalProfilePage() {
   const activeSituation = situations.find((s) => s.is_active);
   const typeConfig = ANIMAL_TYPE_CONFIG[animal.animal_type] ?? ANIMAL_TYPE_CONFIG.other;
   const lastSeenDays = daysSince(lastSeen);
-  const haventSeen = lastSeenDays > HAVENT_SEEN_DAYS && !animal.deceased;
+  const haventSeen = lastSeenDays > HAVENT_SEEN_DAYS && lastSeenDays !== Infinity && !animal.deceased;
   const profilePhoto = photos.find((p) => p.is_profile);
   const unresolvedFlags = flags.filter((f) => !f.resolved);
 
@@ -353,11 +367,16 @@ export default function AnimalProfilePage() {
         {/* Photo header */}
         <div className="relative h-48 md:h-56 bg-sand">
           {profilePhoto?.storage_path ? (
-            <img
-              src={profilePhoto.storage_path}
-              alt={animal.name ?? 'Animal'}
-              className="w-full h-full object-cover"
-            />
+            <button
+              onClick={() => setLightboxPhoto(profilePhoto.storage_path)}
+              className="w-full h-full cursor-zoom-in"
+            >
+              <img
+                src={profilePhoto.storage_path}
+                alt={animal.name ?? 'Animal'}
+                className="w-full h-full object-cover"
+              />
+            </button>
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <PawPrint className="w-16 h-16 text-muted/15" strokeWidth={1} />
@@ -379,16 +398,9 @@ export default function AnimalProfilePage() {
             )}
           </div>
 
-          {animal.food_bag_size && (
-            <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-night text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
-              <Package className="w-3.5 h-3.5" />
-              {animal.food_bag_size}
-            </span>
-          )}
-
           {haventSeen && (
             <span className="absolute bottom-3 left-3 bg-gold/90 text-night text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
-              {lastSeenDays === Infinity ? 'Never seen' : `Not seen in ${lastSeenDays} days`}
+              Not seen in {lastSeenDays} days
             </span>
           )}
         </div>
@@ -417,9 +429,21 @@ export default function AnimalProfilePage() {
             </div>
           </div>
 
-          {/* Status + key info */}
+          {/* Key info */}
           <div className="flex flex-wrap items-center gap-2 mt-3">
-            {activeSituation && <StatusBadge status={activeSituation.status} size="md" />}
+            {/* Status — tappable to change */}
+            <button
+              onClick={() => setShowStatusPicker(true)}
+              className="inline-flex items-center gap-1.5 text-xs bg-sand hover:bg-night/8 rounded-full px-2.5 py-1 transition-colors"
+            >
+              {activeSituation ? (
+                <StatusBadge status={activeSituation.status} size="sm" />
+              ) : (
+                <span className="text-muted">Set status</span>
+              )}
+              <ChevronDown className="w-3 h-3 text-muted" />
+            </button>
+
             {animal.owner && (
               <Link
                 to={`/people/${animal.owner.id}`}
@@ -446,12 +470,42 @@ export default function AnimalProfilePage() {
             )}
           </div>
 
-          {/* Flags */}
-          {flags.length > 0 && (
-            <div className="mt-3">
-              <FlagResolver flags={flags} onUpdate={() => id && loadAnimal(id)} />
-            </div>
-          )}
+          {/* Quick toggles */}
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button
+              onClick={async () => {
+                const newVal = !animal.urgent_medical;
+                await supabase.from('animals').update({ urgent_medical: newVal }).eq('id', animal.id);
+                if (id) loadAnimal(id);
+              }}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+                animal.urgent_medical
+                  ? 'bg-ember/10 border-ember/30 text-ember'
+                  : 'bg-white border-night/10 text-muted hover:border-ember/30 hover:text-ember'
+              }`}
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              Urgent Medical
+              {animal.urgent_medical ? ' ON' : ''}
+            </button>
+            <button
+              onClick={async () => {
+                const newVal = animal.interested_in_fixing === 'interested' ? null : 'interested';
+                await supabase.from('animals').update({ interested_in_fixing: newVal }).eq('id', animal.id);
+                if (id) loadAnimal(id);
+              }}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+                animal.interested_in_fixing === 'interested'
+                  ? 'bg-primary/10 border-primary/30 text-primary'
+                  : 'bg-white border-night/10 text-muted hover:border-primary/30 hover:text-primary'
+              }`}
+            >
+              <Scissors className="w-3.5 h-3.5" />
+              Ready for S/N
+              {animal.interested_in_fixing === 'interested' ? ' ON' : ''}
+            </button>
+          </div>
+
         </div>
       </div>
 
@@ -484,10 +538,27 @@ export default function AnimalProfilePage() {
       {/* Tab content */}
       <div className="page-enter">
         {activeTab === 'timeline' && (
+          <>
+          {/* Flags — above activity feed */}
+          {flags.length > 0 && (
+            <div className="mb-4">
+              <FlagResolver
+                flags={flags}
+                tableName="animals"
+                recordId={animal.id}
+                onUpdate={() => id && loadAnimal(id)}
+                onEditField={(field) => {
+                  openEdit();
+                }}
+              />
+            </div>
+          )}
+
           <div className="bg-white rounded-2xl border border-night/5 p-5">
             <h2 className="font-heading font-bold text-night mb-4">Dog Timeline</h2>
             <DogTimeline animalId={animal.id} />
           </div>
+          </>
         )}
 
         {activeTab === 'map' && (
@@ -685,6 +756,141 @@ export default function AnimalProfilePage() {
       )}
 
       {/* Photo lightbox */}
+      {/* Status picker modal */}
+      {showStatusPicker && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Change status">
+          <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-night/5">
+              <h2 className="font-heading font-bold text-night text-base">Change Status</h2>
+              <button onClick={() => { setShowStatusPicker(false); setFosterPrompt(false); setFosterName(''); }} className="p-2 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="py-2 max-h-[60vh] overflow-y-auto">
+              {fosterPrompt ? (
+                <div className="px-5 py-3">
+                  <p className="text-sm font-medium text-night mb-2">Who is fostering this animal?</p>
+                  <div className="space-y-1.5 mb-3">
+                    {['FAF', 'K9 Kokua', 'Poi Dogs', 'HHS', 'Paws'].map((org) => (
+                      <button
+                        key={org}
+                        onClick={() => setFosterName(org)}
+                        className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                          fosterName === org ? 'bg-primary/10 text-primary ring-2 ring-primary/30' : 'bg-sand/60 text-night hover:bg-sand'
+                        }`}
+                      >
+                        {org}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setFosterName(fosterName && !['FAF', 'K9 Kokua', 'Poi Dogs', 'HHS', 'Paws'].includes(fosterName) ? fosterName : '')}
+                      className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        fosterName && !['FAF', 'K9 Kokua', 'Poi Dogs', 'HHS', 'Paws'].includes(fosterName) ? 'bg-primary/10 text-primary ring-2 ring-primary/30' : 'bg-sand/60 text-night hover:bg-sand'
+                      }`}
+                    >
+                      Other
+                    </button>
+                    {fosterName !== '' && !['FAF', 'K9 Kokua', 'Poi Dogs', 'HHS', 'Paws'].includes(fosterName) && (
+                      <input
+                        type="text"
+                        value={fosterName}
+                        onChange={(e) => setFosterName(e.target.value)}
+                        placeholder="Enter name"
+                        className="w-full border border-night/10 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none mt-1"
+                        autoFocus
+                      />
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setFosterPrompt(false); setFosterName(''); }}
+                      className="flex-1 py-2.5 bg-sand text-night text-sm font-medium rounded-xl hover:bg-night/8 transition-all"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!fosterName.trim()) return;
+                        if (activeSituation) {
+                          await supabase.from('situations').update({ is_active: false, ended_at: new Date().toISOString() }).eq('id', activeSituation.id);
+                        }
+                        await supabase.from('situations').insert({
+                          animal_id: animal.id,
+                          status: 'in_foster',
+                          is_active: true,
+                          started_at: new Date().toISOString(),
+                          notes: `Foster: ${fosterName.trim()}`,
+                        });
+                        setShowStatusPicker(false);
+                        setFosterPrompt(false);
+                        setFosterName('');
+                        if (id) loadAnimal(id);
+                      }}
+                      disabled={!fosterName.trim()}
+                      className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50"
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {Object.entries(SITUATION_CONFIG).map(([key, cfg]) => (
+                    <button
+                      key={key}
+                      onClick={async () => {
+                        if (activeSituation?.status === key) {
+                          setShowStatusPicker(false);
+                          return;
+                        }
+                        if (key === 'in_foster') {
+                          setFosterPrompt(true);
+                          return;
+                        }
+                        if (activeSituation) {
+                          await supabase.from('situations').update({ is_active: false, ended_at: new Date().toISOString() }).eq('id', activeSituation.id);
+                        }
+                        await supabase.from('situations').insert({
+                          animal_id: animal.id,
+                          status: key,
+                          is_active: true,
+                          started_at: new Date().toISOString(),
+                        });
+                        setShowStatusPicker(false);
+                        if (id) loadAnimal(id);
+                      }}
+                      className={`w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-sand/60 transition-colors ${
+                        activeSituation?.status === key ? 'bg-sand/40' : ''
+                      }`}
+                    >
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${cfg.dot}`} />
+                      <span className="text-sm font-medium text-night flex-1">{cfg.label}</span>
+                      {activeSituation?.status === key && <Check className="w-4 h-4 text-primary shrink-0" />}
+                    </button>
+                  ))}
+                  {activeSituation && (
+                    <>
+                      <div className="border-t border-night/5 my-1" />
+                      <button
+                        onClick={async () => {
+                          await supabase.from('situations').update({ is_active: false, ended_at: new Date().toISOString() }).eq('id', activeSituation.id);
+                          setShowStatusPicker(false);
+                          if (id) loadAnimal(id);
+                        }}
+                        className="w-full flex items-center gap-3 px-5 py-3 text-left text-muted hover:bg-sand/60 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5 shrink-0" />
+                        <span className="text-sm font-medium">Clear status</span>
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {lightboxPhoto && (
         <div
           className="fixed inset-0 bg-night/90 z-50 flex items-center justify-center p-4"
@@ -713,7 +919,7 @@ function DetailsTab({ animal, situations }: { animal: AnimalDetail; situations: 
       <DetailSection title="About">
         <DetailRow icon={Tag} label="Breed" value={animal.breed} />
         <DetailRow icon={Tag} label="Color" value={animal.color} />
-        <DetailRow label="Sex" value={animal.sex === 'unknown' ? 'Unknown' : animal.sex === 'male' ? 'Male' : 'Female'} />
+        <DetailRow icon={User} label="Sex" value={animal.sex === 'unknown' ? 'Unknown' : animal.sex === 'male' ? 'Male' : 'Female'} />
         <DetailRow icon={Ruler} label="Size" value={SIZE_LABELS[animal.size_category]} />
         <DetailRow icon={Weight} label="Weight" value={animal.weight_lbs ? `${animal.weight_lbs} lbs` : null} />
         <DetailRow icon={Calendar} label="Age estimate" value={animal.age_estimate ? `~${animal.age_estimate} years` : null} />
@@ -723,7 +929,7 @@ function DetailsTab({ animal, situations }: { animal: AnimalDetail; situations: 
       {/* Medical */}
       <DetailSection title="Medical">
         <DetailRow icon={Heart} label="Fixed status" value={FIXED_STATUS_LABELS[animal.fixed_status]} />
-        {animal.date_fixed && <DetailRow label="Date fixed" value={formatDate(animal.date_fixed)} />}
+        {animal.date_fixed && <DetailRow icon={Scissors} label="Date fixed" value={formatDate(animal.date_fixed)} />}
         {animal.interested_in_fixing && (
           <DetailRow label="Interested in fixing" value={animal.interested_in_fixing.replace(/_/g, ' ')} />
         )}

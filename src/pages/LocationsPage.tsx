@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
-import { MapPin, List, Map, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MapPin, List, Map, Loader2, Plus, X, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import LocationCard, { type LocationCardData } from '../components/locations/LocationCard';
@@ -20,7 +21,7 @@ interface RawLocation {
 }
 
 export default function LocationsPage() {
-  const { isAdmin, session } = useAuth();
+  const { isAdmin, session, user } = useAuth();
   const [locations, setLocations] = useState<RawLocation[]>([]);
   const [animalCounts, setAnimalCounts] = useState<Record<string, number>>({});
   const [ownerCounts, setOwnerCounts] = useState<Record<string, number>>({});
@@ -28,6 +29,11 @@ export default function LocationsPage() {
   const [filters, setFilters] = useState<LocationFilterState>(DEFAULT_LOCATION_FILTERS);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'list' | 'map'>('list');
+  const [showAddLocation, setShowAddLocation] = useState(false);
+  const [newLocName, setNewLocName] = useState('');
+  const [newLocAddress, setNewLocAddress] = useState('');
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (session) loadData();
@@ -214,6 +220,77 @@ export default function LocationsPage() {
           {cardData.map((loc) => (
             <LocationCard key={loc.id} location={loc} />
           ))}
+        </div>
+      )}
+
+      {/* Add Location FAB */}
+      <button
+        onClick={() => setShowAddLocation(true)}
+        className="fixed bottom-20 md:bottom-6 right-4 md:right-6 h-12 bg-primary hover:bg-primary-hover text-white rounded-2xl shadow-[0_4px_16px_rgba(110,168,50,0.35)] hover:shadow-[0_6px_20px_rgba(110,168,50,0.45)] flex items-center justify-center gap-2 px-5 transition-all duration-200 z-30 hover:scale-105 active:scale-95"
+        aria-label="Add new location"
+      >
+        <Plus className="w-4 h-4" strokeWidth={2} />
+        <span className="text-sm font-semibold">Add Location</span>
+      </button>
+
+      {/* Add Location modal */}
+      {showAddLocation && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Add location">
+          <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-night/5 shrink-0">
+              <h2 className="font-heading font-bold text-night text-base">Add Location</h2>
+              <button onClick={() => setShowAddLocation(false)} className="p-2 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-muted mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={newLocName}
+                  onChange={(e) => setNewLocName(e.target.value)}
+                  placeholder="Location name"
+                  className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted mb-1">Address</label>
+                <input
+                  type="text"
+                  value={newLocAddress}
+                  onChange={(e) => setNewLocAddress(e.target.value)}
+                  placeholder="Street address (optional)"
+                  className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                />
+              </div>
+            </div>
+            <div className="p-5 border-t border-night/5 shrink-0">
+              <button
+                onClick={async () => {
+                  if (!newLocName.trim() || !user) return;
+                  setAddSubmitting(true);
+                  const { data, error } = await supabase
+                    .from('locations')
+                    .insert({ name: newLocName.trim(), address: newLocAddress.trim() || null })
+                    .select('id')
+                    .single();
+                  setAddSubmitting(false);
+                  if (error) return;
+                  setShowAddLocation(false);
+                  setNewLocName('');
+                  setNewLocAddress('');
+                  if (data) navigate(`/locations/${data.id}`);
+                }}
+                disabled={!newLocName.trim() || addSubmitting}
+                className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold text-sm rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.25)] disabled:opacity-30 transition-all flex items-center justify-center gap-2"
+              >
+                {addSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                {addSubmitting ? 'Creating...' : 'Create Location'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

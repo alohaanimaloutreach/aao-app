@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { PawPrint, AlertTriangle, Package, MapPin, User, Clock } from 'lucide-react';
+import { PawPrint, AlertTriangle, Ruler, MapPin, User, Clock } from 'lucide-react';
 import StatusBadge from '../shared/StatusBadge';
 import { ANIMAL_TYPE_CONFIG, HAVENT_SEEN_DAYS } from '../../lib/constants';
 import { formatRelative, daysSince } from '../../lib/format';
@@ -29,7 +29,7 @@ interface Props {
 export default function AnimalCard({ animal }: Props) {
   const typeConfig = ANIMAL_TYPE_CONFIG[animal.animal_type] ?? ANIMAL_TYPE_CONFIG.other;
   const lastSeenDays = daysSince(animal.last_seen);
-  const haventSeen = lastSeenDays > HAVENT_SEEN_DAYS && !animal.deceased;
+  const haventSeen = lastSeenDays > HAVENT_SEEN_DAYS && lastSeenDays !== Infinity && !animal.deceased;
 
   return (
     <Link
@@ -58,11 +58,25 @@ export default function AnimalCard({ animal }: Props) {
           </div>
         )}
 
-        {/* Food bag badge */}
-        {animal.food_bag_size && (
-          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-night text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-            <Package className="w-3 h-3" />
-            {animal.food_bag_size}
+        {/* Identifying badge — location, owner, or size */}
+        {(animal.primary_location || animal.owner || animal.size_category) && (
+          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-night text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 max-w-[60%]">
+            {animal.primary_location ? (
+              <>
+                <MapPin className="w-3 h-3 shrink-0" />
+                <span className="truncate">{animal.primary_location.name}</span>
+              </>
+            ) : animal.owner ? (
+              <>
+                <User className="w-3 h-3 shrink-0" />
+                <span className="truncate">{animal.owner.name}</span>
+              </>
+            ) : (
+              <>
+                <Ruler className="w-3 h-3 shrink-0" />
+                <span className="truncate">{animal.size_category}</span>
+              </>
+            )}
           </div>
         )}
 
@@ -70,7 +84,7 @@ export default function AnimalCard({ animal }: Props) {
         {haventSeen && (
           <div className="absolute bottom-2 left-2 bg-gold/90 text-night text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            {lastSeenDays === Infinity ? 'Never seen' : `${lastSeenDays}d since last seen`}
+            {lastSeenDays}d since last seen
           </div>
         )}
       </div>

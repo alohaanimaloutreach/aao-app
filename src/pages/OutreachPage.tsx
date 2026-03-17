@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CalendarHeart, Plus, MapPin, Users, PawPrint, Package, Play } from 'lucide-react';
+import { CalendarHeart, Plus, MapPin, Users, PawPrint, Package, Play, Search, ArrowUpDown, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useTestMode } from '../lib/testMode';
@@ -16,6 +16,7 @@ interface OutreachEventRow {
   notes: string | null;
   total_food_lbs: number | null;
   total_bags: number | null;
+  location_id: string | null;
   location: { name: string } | null;
   volunteer_count: number;
   animal_count: number;
@@ -26,8 +27,12 @@ export default function OutreachPage() {
   const { testMode } = useTestMode();
   const navigate = useNavigate();
   const [events, setEvents] = useState<OutreachEventRow[]>([]);
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSetup, setShowSetup] = useState(false);
+  const [search, setSearch] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [sortNewest, setSortNewest] = useState(true);
 
   useEffect(() => {
     if (session) loadEvents();
@@ -38,15 +43,18 @@ export default function OutreachPage() {
 
     let eventsQuery = supabase
       .from('outreach_events')
-      .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, location:locations(name)')
+      .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, location_id, location:locations(name)')
       .order('event_date', { ascending: false });
     if (!testMode) eventsQuery = eventsQuery.eq('is_test', false);
 
-    const [eventRes, volRes, careRes] = await Promise.all([
+    const [eventRes, volRes, careRes, locRes] = await Promise.all([
       eventsQuery,
       supabase.from('outreach_event_volunteers').select('outreach_event_id'),
       supabase.from('care_events').select('outreach_event_id, animal_id').not('outreach_event_id', 'is', null),
+      supabase.from('locations').select('id, name').eq('archived', false).order('name'),
     ]);
+
+    if (locRes.data) setLocations(locRes.data);
 
     const volCounts: Record<string, number> = {};
     (volRes.data ?? []).forEach((v: any) => {
@@ -77,7 +85,32 @@ export default function OutreachPage() {
   }
 
   const activeEvents = events.filter((e) => e.status === 'active');
-  const pastEvents = events.filter((e) => e.status !== 'active');
+
+  const pastEvents = useMemo(() => {
+    let list = events.filter((e) => e.status !== 'active');
+
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter((e) =>
+        e.location?.name?.toLowerCase().includes(q) ||
+        e.notes?.toLowerCase().includes(q) ||
+        e.event_type.replace(/_/g, ' ').toLowerCase().includes(q) ||
+        formatDate(e.event_date).toLowerCase().includes(q)
+      );
+    }
+
+    if (locationFilter) {
+      list = list.filter((e) => e.location_id === locationFilter);
+    }
+
+    if (!sortNewest) {
+      list = [...list].reverse();
+    }
+
+    return list;
+  }, [events, search, locationFilter, sortNewest]);
+
+  const hasFilters = search || locationFilter;
 
   return (
     <div>
@@ -131,6 +164,49 @@ export default function OutreachPage() {
         </div>
       )}
 
+      {/* Search / filter bar */}
+      {!loading && events.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <div className="relative flex-1 min-w-[160px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search events..."
+              className="w-full pl-9 pr-3 py-2 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+            />
+          </div>
+          <select
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            className="px-3 py-2 bg-white border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="">All locations</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => setSortNewest(!sortNewest)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-night/8 rounded-xl text-sm text-muted hover:text-night transition-colors"
+            title={sortNewest ? 'Showing newest first' : 'Showing oldest first'}
+          >
+            <ArrowUpDown className="w-3.5 h-3.5" />
+            {sortNewest ? 'Newest' : 'Oldest'}
+          </button>
+          {hasFilters && (
+            <button
+              onClick={() => { setSearch(''); setLocationFilter(''); }}
+              className="flex items-center gap-1 px-2.5 py-2 text-xs text-muted hover:text-night transition-colors"
+            >
+              <X className="w-3 h-3" />
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Past events */}
       {loading ? (
         <div className="space-y-3">
@@ -150,7 +226,7 @@ export default function OutreachPage() {
             </div>
           ))}
         </div>
-      ) : pastEvents.length === 0 && activeEvents.length === 0 ? (
+      ) : pastEvents.length === 0 && activeEvents.length === 0 && !hasFilters ? (
         <EmptyState
           icon={CalendarHeart}
           title="No outreach events yet"
@@ -159,6 +235,14 @@ export default function OutreachPage() {
         />
       ) : (
         <>
+          {pastEvents.length === 0 && hasFilters && (
+            <EmptyState
+              icon={Search}
+              title="No matching events"
+              description="Try a different search or clear the filters"
+              iconColor="text-muted"
+            />
+          )}
           {pastEvents.length > 0 && (
             <div>
               {activeEvents.length > 0 && (

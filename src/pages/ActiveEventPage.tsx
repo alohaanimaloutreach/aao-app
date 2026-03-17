@@ -148,9 +148,9 @@ export default function ActiveEventPage() {
         </div>
         <button
           onClick={() => setShowEndConfirm(true)}
-          className="px-3 py-2 bg-white border border-night/10 rounded-xl text-xs font-medium text-night hover:bg-sand transition-all flex items-center gap-1.5 shrink-0"
+          className="px-3 py-2 bg-ember hover:bg-ember/90 rounded-xl text-xs font-semibold text-white transition-all flex items-center gap-1.5 shrink-0"
         >
-          <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+          <CheckCircle2 className="w-3.5 h-3.5" />
           End Event
         </button>
       </div>
