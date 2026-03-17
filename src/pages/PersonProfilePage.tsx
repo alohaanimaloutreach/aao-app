@@ -15,12 +15,17 @@ import {
   Check,
   X,
   Loader2,
+  Search,
+  Crosshair,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatDate } from '../lib/format';
 import StatusBadge from '../components/shared/StatusBadge';
 import FlagResolver from '../components/admin/FlagResolver';
 import ArchiveActions from '../components/admin/ArchiveActions';
+import OwnerLocationMap from '../components/people/OwnerLocationMap';
 
 interface OwnerDetail {
   id: string;
@@ -71,15 +76,59 @@ export default function PersonProfilePage() {
   const [flags, setFlags] = useState<OwnerFlag[]>([]);
   const [notes, setNotes] = useState<OwnerNote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'animals' | 'details' | 'notes'>('animals');
+  const [activeTab, setActiveTab] = useState<'animals' | 'map' | 'details' | 'notes'>('animals');
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Record<string, any>>({});
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
+  const [showEditLocationPicker, setShowEditLocationPicker] = useState(false);
+  const [editLocationSearch, setEditLocationSearch] = useState('');
+  const [editLocationResults, setEditLocationResults] = useState<{ id: string; name: string; address: string | null }[]>([]);
+  const [showCreateLocation, setShowCreateLocation] = useState(false);
+  const [newLocName, setNewLocName] = useState('');
+  const [newLocAddress, setNewLocAddress] = useState('');
+  const [creatingLocation, setCreatingLocation] = useState(false);
 
   useEffect(() => {
     if (id) loadOwner(id);
   }, [id]);
+
+  // Location search for edit modal
+  useEffect(() => {
+    if (!showEditLocationPicker || editLocationSearch.trim().length < 2) {
+      setEditLocationResults([]);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      const { data } = await supabase
+        .from('locations')
+        .select('id, name, address')
+        .eq('archived', false)
+        .ilike('name', `%${editLocationSearch.trim()}%`)
+        .order('name')
+        .limit(10);
+      setEditLocationResults(data ?? []);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [editLocationSearch, showEditLocationPicker]);
+
+  async function handleCreateLocation() {
+    if (!newLocName.trim()) return;
+    setCreatingLocation(true);
+    const { data, error } = await supabase
+      .from('locations')
+      .insert({ name: newLocName.trim(), address: newLocAddress.trim() || null })
+      .select('id, name')
+      .single();
+    setCreatingLocation(false);
+    if (error) { setEditError(`Failed to create location: ${error.message}`); return; }
+    setEditData((prev: any) => ({ ...prev, primary_location_id: data.id, primary_location_name: data.name }));
+    setShowCreateLocation(false);
+    setShowEditLocationPicker(false);
+    setEditLocationSearch('');
+    setNewLocName('');
+    setNewLocAddress('');
+  }
 
   async function loadOwner(ownerId: string) {
     setLoading(true);
@@ -149,8 +198,14 @@ export default function PersonProfilePage() {
       phone_secondary: owner.phone_secondary ?? '',
       address: owner.address ?? '',
       notes: owner.notes ?? '',
+      primary_location_id: owner.primary_location?.id ?? '',
+      primary_location_name: owner.primary_location?.name ?? '',
+      precise_lat: owner.precise_lat ?? '',
+      precise_lng: owner.precise_lng ?? '',
     });
     setEditError('');
+    setShowEditLocationPicker(false);
+    setEditLocationSearch('');
     setEditing(true);
   }
 
@@ -164,6 +219,9 @@ export default function PersonProfilePage() {
       phone_secondary: editData.phone_secondary || null,
       address: editData.address || null,
       notes: editData.notes || null,
+      primary_location_id: editData.primary_location_id || null,
+      precise_lat: editData.precise_lat ? Number(editData.precise_lat) : null,
+      precise_lng: editData.precise_lng ? Number(editData.precise_lng) : null,
     }).eq('id', owner.id);
     setEditSaving(false);
     if (error) { setEditError(error.message); return; }
@@ -330,6 +388,157 @@ export default function PersonProfilePage() {
                 <label className="block text-xs text-muted font-medium mb-1">Notes</label>
                 <textarea value={editData.notes} onChange={(e) => setEditData({ ...editData, notes: e.target.value })} rows={4} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
               </div>
+
+              {/* Location */}
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Location</label>
+                {!showEditLocationPicker ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-muted shrink-0" />
+                        <span className="truncate">{editData.primary_location_name || 'No location set'}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowEditLocationPicker(true)}
+                      className="px-3 py-2.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/15 rounded-xl transition-colors whitespace-nowrap"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted/50" />
+                      <input
+                        type="text"
+                        value={editLocationSearch}
+                        onChange={(e) => setEditLocationSearch(e.target.value)}
+                        placeholder="Search locations..."
+                        className="w-full pl-9 pr-4 py-2.5 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                        autoFocus
+                      />
+                    </div>
+                    {editLocationResults.map((loc) => (
+                      <button
+                        key={loc.id}
+                        type="button"
+                        onClick={() => {
+                          setEditData({ ...editData, primary_location_id: loc.id, primary_location_name: loc.name });
+                          setShowEditLocationPicker(false);
+                          setShowCreateLocation(false);
+                          setEditLocationSearch('');
+                        }}
+                        className="w-full flex items-center gap-2 p-2.5 rounded-xl border border-night/5 bg-white text-left text-sm hover:bg-sand/50 transition-colors"
+                      >
+                        <MapPin className="w-4 h-4 text-muted shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-night block truncate">{loc.name}</span>
+                          {loc.address && <span className="text-[11px] text-muted truncate block">{loc.address}</span>}
+                        </div>
+                      </button>
+                    ))}
+                    {!showCreateLocation ? (
+                      <button
+                        type="button"
+                        onClick={() => { setShowCreateLocation(true); setNewLocName(editLocationSearch); }}
+                        className="w-full flex items-center gap-2 p-2.5 rounded-xl border border-dashed border-primary/30 bg-primary/5 text-left text-sm hover:bg-primary/10 transition-colors text-primary font-medium"
+                      >
+                        <Plus className="w-4 h-4 shrink-0" />
+                        Create new location
+                      </button>
+                    ) : (
+                      <div className="p-3 rounded-xl border border-primary/20 bg-primary/5 space-y-2">
+                        <p className="text-xs font-medium text-night">New Location</p>
+                        <input
+                          type="text"
+                          value={newLocName}
+                          onChange={(e) => setNewLocName(e.target.value)}
+                          placeholder="Location name *"
+                          className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                          autoFocus
+                        />
+                        <input
+                          type="text"
+                          value={newLocAddress}
+                          onChange={(e) => setNewLocAddress(e.target.value)}
+                          placeholder="Address (optional)"
+                          className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCreateLocation}
+                            disabled={!newLocName.trim() || creatingLocation}
+                            className="flex-1 py-2 bg-primary text-white text-xs font-semibold rounded-lg disabled:opacity-30 transition-all flex items-center justify-center gap-1.5"
+                          >
+                            {creatingLocation ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                            {creatingLocation ? 'Creating...' : 'Create & Select'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowCreateLocation(false); setNewLocName(''); setNewLocAddress(''); }}
+                            className="px-3 py-2 text-xs text-muted hover:text-night font-medium transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setShowEditLocationPicker(false); setShowCreateLocation(false); setEditLocationSearch(''); setNewLocName(''); setNewLocAddress(''); }}
+                      className="w-full py-2 text-xs text-muted hover:text-night font-medium transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Precise pin location */}
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Precise Pin Location</label>
+                {editData.precise_lat && editData.precise_lng ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night">
+                      <div className="flex items-center gap-1.5">
+                        <Crosshair className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span>{Number(editData.precise_lat).toFixed(5)}, {Number(editData.precise_lng).toFixed(5)}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditData({ ...editData, precise_lat: '', precise_lng: '' })}
+                      className="px-3 py-2.5 text-xs font-medium text-ember bg-ember/10 hover:bg-ember/15 rounded-xl transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      step="any"
+                      value={editData.precise_lat}
+                      onChange={(e) => setEditData({ ...editData, precise_lat: e.target.value })}
+                      placeholder="Latitude"
+                      className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      value={editData.precise_lng}
+                      onChange={(e) => setEditData({ ...editData, precise_lng: e.target.value })}
+                      placeholder="Longitude"
+                      className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                    />
+                  </div>
+                )}
+                <p className="text-[10px] text-muted/60 mt-1">Optional — for exact GPS coordinates</p>
+              </div>
             </div>
             <div className="p-5 border-t border-night/5 shrink-0 space-y-2">
               {editError && (
@@ -346,7 +555,7 @@ export default function PersonProfilePage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white rounded-xl border border-night/5 p-1 mb-4">
-        {(['animals', 'details', 'notes'] as const).map((tab) => (
+        {(['animals', 'map', 'details', 'notes'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -354,13 +563,22 @@ export default function PersonProfilePage() {
               activeTab === tab ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-night'
             }`}
           >
-            {tab === 'animals' ? `Animals (${animals.length})` : tab === 'notes' ? `Notes (${notes.length})` : 'Details'}
+            {tab === 'animals' ? `Animals (${animals.length})` : tab === 'notes' ? `Notes (${notes.length})` : tab === 'map' ? 'Map' : 'Details'}
           </button>
         ))}
       </div>
 
       <div className="page-enter">
         {activeTab === 'animals' && <AnimalsTab animals={animals} />}
+        {activeTab === 'map' && (
+          <OwnerLocationMap
+            ownerId={owner.id}
+            primaryLocationId={owner.primary_location?.id ?? null}
+            preciseLat={owner.precise_lat}
+            preciseLng={owner.precise_lng}
+            animalIds={animals.map((a) => a.id)}
+          />
+        )}
         {activeTab === 'details' && <DetailsTab owner={owner} />}
         {activeTab === 'notes' && <NotesTab notes={notes} />}
       </div>

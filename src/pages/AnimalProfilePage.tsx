@@ -25,6 +25,7 @@ import {
   Loader2,
   Upload,
   Search,
+  Plus,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatDate, daysSince } from '../lib/format';
@@ -123,6 +124,10 @@ export default function AnimalProfilePage() {
   const [editLocationSearch, setEditLocationSearch] = useState('');
   const [editLocationResults, setEditLocationResults] = useState<{ id: string; name: string; address: string | null }[]>([]);
   const [showEditLocationPicker, setShowEditLocationPicker] = useState(false);
+  const [showCreateLocation, setShowCreateLocation] = useState(false);
+  const [newLocName, setNewLocName] = useState('');
+  const [newLocAddress, setNewLocAddress] = useState('');
+  const [creatingLocation, setCreatingLocation] = useState(false);
 
   useEffect(() => {
     if (id) loadAnimal(id);
@@ -216,6 +221,24 @@ export default function AnimalProfilePage() {
     }, 300);
     return () => clearTimeout(timeout);
   }, [editLocationSearch, showEditLocationPicker]);
+
+  async function handleCreateLocation() {
+    if (!newLocName.trim()) return;
+    setCreatingLocation(true);
+    const { data, error } = await supabase
+      .from('locations')
+      .insert({ name: newLocName.trim(), address: newLocAddress.trim() || null })
+      .select('id, name')
+      .single();
+    setCreatingLocation(false);
+    if (error) { setEditError(`Failed to create location: ${error.message}`); return; }
+    setEditData((prev: any) => ({ ...prev, primary_location_id: data.id, primary_location_name: data.name }));
+    setShowCreateLocation(false);
+    setShowEditLocationPicker(false);
+    setEditLocationSearch('');
+    setNewLocName('');
+    setNewLocAddress('');
+  }
 
   function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -555,6 +578,7 @@ export default function AnimalProfilePage() {
                         onClick={() => {
                           setEditData({ ...editData, primary_location_id: loc.id, primary_location_name: loc.name });
                           setShowEditLocationPicker(false);
+                          setShowCreateLocation(false);
                           setEditLocationSearch('');
                         }}
                         className="w-full flex items-center gap-2 p-2.5 rounded-xl border border-night/5 bg-white text-left text-sm hover:bg-sand/50 transition-colors"
@@ -566,9 +590,56 @@ export default function AnimalProfilePage() {
                         </div>
                       </button>
                     ))}
+                    {!showCreateLocation ? (
+                      <button
+                        type="button"
+                        onClick={() => { setShowCreateLocation(true); setNewLocName(editLocationSearch); }}
+                        className="w-full flex items-center gap-2 p-2.5 rounded-xl border border-dashed border-primary/30 bg-primary/5 text-left text-sm hover:bg-primary/10 transition-colors text-primary font-medium"
+                      >
+                        <Plus className="w-4 h-4 shrink-0" />
+                        Create new location
+                      </button>
+                    ) : (
+                      <div className="p-3 rounded-xl border border-primary/20 bg-primary/5 space-y-2">
+                        <p className="text-xs font-medium text-night">New Location</p>
+                        <input
+                          type="text"
+                          value={newLocName}
+                          onChange={(e) => setNewLocName(e.target.value)}
+                          placeholder="Location name *"
+                          className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                          autoFocus
+                        />
+                        <input
+                          type="text"
+                          value={newLocAddress}
+                          onChange={(e) => setNewLocAddress(e.target.value)}
+                          placeholder="Address (optional)"
+                          className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCreateLocation}
+                            disabled={!newLocName.trim() || creatingLocation}
+                            className="flex-1 py-2 bg-primary text-white text-xs font-semibold rounded-lg disabled:opacity-30 transition-all flex items-center justify-center gap-1.5"
+                          >
+                            {creatingLocation ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                            {creatingLocation ? 'Creating...' : 'Create & Select'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowCreateLocation(false); setNewLocName(''); setNewLocAddress(''); }}
+                            className="px-3 py-2 text-xs text-muted hover:text-night font-medium transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <button
                       type="button"
-                      onClick={() => { setShowEditLocationPicker(false); setEditLocationSearch(''); }}
+                      onClick={() => { setShowEditLocationPicker(false); setShowCreateLocation(false); setEditLocationSearch(''); setNewLocName(''); setNewLocAddress(''); }}
                       className="w-full py-2 text-xs text-muted hover:text-night font-medium transition-colors"
                     >
                       Cancel

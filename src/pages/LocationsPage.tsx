@@ -1,10 +1,12 @@
-import { useEffect, useState, useMemo } from 'react';
-import { MapPin } from 'lucide-react';
+import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
+import { MapPin, List, Map, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import LocationCard, { type LocationCardData } from '../components/locations/LocationCard';
 import LocationFilters, { type LocationFilterState, DEFAULT_LOCATION_FILTERS } from '../components/locations/LocationFilters';
 import EmptyState from '../components/shared/EmptyState';
+
+const MapInner = lazy(() => import('../components/animals/DogLocationMapInner'));
 
 interface RawLocation {
   id: string;
@@ -25,6 +27,7 @@ export default function LocationsPage() {
   const [lastVisitedMap, setLastVisitedMap] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<LocationFilterState>(DEFAULT_LOCATION_FILTERS);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<'list' | 'map'>('list');
 
   useEffect(() => {
     if (session) loadData();
@@ -108,12 +111,42 @@ export default function LocationsPage() {
     last_visited: lastVisitedMap[l.id] ?? null,
   }));
 
+  const mapPins = useMemo(() => {
+    return filtered
+      .filter((l) => l.latitude && l.longitude)
+      .map((l) => ({
+        id: l.id,
+        type: 'home' as const,
+        label: l.name,
+        detail: l.address || l.precise_location || null,
+        date: null,
+        lat: Number(l.latitude),
+        lng: Number(l.longitude),
+      }));
+  }, [filtered]);
+
   return (
     <div>
       <div className="flex items-start justify-between gap-4 mb-5">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">Locations</h1>
           <p className="text-muted mt-0.5">Outreach sites and service areas</p>
+        </div>
+        <div className="flex gap-1 bg-white rounded-xl border border-night/5 p-1">
+          <button
+            onClick={() => setView('list')}
+            className={`p-2 rounded-lg transition-all ${view === 'list' ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-night'}`}
+            aria-label="List view"
+          >
+            <List className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setView('map')}
+            className={`p-2 rounded-lg transition-all ${view === 'map' ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-night'}`}
+            aria-label="Map view"
+          >
+            <Map className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -141,6 +174,32 @@ export default function LocationsPage() {
             </div>
           ))}
         </div>
+      ) : view === 'map' ? (
+        mapPins.length === 0 ? (
+          <div className="mt-4">
+            <EmptyState
+              icon={MapPin}
+              title="No locations with coordinates"
+              description="Locations need latitude/longitude to appear on the map"
+              iconColor="text-ember"
+            />
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-night/5 overflow-hidden mt-4">
+            <div className="h-[28rem] md:h-[36rem]">
+              <Suspense fallback={
+                <div className="h-full flex items-center justify-center text-muted text-sm gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading map...
+                </div>
+              }>
+                <MapInner pins={mapPins} />
+              </Suspense>
+            </div>
+            <div className="px-5 py-2.5 border-t border-night/5 text-[11px] text-muted">
+              {mapPins.length} location{mapPins.length !== 1 ? 's' : ''} shown
+            </div>
+          </div>
+        )
       ) : cardData.length === 0 ? (
         <div className="mt-4">
           <EmptyState
