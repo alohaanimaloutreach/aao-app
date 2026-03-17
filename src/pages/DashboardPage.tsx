@@ -300,7 +300,7 @@ export default function DashboardPage() {
           <p className="text-sm text-muted mb-3">Here are the quickest ways to get started:</p>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => { dismissWelcome(); setShowSetup(true); }}
+              onClick={() => setShowSetup(true)}
               className="flex items-center gap-2 px-3.5 py-2 bg-primary/10 text-primary text-sm font-medium rounded-xl hover:bg-primary/15 transition-colors"
             >
               <CalendarHeart className="w-4 h-4" />
@@ -308,7 +308,6 @@ export default function DashboardPage() {
             </button>
             <Link
               to="/animals"
-              onClick={dismissWelcome}
               className="flex items-center gap-2 px-3.5 py-2 bg-sand text-night text-sm font-medium rounded-xl hover:bg-sand/80 transition-colors"
             >
               <PawPrint className="w-4 h-4" />
@@ -316,7 +315,6 @@ export default function DashboardPage() {
             </Link>
             <Link
               to="/people"
-              onClick={dismissWelcome}
               className="flex items-center gap-2 px-3.5 py-2 bg-sand text-night text-sm font-medium rounded-xl hover:bg-sand/80 transition-colors"
             >
               <Users className="w-4 h-4" />
