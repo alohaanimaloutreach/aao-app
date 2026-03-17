@@ -270,7 +270,6 @@ export default function DashboardPage() {
           <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">
             Aloha, {profile?.name?.split(' ')[0] ?? 'friend'}
           </h1>
-          <p className="text-muted mt-0.5">Here is what is happening at AAO today</p>
         </div>
         <div className="flex gap-2 shrink-0">
           <button
