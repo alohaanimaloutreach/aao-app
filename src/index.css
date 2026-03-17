@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #6ea832;
+  --color-primary-hover: #5d9128;
+  --color-night: #1c1708;
+  --color-gold: #e8c84a;
+  --color-sand: #f7f1e3;
+  --color-ember: #c45c2a;
+  --color-muted: #7a7060;
+  --color-white: #ffffff;
+
+  --font-heading: 'Fraunces', serif;
+  --font-body: 'Figtree', sans-serif;
+}
+
+/* Global smoothing */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* Prevent iOS Safari from inflating text */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-night);
+  background-color: var(--color-sand);
+  margin: 0;
+  overflow-x: hidden;
+  /* Smoother scroll on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+}
+
+/* iOS safe areas */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Prevent body scroll when drawer is open */
+body.drawer-open {
+  overflow: hidden;
+  /* Prevent iOS bounce scroll while locked */
+  position: fixed;
+  width: 100%;
+}
+
+/* Backdrop animation */
+.drawer-backdrop {
+  background-color: rgba(28, 23, 8, 0);
+  animation: fadeIn 200ms ease forwards;
+}
+@keyframes fadeIn {
+  to { background-color: rgba(28, 23, 8, 0.4); }
+}
+
+/* Page content fade-in */
+.page-enter {
+  animation: pageIn 250ms ease;
+}
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Smooth focus rings everywhere */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Better input focus */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+}
+
+
+/* Loading skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--color-muted)/8 25%, var(--color-muted)/15 50%, var(--color-muted)/8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease infinite;
+  border-radius: 6px;
+}
+
+/* Scrollbar styling — desktop only */
+@media (pointer: fine) {
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-muted);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-night);
+  }
+}
+
+/* Active press states */
+button:active:not(:disabled),
+a:active {
+  transform: scale(0.97);
+}
+
+/* Card hover lift — desktop only to avoid sticky hover on touch */
+.card-hover {
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+@media (hover: hover) {
+  .card-hover:hover {
+    box-shadow: 0 4px 12px rgba(28, 23, 8, 0.08);
+    transform: translateY(-1px);
+  }
+}
+
+/* Tap highlight for mobile */
+@media (pointer: coarse) {
+  .card-hover:active {
+    background-color: rgba(28, 23, 8, 0.02);
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .page-enter {
+    animation: none;
+  }
+}
+
+/* Screen reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Test mode — pulsing amber border */
+@keyframes testModePulse {
+  0%, 100% { box-shadow: inset 0 0 0 3px #f59e0b; }
+  50% { box-shadow: inset 0 0 0 3px #fbbf24; }
+}
+.test-mode-frame {
+  animation: testModePulse 2s ease-in-out infinite;
+}
+
+/* Test mode — striped banner */
+@keyframes testModeStripes {
+  0% { background-position: 0 0; }
+  100% { background-position: 40px 0; }
+}
+.test-mode-banner {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 8px,
+    rgba(0,0,0,0.06) 8px,
+    rgba(0,0,0,0.06) 16px
+  );
+  background-size: 40px 40px;
+  animation: testModeStripes 1.5s linear infinite;
+}
+
+/* Skip to content link for keyboard users */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--color-primary);
+  color: white;
+  padding: 8px 16px;
+  z-index: 100;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 0 0 8px 0;
+  transition: top 200ms ease;
+}
+.skip-link:focus {
+  top: 0;
+}

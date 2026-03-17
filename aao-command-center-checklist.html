@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AAO Command Center — Project Checklist</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --olive:#6ea832;--night:#1c1708;--dark:#3a3210;--gold:#e8c84a;--sand:#f7f1e3;
+      --ember:#c45c2a;--white:#ffffff;--muted:#7a7060;--stripe:#f0ece1;--done-bg:#eef6e3;
+      --phase1:#6ea832;--phase2:#3a8a7a;--phase3:#c45c2a;--phase4:#7a5cb8;--phase5:#2a7ac4;
+    }
+    body { font-family:'Figtree',sans-serif; background:var(--sand); color:var(--night); min-height:100vh; padding:2rem 1.5rem 4rem; }
+    .header { max-width:900px; margin:0 auto 2rem; }
+    .header-top { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+    .header h1 { font-family:'Fraunces',serif; font-size:2rem; font-weight:600; color:var(--night); line-height:1.2; }
+    .header h1 span { color:var(--olive); }
+    .header-meta { font-size:0.85rem; color:var(--muted); margin-top:0.4rem; }
+    .progress-wrap { text-align:right; min-width:140px; }
+    .progress-label { font-size:0.75rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.35rem; }
+    .progress-bar { background:#ddd5c4; border-radius:99px; height:10px; overflow:hidden; width:140px; margin-left:auto; }
+    .progress-fill { background:var(--olive); height:100%; border-radius:99px; transition:width 0.4s ease; }
+    .progress-count { font-size:0.78rem; color:var(--muted); margin-top:0.3rem; }
+    .divider { border:none; border-top:2px solid var(--olive); margin:1.2rem 0 0; opacity:0.4; }
+    .note { background:var(--white); border-left:3px solid var(--gold); border-radius:0 6px 6px 0; padding:0.65rem 1rem; font-size:0.82rem; color:var(--muted); margin-top:1rem; }
+    .note strong { color:var(--night); }
+    .phase-nav { max-width:900px; margin:1.25rem auto 1.5rem; display:flex; gap:0.5rem; flex-wrap:wrap; }
+    .phase-pill { font-size:0.75rem; font-weight:700; padding:0.3rem 0.85rem; border-radius:99px; border:2px solid; cursor:pointer; transition:background 0.15s,color 0.15s; display:flex; align-items:center; gap:0.4rem; }
+    .phase-pill .pill-count { font-size:0.68rem; opacity:0.8; }
+    .phase-pill[data-phase="1"]{border-color:var(--phase1);color:var(--phase1);}
+    .phase-pill[data-phase="1"]:hover,.phase-pill[data-phase="1"].active{background:var(--phase1);color:var(--white);}
+    .phase-pill[data-phase="2"]{border-color:var(--phase2);color:var(--phase2);}
+    .phase-pill[data-phase="2"]:hover,.phase-pill[data-phase="2"].active{background:var(--phase2);color:var(--white);}
+    .phase-pill[data-phase="3"]{border-color:var(--phase3);color:var(--phase3);}
+    .phase-pill[data-phase="3"]:hover,.phase-pill[data-phase="3"].active{background:var(--phase3);color:var(--white);}
+    .phase-pill[data-phase="4"]{border-color:var(--phase4);color:var(--phase4);}
+    .phase-pill[data-phase="4"]:hover,.phase-pill[data-phase="4"].active{background:var(--phase4);color:var(--white);}
+    .phase-pill[data-phase="5"]{border-color:var(--phase5);color:var(--phase5);}
+    .phase-pill[data-phase="5"]:hover,.phase-pill[data-phase="5"].active{background:var(--phase5);color:var(--white);}
+    .phase-pill[data-phase="all"]{border-color:var(--muted);color:var(--muted);}
+    .phase-pill[data-phase="all"]:hover,.phase-pill[data-phase="all"].active{background:var(--night);color:var(--white);border-color:var(--night);}
+    .sections { max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:1.25rem; }
+    .section { background:var(--white); border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(28,23,8,0.08); border-left:4px solid var(--olive); }
+    .section[data-phase="1"]{border-left-color:var(--phase1);}
+    .section[data-phase="2"]{border-left-color:var(--phase2);}
+    .section[data-phase="3"]{border-left-color:var(--phase3);}
+    .section[data-phase="4"]{border-left-color:var(--phase4);}
+    .section[data-phase="5"]{border-left-color:var(--phase5);}
+    .section.hidden { display:none; }
+    .section-header { background:var(--night); padding:0.75rem 1.2rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; cursor:pointer; user-select:none; }
+    .section-header:hover { background:var(--dark); }
+    .section-left { display:flex; align-items:center; gap:0.75rem; }
+    .phase-badge { font-size:0.65rem; font-weight:800; letter-spacing:0.06em; padding:0.15rem 0.5rem; border-radius:4px; text-transform:uppercase; flex-shrink:0; }
+    .section[data-phase="1"] .phase-badge{background:var(--phase1);color:var(--white);}
+    .section[data-phase="2"] .phase-badge{background:var(--phase2);color:var(--white);}
+    .section[data-phase="3"] .phase-badge{background:var(--phase3);color:var(--white);}
+    .section[data-phase="4"] .phase-badge{background:var(--phase4);color:var(--white);}
+    .section[data-phase="5"] .phase-badge{background:var(--phase5);color:var(--white);}
+    .section-title { font-family:'Fraunces',serif; font-size:0.95rem; font-weight:600; color:var(--white); }
+    .section-right { display:flex; align-items:center; gap:0.75rem; flex-shrink:0; }
+    .section-pill { font-size:0.72rem; font-weight:700; color:var(--night); background:var(--gold); border-radius:99px; padding:0.15rem 0.6rem; }
+    .chevron { color:rgba(255,255,255,0.5); font-size:0.8rem; transition:transform 0.2s; }
+    .section.collapsed .chevron { transform:rotate(-90deg); }
+    .task-list { padding:0.5rem 0; }
+    .section.collapsed .task-list { display:none; }
+    .task-item { display:flex; align-items:flex-start; gap:0.85rem; padding:0.65rem 1.2rem; border-bottom:1px solid #ede8dc; transition:background 0.15s; }
+    .task-item:last-child { border-bottom:none; }
+    .task-item:nth-child(even) { background:var(--stripe); }
+    .task-item:hover { background:#ece5d4; }
+    .task-item.is-done { background:var(--done-bg)!important; }
+    .task-item.is-done .task-text { text-decoration:line-through; opacity:0.55; }
+    .task-item.is-done .task-note { opacity:0.45; }
+    .task-item.is-done .task-tag { display:none; }
+    .task-item.is-done .done-badge { display:inline-block; }
+    .done-badge { display:none; font-size:0.65rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em; white-space:nowrap; margin-top:2px; flex-shrink:0; background:#c8e8a0; color:#3a6010; }
+    .check-wrap { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; min-width:22px; border:2px solid #c5ba9e; border-radius:5px; cursor:pointer; transition:border-color 0.15s,background 0.15s; margin-top:1px; }
+    .check-wrap:hover { border-color:var(--olive); }
+    .check-wrap.checked { background:var(--olive); border-color:var(--olive); }
+    .check-wrap svg { display:none; }
+    .check-wrap.checked svg { display:block; }
+    .task-body { flex:1; min-width:0; }
+    .task-text { font-size:0.88rem; font-weight:500; color:var(--night); line-height:1.45; }
+    .task-note { font-size:0.78rem; color:var(--muted); margin-top:0.2rem; line-height:1.4; }
+    .task-note code { font-family:'JetBrains Mono',monospace; font-size:0.73rem; background:#e8ddd0; padding:0.05rem 0.3rem; border-radius:3px; color:var(--dark); }
+    .task-tag { font-size:0.65rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em; white-space:nowrap; margin-top:2px; flex-shrink:0; }
+    .tag-current{background:#fef3c7;color:#92400e;}
+    .tag-testing{background:#dbeafe;color:#1e40af;}
+    .tag-todo{background:#e0e7ff;color:#3730a3;}
+    .tag-code{background:#d1fae5;color:#065f46;}
+    .tag-deploy{background:#fee2e2;color:#991b1b;}
+    .tag-done-label{background:#c8e8a0;color:#3a6010;}
+    .actions { max-width:900px; margin:1.5rem auto 0; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; }
+    .btn { font-family:'Figtree',sans-serif; font-size:0.82rem; font-weight:600; padding:0.45rem 1rem; border-radius:6px; border:none; cursor:pointer; transition:background 0.15s; }
+    .btn-primary{background:var(--olive);color:var(--white);}
+    .btn-primary:hover{background:var(--dark);}
+    .btn-outline{background:transparent;color:var(--muted);border:1px solid #c5ba9e;}
+    .btn-outline:hover{border-color:var(--ember);color:var(--ember);}
+    .saved-note{font-size:0.78rem;color:var(--olive);opacity:0;transition:opacity 0.3s;}
+    .saved-note.show{opacity:1;}
+    @media(max-width:600px){body{padding:1rem 0.75rem 3rem;}.header h1{font-size:1.4rem;}.task-item{gap:0.6rem;padding:0.6rem 0.9rem;}}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>AAO Command Center <span>Checklist</span></h1>
+      <p class="header-meta">React + Supabase internal app &nbsp;&middot;&nbsp; Tracking all features & milestones</p>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label">Overall Progress</div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-count" id="progressCount">0 of 0 complete</div>
+    </div>
+  </div>
+  <hr class="divider">
+  <p class="note"><strong>Tech stack:</strong> React 18, TypeScript, Tailwind CSS v4, Supabase (Postgres + Auth + Storage + Realtime), Vite 8, React Router v6. Deployed target: <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;background:#e8ddd0;padding:0.05rem 0.3rem;border-radius:3px;">app.alohaanimaloutreach.org</code></p>
+</div>
+
+<div class="phase-nav" id="phaseNav"></div>
+<div class="sections" id="sections"></div>
+
+<div class="actions">
+  <button class="btn btn-primary" onclick="saveProgress()">Save Progress</button>
+  <button class="btn btn-outline" onclick="resetAll()">Reset All</button>
+  <span class="saved-note" id="savedNote">&#10003; Saved</span>
+</div>
+
+<script>
+const PHASES = [
+  {
+    phase:1, title:"Foundation & Core Pages",
+    tasks:[
+      {id:"p1-supabase",text:"Supabase project setup",note:"Database, auth, storage, and RLS policies configured",done:true},
+      {id:"p1-schema",text:"Database schema & migrations",note:"Tables: animals, owners, locations, care_events, outreach_events, field_notes, flags, situations, checkin_queue, outreach_event_volunteers, users",done:true},
+      {id:"p1-auth",text:"Authentication & protected routes",note:"Email/password login, session persistence, role-based access (admin/volunteer)",done:true},
+      {id:"p1-scaffold",text:"App scaffold & layout",note:"Vite + React + TypeScript + Tailwind v4. Sidebar (desktop), BottomNav (mobile), TopBar, AppLayout",done:true},
+      {id:"p1-dashboard",text:"Dashboard page",note:"Stats cards, recent activity feed with links to records, active event card",done:true},
+      {id:"p1-animals",text:"Animals page & profiles",note:"List with filters (type, sex, size, status), search, infinite scroll. Profile with photo upload, timeline, situation tracking",done:true},
+      {id:"p1-people",text:"People page & profiles",note:"Owner list with filters, search, infinite scroll. Profile with linked animals and care history",done:true},
+      {id:"p1-locations",text:"Locations page & profiles",note:"Location list with filters. Profile with linked owners and animals, field notes",done:true},
+      {id:"p1-notes",text:"Field Notes page & drawer",note:"Full page list + slide-out drawer accessible from any page. Timestamped, tagged by animal/owner/location, flaggable",done:true},
+      {id:"p1-flags",text:"Flags page",note:"Flagged field notes for admin review with resolve/dismiss actions",done:true},
+      {id:"p1-reports",text:"Reports page with CSV export",note:"Admin-only. Filterable reports: animals by status, care history, food distribution. CSV download",done:true},
+      {id:"p1-mobile",text:"Mobile-first responsive layout",note:"Bottom tab bar, touch-friendly controls, safe area insets",done:true},
+    ]
+  },
+  {
+    phase:2, title:"Outreach & Check-In Flow",
+    tasks:[
+      {id:"p2-event-setup",text:"Event setup flow",note:"Create outreach event: pick location (search + add new), set date. Auto-adds creator as volunteer",done:true},
+      {id:"p2-checkin-desk",text:"Check-in desk",note:"Owner-first flow: search/add owner, auto-load animals, toggle food + vet services per animal. Quick-add for new animals",done:true},
+      {id:"p2-vet-queue",text:"Vet queue with realtime updates",note:"Supabase realtime subscription. Queue list with position, wait time, remove. Detail view with per-animal service forms",done:true},
+      {id:"p2-queue-db",text:"Check-in queue database table & migration",note:"checkin_queue table with staged_care JSONB, RLS policies, realtime enabled",done:true},
+      {id:"p2-care-events",text:"Care event recording",note:"Food-only path writes directly. Vet path stages in queue, writes on complete. Tracks: food, vaccines, preventatives, spay/neuter, grooming, medical",done:true},
+      {id:"p2-event-summary",text:"Event summary page",note:"Stats grid (owners, animals, food bags/lbs, vaccines, etc.), details by owner, email summary button",done:true},
+      {id:"p2-end-event",text:"End event with confirmation",note:"Calculates food totals, marks event completed, redirects to summary. Confirmation dialog prevents accidental closure",done:true},
+      {id:"p2-volunteer-tracking",text:"Auto volunteer tracking",note:"Automatically records volunteers via upsert when they perform check-in or queue actions",done:true},
+      {id:"p2-dashboard-active",text:"Dashboard active event card",note:"Shows when event is active: Check In Desk button, Vet Queue button (with count), End Event button",done:true},
+      {id:"p2-queue-badge",text:"BottomNav queue badge",note:"Amber dot on Outreach tab when queue has waiting items. Polls every 30 seconds",done:true},
+    ]
+  },
+  {
+    phase:3, title:"Polish & Quality of Life",
+    tasks:[
+      {id:"p3-test-mode",text:"Test mode toggle",note:"TopBar + Sidebar toggle. Tags all created records with [TEST] for easy cleanup. Amber banner when active",done:true},
+      {id:"p3-activity-links",text:"Dashboard activity links",note:"Recent activity items link directly to associated animal/owner/location profiles",done:true},
+      {id:"p3-photos",text:"Animal photo uploads",note:"Supabase storage bucket, profile photo selection, photo gallery on animal profile",done:true},
+      {id:"p3-aao-ids",text:"Auto-generated AAO IDs",note:"Database function `generate_aao_id()` creates AAO-000001 format IDs for animals",done:true},
+      {id:"p3-infinite-scroll",text:"Infinite scroll on list pages",note:"Animals, People pages load more on scroll instead of pagination",done:true},
+      {id:"p3-search-global",text:"Global search",note:"Cmd+K or search icon. Searches animals, owners, locations with grouped results and direct links to profiles",done:true},
+      {id:"p3-loading-states",text:"Loading & empty states polish",note:"Skeleton loaders on all list pages, EmptyState with role=status, aria-busy on loading sections",done:true},
+      {id:"p3-form-validation",text:"Form validation & error messages",note:"Error handling with user-facing messages on all DB operations. aria-live regions for error/success feedback",done:true},
+      {id:"p3-keyboard-nav",text:"Keyboard navigation & accessibility",note:"Skip link, Cmd+K search, Esc to close, aria-modal on dialogs, aria-live regions, reduced motion support, sr-only utility, focus-visible rings",done:true},
+    ]
+  },
+  {
+    phase:4, title:"Deploy & Production",
+    tasks:[
+      {id:"p4-env-prod",text:"Production environment setup",note:"Separate Supabase project for production or configure production environment variables",tag:"deploy"},
+      {id:"p4-build-test",text:"Production build & testing",note:"Run `vite build`, verify no TypeScript errors, test all flows in preview mode",tag:"testing"},
+      {id:"p4-deploy-netlify",text:"Deploy to Netlify",note:"Connect GitHub repo, configure build settings, set environment variables",tag:"deploy"},
+      {id:"p4-subdomain",text:"Configure app.alohaanimaloutreach.org",note:"Add subdomain DNS record at registrar pointing to Netlify. SSL auto-provisions",tag:"deploy"},
+      {id:"p4-supabase-prod",text:"Supabase production configuration",note:"Verify RLS policies, set up proper auth redirect URLs, configure storage policies for production domain",tag:"deploy"},
+      {id:"p4-seed-prod",text:"Seed production data",note:"Set up initial locations, create admin user accounts, verify all tables are ready",tag:"deploy"},
+      {id:"p4-smoke-test",text:"Production smoke test",note:"Full end-to-end test on live site: login, create animal, run outreach event, check reports",tag:"testing"},
+      {id:"p4-backup",text:"Database backup strategy",note:"Configure Supabase automatic backups, document restore procedure",tag:"todo"},
+    ]
+  },
+  {
+    phase:5, title:"Future Enhancements",
+    tasks:[
+      {id:"p5-notifications",text:"In-app notifications",note:"Alert volunteers about queue items, overdue medical events, new flags",tag:"todo"},
+      {id:"p5-map-view",text:"Map view for locations",note:"Visual map showing location pins with animal/owner counts",tag:"todo"},
+      {id:"p5-offline",text:"Offline support",note:"Service worker for basic offline access during outreach in areas with poor connectivity",tag:"todo"},
+      {id:"p5-advanced-reports",text:"Advanced reporting & analytics",note:"Trends over time, monthly comparisons, impact metrics for grant applications",tag:"todo"},
+      {id:"p5-printable",text:"Printable reports",note:"Print-friendly event summaries and animal records for fieldwork",tag:"todo"},
+      {id:"p5-user-mgmt",text:"User management & invites",note:"Admin panel for inviting new volunteers, managing roles, deactivating accounts",tag:"todo"},
+      {id:"p5-audit-log",text:"Audit log",note:"Track who changed what and when across all records",tag:"todo"},
+      {id:"p5-medical-reminders",text:"Medical event reminders",note:"Scheduled reminders for upcoming vaccines, follow-ups, and preventative care due dates",tag:"todo"},
+      {id:"p5-bulk-ops",text:"Bulk operations",note:"Bulk update animal statuses, bulk food distribution logging, batch CSV imports",tag:"todo"},
+      {id:"p5-integrations",text:"External integrations",note:"Email summaries, calendar sync for outreach events, potential Slack/Discord alerts",tag:"todo"},
+    ]
+  },
+];
+
+const TAG_LABELS={current:'In Progress',testing:'Testing',todo:'To Do',code:'Claude Code',deploy:'Deploy'};
+const TAG_CLASSES={current:'tag-current',testing:'tag-testing',todo:'tag-todo',code:'tag-code',deploy:'tag-deploy'};
+
+function tagHTML(tag){if(!tag)return '';return `<span class="task-tag ${TAG_CLASSES[tag]||''}">${TAG_LABELS[tag]||tag}</span>`;}
+function svg(){return `<svg width="12" height="9" viewBox="0 0 12 9" fill="none"><path d="M1 4.5L4.5 8L11 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;}
+
+function allIds(p){return p.tasks.map(t=>t.id);}
+function totalItems(){return PHASES.reduce((a,p)=>a+allIds(p).length,0);}
+
+const KEY='aao-cc-checklist';
+let checked={},collapsed={},activeFilter='all';
+
+function loadState(){try{const s=localStorage.getItem(KEY);if(s){const p=JSON.parse(s);checked=p.checked||{};collapsed=p.collapsed||{};}}catch(e){}}
+function saveState(){try{localStorage.setItem(KEY,JSON.stringify({checked,collapsed}));}catch(e){}}
+
+function saveProgress(){
+  saveState();
+  const n=document.getElementById('savedNote');
+  n.classList.add('show');setTimeout(()=>n.classList.remove('show'),2000);
+}
+
+function resetAll(){
+  if(!confirm('Reset all checkboxes? Pre-done items will be re-checked automatically.'))return;
+  checked={};
+  PHASES.forEach(p=>{p.tasks.forEach(t=>{if(t.done)checked[t.id]=true;});});
+  saveState();render();updateProgress();
+}
+
+function toggle(id){
+  checked[id]=!checked[id];saveState();
+  const item=document.querySelector(`.task-item[data-id="${id}"]`);
+  const wrap=document.querySelector(`.check-wrap[data-id="${id}"]`);
+  if(!item||!wrap)return;
+  item.classList.toggle('is-done',!!checked[id]);
+  wrap.classList.toggle('checked',!!checked[id]);
+  updateProgress();updateAllPills();
+}
+
+function toggleCollapse(idx){
+  const key='sec-'+idx;collapsed[key]=!collapsed[key];saveState();
+  document.querySelector(`.section[data-idx="${idx}"]`).classList.toggle('collapsed',!!collapsed[key]);
+}
+
+function setFilter(phase){
+  activeFilter=phase;
+  document.querySelectorAll('.phase-pill').forEach(p=>p.classList.toggle('active',p.dataset.phase===String(phase)));
+  document.querySelectorAll('.section').forEach(s=>s.classList.toggle('hidden',phase!=='all'&&s.dataset.phase!==String(phase)));
+}
+
+function updateProgress(){
+  const total=totalItems();
+  const done=Object.values(checked).filter(Boolean).length;
+  const pct=total?Math.round(done/total*100):0;
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('progressCount').textContent=`${done} of ${total} complete`;
+}
+
+function doneForPhase(p){return allIds(p).filter(id=>checked[id]).length;}
+
+function updateAllPills(){
+  PHASES.forEach((p,idx)=>{
+    const done=doneForPhase(p),total=allIds(p).length;
+    const pill=document.querySelector(`.section[data-idx="${idx}"] .section-pill`);
+    if(pill)pill.textContent=`${done}/${total}`;
+    const navPill=document.querySelector(`.phase-pill[data-phase="${p.phase}"] .pill-count`);
+    if(navPill)navPill.textContent=`${done}/${total}`;
+  });
+  const total=totalItems(),done=Object.values(checked).filter(Boolean).length;
+  const ap=document.querySelector('.phase-pill[data-phase="all"] .pill-count');
+  if(ap)ap.textContent=`${done}/${total}`;
+}
+
+function render(){
+  const nav=document.getElementById('phaseNav');
+  nav.innerHTML='';
+  const total=totalItems(),done=Object.values(checked).filter(Boolean).length;
+  const ap=document.createElement('div');
+  ap.className='phase-pill'+(activeFilter==='all'?' active':'');
+  ap.dataset.phase='all';
+  ap.innerHTML=`All Phases <span class="pill-count">${done}/${total}</span>`;
+  ap.onclick=()=>setFilter('all');
+  nav.appendChild(ap);
+
+  PHASES.forEach(p=>{
+    const d=doneForPhase(p),t=allIds(p).length;
+    const pill=document.createElement('div');
+    pill.className='phase-pill'+(activeFilter===p.phase?' active':'');
+    pill.dataset.phase=String(p.phase);
+    pill.innerHTML=`Phase ${p.phase} <span class="pill-count">${d}/${t}</span>`;
+    pill.onclick=()=>setFilter(p.phase);
+    nav.appendChild(pill);
+  });
+
+  const container=document.getElementById('sections');
+  container.innerHTML='';
+
+  PHASES.forEach((p,idx)=>{
+    const done=doneForPhase(p),total=allIds(p).length;
+    const colKey='sec-'+idx,isCollapsed=!!collapsed[colKey];
+    const isHidden=activeFilter!=='all'&&activeFilter!==p.phase;
+
+    const secEl=document.createElement('div');
+    secEl.className=`section${isCollapsed?' collapsed':''}${isHidden?' hidden':''}`;
+    secEl.dataset.phase=String(p.phase);
+    secEl.dataset.idx=String(idx);
+    secEl.innerHTML=`
+      <div class="section-header" onclick="toggleCollapse(${idx})">
+        <div class="section-left">
+          <span class="phase-badge">Phase ${p.phase}</span>
+          <span class="section-title">${p.title}</span>
+        </div>
+        <div class="section-right">
+          <span class="section-pill">${done}/${total}</span>
+          <span class="chevron">&#9662;</span>
+        </div>
+      </div>
+      <div class="task-list">
+        ${p.tasks.map(task=>`
+          <div class="task-item${checked[task.id]?' is-done':''}" data-id="${task.id}">
+            <div class="check-wrap${checked[task.id]?' checked':''}" data-id="${task.id}" onclick="toggle('${task.id}')">${svg()}</div>
+            <div class="task-body">
+              <div class="task-text">${task.text}</div>
+              ${task.note?`<div class="task-note">${task.note}</div>`:''}
+            </div>
+            ${task.done?'<span class="task-tag tag-done-label">Done</span>':tagHTML(task.tag)}
+            <span class="done-badge">Done</span>
+          </div>`).join('')}
+      </div>`;
+    container.appendChild(secEl);
+  });
+}
+
+loadState();
+PHASES.forEach(p=>{p.tasks.forEach(t=>{if(t.done&&checked[t.id]===undefined)checked[t.id]=true;});});
+render();updateProgress();
+window.addEventListener('beforeunload',saveState);
+</script>
+</body>
+</html>
