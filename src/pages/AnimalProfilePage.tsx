@@ -365,7 +365,7 @@ export default function AnimalProfilePage() {
 
           {haventSeen && (
             <span className="absolute bottom-3 left-3 bg-gold/90 text-night text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
-              Not seen in {lastSeenDays} days
+              {lastSeenDays === Infinity ? 'Never seen' : `Not seen in ${lastSeenDays} days`}
             </span>
           )}
         </div>

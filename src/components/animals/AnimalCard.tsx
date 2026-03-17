@@ -70,7 +70,7 @@ export default function AnimalCard({ animal }: Props) {
         {haventSeen && (
           <div className="absolute bottom-2 left-2 bg-gold/90 text-night text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            {lastSeenDays}d since last seen
+            {lastSeenDays === Infinity ? 'Never seen' : `${lastSeenDays}d since last seen`}
           </div>
         )}
       </div>
