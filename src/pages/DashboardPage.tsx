@@ -392,7 +392,7 @@ export default function DashboardPage() {
                 )}
               </div>
               {activeEvent.location_name && (
-                <p className="text-xs text-muted mt-0.5">{activeEvent.location_name}</p>
+                <p className="text-sm text-muted mt-0.5">{activeEvent.location_name}</p>
               )}
             </div>
           </div>
@@ -465,7 +465,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-night">{alert.title}</p>
-                <p className="text-xs text-muted mt-0.5">{alert.description}</p>
+                <p className="text-sm text-muted mt-0.5">{alert.description}</p>
               </div>
               <ArrowRight className="w-4 h-4 text-muted/50 mt-1 shrink-0" />
             </Link>
@@ -494,7 +494,7 @@ export default function DashboardPage() {
             ) : (
               <>
                 <p className="text-2xl md:text-3xl font-bold font-heading text-night leading-none">{card.value.toLocaleString()}</p>
-                <p className="text-xs md:text-sm text-muted mt-1">{card.label}</p>
+                <p className="text-sm text-muted mt-1">{card.label}</p>
               </>
             )}
           </Link>
@@ -513,7 +513,7 @@ export default function DashboardPage() {
             ) : (
               <div className="skeleton h-5 w-8" />
             )}
-            <p className="text-xs text-muted">Outreach events this month</p>
+            <p className="text-sm text-muted">Outreach events this month</p>
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-night/5 p-4 flex items-center gap-3">
@@ -526,7 +526,7 @@ export default function DashboardPage() {
             ) : (
               <div className="skeleton h-5 w-12" />
             )}
-            <p className="text-xs text-muted">Food distributed this month</p>
+            <p className="text-sm text-muted">Food distributed this month</p>
           </div>
         </div>
       </div>
@@ -564,8 +564,8 @@ export default function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-night leading-tight truncate">{item.description}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-muted">{formatRelative(item.date)}</span>
-                      {item.author && <span className="text-xs text-muted">{item.author}</span>}
+                      <span className="text-sm text-muted">{formatRelative(item.date)}</span>
+                      {item.author && <span className="text-sm text-muted">{item.author}</span>}
                     </div>
                   </div>
                   {item.link && <ArrowRight className="w-3.5 h-3.5 text-muted/25 shrink-0 mt-1" />}

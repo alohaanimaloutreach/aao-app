@@ -71,7 +71,7 @@ export default function PeopleFilters({ filters, onChange, locations, resultCoun
         <div className="bg-white rounded-2xl border border-night/5 p-4">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs text-muted font-medium mb-1">Location</label>
+              <label className="block text-sm text-muted font-medium mb-1">Location</label>
               <select
                 value={filters.locationId}
                 onChange={(e) => update({ locationId: e.target.value })}
@@ -84,7 +84,7 @@ export default function PeopleFilters({ filters, onChange, locations, resultCoun
               </select>
             </div>
             <div>
-              <label className="block text-xs text-muted font-medium mb-1">Animals</label>
+              <label className="block text-sm text-muted font-medium mb-1">Animals</label>
               <select
                 value={filters.hasAnimals}
                 onChange={(e) => update({ hasAnimals: e.target.value })}
@@ -115,7 +115,7 @@ export default function PeopleFilters({ filters, onChange, locations, resultCoun
         </div>
       )}
 
-      <p className="text-xs text-muted">
+      <p className="text-sm text-muted">
         {resultCount} {resultCount === 1 ? 'person' : 'people'}
       </p>
     </div>

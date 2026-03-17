@@ -541,7 +541,7 @@ export default function AnimalProfilePage() {
 
               {/* Location */}
               <div>
-                <label className="block text-xs font-medium text-muted mb-1">Location</label>
+                <label className="block text-sm font-medium text-muted mb-1">Location</label>
                 {!showEditLocationPicker ? (
                   <div className="flex items-center gap-2">
                     <div className="flex-1 px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night">
@@ -650,7 +650,7 @@ export default function AnimalProfilePage() {
 
               {/* Photo upload */}
               <div>
-                <label className="block text-xs font-medium text-muted mb-1">Add Photo</label>
+                <label className="block text-sm font-medium text-muted mb-1">Add Photo</label>
                 {photoPreview ? (
                   <div className="relative">
                     <img src={photoPreview} alt="Preview" className="w-full h-40 object-cover rounded-xl" />
@@ -751,7 +751,7 @@ function DetailsTab({ animal, situations }: { animal: AnimalDetail; situations: 
                 {animal.owner.name}
               </Link>
               {animal.owner.phone_primary && (
-                <p className="text-xs text-muted flex items-center gap-1">
+                <p className="text-sm text-muted flex items-center gap-1">
                   <Phone className="w-3 h-3" />
                   {animal.owner.phone_primary}
                 </p>
@@ -806,11 +806,11 @@ function DetailsTab({ animal, situations }: { animal: AnimalDetail; situations: 
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted">
+                <p className="text-sm text-muted">
                   {formatDate(s.started_at)}
                   {s.ended_at ? ` to ${formatDate(s.ended_at)}` : ' to present'}
                 </p>
-                {s.notes && <p className="text-xs text-muted mt-1">{s.notes}</p>}
+                {s.notes && <p className="text-sm text-muted mt-1">{s.notes}</p>}
               </div>
             ))}
           </div>
@@ -818,7 +818,7 @@ function DetailsTab({ animal, situations }: { animal: AnimalDetail; situations: 
       </DetailSection>
 
       {/* Meta */}
-      <div className="text-xs text-muted flex gap-4 pt-2">
+      <div className="text-sm text-muted flex gap-4 pt-2">
         <span>Created {formatDate(animal.created_at)}</span>
         <span>Updated {formatDate(animal.updated_at)}</span>
       </div>
@@ -900,7 +900,7 @@ function DetailRow({
   return (
     <div className="flex items-start gap-2 py-1.5">
       {Icon && <Icon className="w-3.5 h-3.5 text-muted mt-0.5 shrink-0" strokeWidth={1.5} />}
-      <span className="text-xs text-muted min-w-[80px] shrink-0">{label}</span>
+      <span className="text-sm text-muted min-w-[80px] shrink-0">{label}</span>
       <span className="text-sm text-night">{value}</span>
     </div>
   );
@@ -912,7 +912,7 @@ function EditField({ label, value, onChange, type = 'text', placeholder, multili
   const cls = 'w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40';
   return (
     <div>
-      <label className="block text-xs text-muted font-medium mb-1">{label}</label>
+      <label className="block text-sm text-muted font-medium mb-1">{label}</label>
       {multiline ? (
         <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} className={`${cls} resize-none`} placeholder={placeholder} />
       ) : (
@@ -927,7 +927,7 @@ function EditSelect({ label, value, onChange, options }: {
 }) {
   return (
     <div>
-      <label className="block text-xs text-muted font-medium mb-1">{label}</label>
+      <label className="block text-sm text-muted font-medium mb-1">{label}</label>
       <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30">
         {options.map(([val, lbl]) => (
           <option key={val} value={val}>{lbl}</option>

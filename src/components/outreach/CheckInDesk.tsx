@@ -458,7 +458,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
         <h3 className="text-lg font-heading font-bold text-night">New Owner</h3>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Name *</label>
+            <label className="block text-sm font-medium text-muted mb-1">Name *</label>
             <input
               type="text"
               value={newOwnerName}
@@ -469,7 +469,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Phone</label>
+            <label className="block text-sm font-medium text-muted mb-1">Phone</label>
             <input
               type="tel"
               value={newOwnerPhone}
@@ -480,7 +480,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
           </div>
           {/* Location picker */}
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Location</label>
+            <label className="block text-sm font-medium text-muted mb-1">Location</label>
             {!showLocationPicker ? (
               <div className="flex items-center gap-2">
                 <div className="flex-1 px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night">
@@ -569,7 +569,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
         <p className="text-xs text-muted">Adding for {owner?.name}</p>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Name *</label>
+            <label className="block text-sm font-medium text-muted mb-1">Name *</label>
             <input
               type="text"
               value={newAnimalName}
@@ -581,7 +581,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted mb-1">Type</label>
+              <label className="block text-sm font-medium text-muted mb-1">Type</label>
               <div className="flex gap-2">
                 {(['dog', 'cat'] as const).map((t) => (
                   <button
@@ -597,7 +597,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted mb-1">Sex</label>
+              <label className="block text-sm font-medium text-muted mb-1">Sex</label>
               <select
                 value={newAnimalSex}
                 onChange={(e) => setNewAnimalSex(e.target.value)}
@@ -610,7 +610,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Size</label>
+            <label className="block text-sm font-medium text-muted mb-1">Size</label>
             <div className="grid grid-cols-4 gap-1.5">
               {[
                 { value: 'small', label: 'S' },
@@ -631,7 +631,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Fixed?</label>
+            <label className="block text-sm font-medium text-muted mb-1">Fixed?</label>
             <div className="grid grid-cols-3 gap-1.5">
               {[
                 { value: 'unknown', label: 'Unknown' },
@@ -651,7 +651,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Notes</label>
+            <label className="block text-sm font-medium text-muted mb-1">Notes</label>
             <textarea
               value={newAnimalNotes}
               onChange={(e) => setNewAnimalNotes(e.target.value)}

@@ -178,9 +178,9 @@ export default function NotesPage() {
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
                   {n.flagged && <Flag className="w-3.5 h-3.5 text-gold fill-gold/20" />}
-                  <span className="text-xs text-muted">{formatDateTime(n.created_at)}</span>
+                  <span className="text-sm text-muted">{formatDateTime(n.created_at)}</span>
                 </div>
-                {n.author_name && <span className="text-xs text-muted">{n.author_name}</span>}
+                {n.author_name && <span className="text-sm text-muted">{n.author_name}</span>}
               </div>
 
               {/* Note text */}

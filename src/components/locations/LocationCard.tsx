@@ -48,7 +48,7 @@ export default function LocationCard({ location }: Props) {
 
           {/* Address / description */}
           {(location.address || location.precise_location) && (
-            <p className="text-xs text-muted mt-0.5 truncate">
+            <p className="text-sm text-muted mt-0.5 truncate">
               {location.address || location.precise_location}
             </p>
           )}
@@ -64,7 +64,7 @@ export default function LocationCard({ location }: Props) {
               {location.owner_count}
             </span>
             {location.last_visited && (
-              <span className="text-xs text-muted flex items-center gap-1">
+              <span className="text-sm text-muted flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 Visited {formatRelative(location.last_visited)}
               </span>

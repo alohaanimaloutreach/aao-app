@@ -137,11 +137,11 @@ export default function ActiveEventPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-1">
             {event.location?.name && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted">
+              <span className="inline-flex items-center gap-1 text-sm text-muted">
                 <MapPin className="w-3 h-3" /> {event.location.name}
               </span>
             )}
-            <span className="inline-flex items-center gap-1 text-xs text-muted">
+            <span className="inline-flex items-center gap-1 text-sm text-muted">
               <Calendar className="w-3 h-3" /> {formatDate(event.event_date)}
             </span>
           </div>

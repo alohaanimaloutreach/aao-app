@@ -191,7 +191,7 @@ export default function AnimalFilters({ filters, onChange, locations, resultCoun
       )}
 
       {/* Result count */}
-      <p className="text-xs text-muted">
+      <p className="text-sm text-muted">
         {resultCount} animal{resultCount !== 1 ? 's' : ''}
       </p>
     </div>
@@ -211,7 +211,7 @@ function FilterSelect({
 }) {
   return (
     <div>
-      <label className="block text-xs text-muted font-medium mb-1">{label}</label>
+      <label className="block text-sm text-muted font-medium mb-1">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

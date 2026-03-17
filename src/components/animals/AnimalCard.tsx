@@ -100,19 +100,19 @@ export default function AnimalCard({ animal }: Props) {
         {/* Meta info */}
         <div className="space-y-1">
           {animal.owner && (
-            <div className="flex items-center gap-1.5 text-xs text-muted">
+            <div className="flex items-center gap-1.5 text-sm text-muted">
               <User className="w-3 h-3 shrink-0" />
               <span className="truncate">{animal.owner.name}</span>
             </div>
           )}
           {animal.primary_location && (
-            <div className="flex items-center gap-1.5 text-xs text-muted">
+            <div className="flex items-center gap-1.5 text-sm text-muted">
               <MapPin className="w-3 h-3 shrink-0" />
               <span className="truncate">{animal.primary_location.name}</span>
             </div>
           )}
           {animal.last_seen && (
-            <div className="flex items-center gap-1.5 text-xs text-muted">
+            <div className="flex items-center gap-1.5 text-sm text-muted">
               <Clock className="w-3 h-3 shrink-0" />
               <span>Last seen {formatRelative(animal.last_seen)}</span>
             </div>

@@ -223,7 +223,7 @@ export default function FlagsPage() {
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-semibold text-night">{counts.unresolved}</p>
-                  <p className="text-xs text-muted">{config.label} flags</p>
+                  <p className="text-sm text-muted">{config.label} flags</p>
                 </div>
               </button>
             );
@@ -323,26 +323,26 @@ export default function FlagsPage() {
                         {config.label}
                       </span>
                     </div>
-                    <p className="text-xs text-muted leading-relaxed">
+                    <p className="text-sm text-muted leading-relaxed">
                       {flag.reason ?? 'Flagged for review'}
                     </p>
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
-                      <span className="text-xs text-muted">
+                      <span className="text-sm text-muted">
                         {formatDate(flag.created_at)}
                       </span>
                       {flag.resolved && flag.resolution_action && (
-                        <span className="text-xs text-primary font-medium">
+                        <span className="text-sm text-primary font-medium">
                           {getActionLabel(flag.resolution_action)}
                         </span>
                       )}
                       {flag.resolved && flag.resolved_at && (
-                        <span className="text-xs text-muted">
+                        <span className="text-sm text-muted">
                           Resolved {formatDate(flag.resolved_at)}
                         </span>
                       )}
                     </div>
                     {flag.resolved && flag.resolution_note && (
-                      <div className="flex items-start gap-1.5 mt-1.5 text-xs text-muted bg-sand/60 rounded-lg px-2.5 py-1.5">
+                      <div className="flex items-start gap-1.5 mt-1.5 text-sm text-muted bg-sand/60 rounded-lg px-2.5 py-1.5">
                         <MessageSquare className="w-3 h-3 shrink-0 mt-0.5" />
                         {flag.resolution_note}
                       </div>
@@ -407,7 +407,7 @@ export default function FlagsPage() {
                             </div>
                             <div>
                               <p className="text-sm font-medium text-night">{action.label}</p>
-                              <p className="text-xs text-muted">{action.description}</p>
+                              <p className="text-sm text-muted">{action.description}</p>
                             </div>
                           </div>
                         </button>

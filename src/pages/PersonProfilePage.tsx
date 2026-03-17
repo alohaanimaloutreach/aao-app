@@ -334,7 +334,7 @@ export default function PersonProfilePage() {
         {owner.precise_lat && owner.precise_lng && (
           <div className="mt-3 bg-sand/70 rounded-xl p-3 flex items-center gap-2">
             <Navigation className="w-4 h-4 text-primary" strokeWidth={1.75} />
-            <span className="text-xs text-muted">
+            <span className="text-sm text-muted">
               Pin location: {owner.precise_lat.toFixed(5)}, {owner.precise_lng.toFixed(5)}
             </span>
           </div>
@@ -369,29 +369,29 @@ export default function PersonProfilePage() {
             </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
               <div>
-                <label className="block text-xs text-muted font-medium mb-1">Name</label>
+                <label className="block text-sm text-muted font-medium mb-1">Name</label>
                 <input type="text" value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="block text-xs text-muted font-medium mb-1">Phone (primary)</label>
+                <label className="block text-sm text-muted font-medium mb-1">Phone (primary)</label>
                 <input type="tel" value={editData.phone_primary} onChange={(e) => setEditData({ ...editData, phone_primary: e.target.value })} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="block text-xs text-muted font-medium mb-1">Phone (secondary)</label>
+                <label className="block text-sm text-muted font-medium mb-1">Phone (secondary)</label>
                 <input type="tel" value={editData.phone_secondary} onChange={(e) => setEditData({ ...editData, phone_secondary: e.target.value })} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="block text-xs text-muted font-medium mb-1">Address</label>
+                <label className="block text-sm text-muted font-medium mb-1">Address</label>
                 <input type="text" value={editData.address} onChange={(e) => setEditData({ ...editData, address: e.target.value })} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="block text-xs text-muted font-medium mb-1">Notes</label>
+                <label className="block text-sm text-muted font-medium mb-1">Notes</label>
                 <textarea value={editData.notes} onChange={(e) => setEditData({ ...editData, notes: e.target.value })} rows={4} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
               </div>
 
               {/* Location */}
               <div>
-                <label className="block text-xs font-medium text-muted mb-1">Location</label>
+                <label className="block text-sm font-medium text-muted mb-1">Location</label>
                 {!showEditLocationPicker ? (
                   <div className="flex items-center gap-2">
                     <div className="flex-1 px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night">
@@ -500,7 +500,7 @@ export default function PersonProfilePage() {
 
               {/* Precise pin location */}
               <div>
-                <label className="block text-xs font-medium text-muted mb-1">Precise Pin Location</label>
+                <label className="block text-sm font-medium text-muted mb-1">Precise Pin Location</label>
                 {editData.precise_lat && editData.precise_lng ? (
                   <div className="flex items-center gap-2">
                     <div className="flex-1 px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night">
@@ -659,7 +659,7 @@ function DetailsTab({ owner }: { owner: OwnerDetail }) {
               loading="lazy"
             />
             <div className="flex items-center justify-between px-3 py-1.5 bg-sand/50">
-              <span className="text-xs text-muted">
+              <span className="text-sm text-muted">
                 {owner.precise_lat.toFixed(5)}, {owner.precise_lng.toFixed(5)}
               </span>
               <a
@@ -676,13 +676,13 @@ function DetailsTab({ owner }: { owner: OwnerDetail }) {
           <div className="bg-sand rounded-xl h-48 flex items-center justify-center">
             <div className="text-center">
               <MapPin className="w-8 h-8 text-muted/20 mx-auto mb-1" />
-              <p className="text-xs text-muted">No precise location set</p>
+              <p className="text-sm text-muted">No precise location set</p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="text-xs text-muted flex gap-4 pt-2">
+      <div className="text-sm text-muted flex gap-4 pt-2">
         <span>Created {formatDate(owner.created_at)}</span>
         <span>Updated {formatDate(owner.updated_at)}</span>
       </div>
@@ -712,10 +712,10 @@ function NotesTab({ notes }: { notes: OwnerNote[] }) {
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="flex items-center gap-1.5">
               {n.is_flagged && <Flag className="w-3 h-3 text-gold" />}
-              <span className="text-xs text-muted">{formatDate(n.created_at)}</span>
+              <span className="text-sm text-muted">{formatDate(n.created_at)}</span>
             </div>
             {n.created_by_name && (
-              <span className="text-xs text-muted">{n.created_by_name}</span>
+              <span className="text-sm text-muted">{n.created_by_name}</span>
             )}
           </div>
           <p className="text-sm text-night leading-relaxed">{n.content}</p>
