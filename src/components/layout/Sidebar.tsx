@@ -58,7 +58,7 @@ export default function Sidebar() {
       <div className="flex items-center h-16 px-4 border-b border-white/8 shrink-0">
         <img src="/logo-white.png" alt="AAO" className="w-8 h-8 rounded-lg shrink-0" />
         <span className="ml-3 font-heading font-bold text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          AAO Command Center
+          AAO
         </span>
       </div>
 
