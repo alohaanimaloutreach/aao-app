@@ -54,7 +54,7 @@ export default function LocationFilters({ filters, onChange, resultCount }: Prop
           }`}
         >
           <SlidersHorizontal className="w-4 h-4" strokeWidth={1.75} />
-          <span className="hidden sm:inline">Filters</span>
+          Filters
           {activeFilterCount > 0 && (
             <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
               {activeFilterCount}

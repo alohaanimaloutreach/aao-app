@@ -373,10 +373,10 @@ export default function DashboardPage() {
             )}
             <button
               onClick={() => setShowEndConfirm(true)}
-              className="px-3 py-2.5 bg-white border border-night/10 rounded-xl text-xs font-medium text-muted hover:text-ember hover:border-ember/20 transition-all flex items-center gap-1.5 shrink-0"
-              title="End Event"
+              className="px-3 py-2.5 bg-white border border-night/10 rounded-xl text-sm font-medium text-muted hover:text-ember hover:border-ember/20 transition-all flex items-center gap-1.5 shrink-0"
             >
               <CircleStop className="w-4 h-4" />
+              End Event
             </button>
           </div>
         </div>

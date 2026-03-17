@@ -109,7 +109,7 @@ export default function LocationsPage() {
     animal_count: animalCounts[l.id] ?? 0,
     owner_count: ownerCounts[l.id] ?? 0,
     last_visited: lastVisitedMap[l.id] ?? null,
-  }));
+  })).sort((a, b) => (b.animal_count + b.owner_count) - (a.animal_count + a.owner_count));
 
   const mapPins = useMemo(() => {
     return filtered
