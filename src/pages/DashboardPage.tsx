@@ -10,6 +10,7 @@ import {
 import { formatRelative, daysSince, formatDate } from '../lib/format';
 import { HAVENT_SEEN_DAYS } from '../lib/constants';
 import { useTestMode } from '../lib/testMode';
+import EventSetup from '../components/outreach/EventSetup';
 
 interface Stats {
   animals: number | null;
@@ -50,6 +51,7 @@ export default function DashboardPage() {
   const [activeEvent, setActiveEvent] = useState<{ id: string; location_name: string | null; queueCount: number } | null>(null);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [endingEvent, setEndingEvent] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
 
   useEffect(() => {
     if (session) loadDashboard();
@@ -372,7 +374,7 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         <button
-          onClick={() => navigate('/outreach')}
+          onClick={() => setShowSetup(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.2)] transition-all whitespace-nowrap"
         >
           <CalendarHeart className="w-4 h-4" strokeWidth={2} />
@@ -504,6 +506,13 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {showSetup && (
+        <EventSetup
+          onCreated={(eventId) => { setShowSetup(false); navigate(`/outreach/event/${eventId}`); }}
+          onCancel={() => setShowSetup(false)}
+        />
+      )}
     </div>
   );
 }
