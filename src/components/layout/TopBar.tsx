@@ -60,24 +60,24 @@ export default function TopBar() {
             {/* Test Mode Switch */}
             <button
               onClick={() => setTestMode(!testMode)}
-              className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-all ${
+              className={`flex items-center gap-2 rounded-xl px-3 py-2 transition-all ${
                 testMode
-                  ? 'bg-amber-100 text-amber-700'
-                  : 'text-muted hover:text-night hover:bg-sand'
+                  ? 'bg-amber-100 text-amber-700 border border-amber-300'
+                  : 'text-muted hover:text-night hover:bg-sand border border-transparent'
               }`}
               role="switch"
               aria-checked={testMode}
               aria-label={testMode ? 'End test mode' : 'Start test mode'}
               title={testMode ? 'End Test Mode' : 'Start Test Mode'}
             >
-              <FlaskConical className="w-4 h-4" strokeWidth={2} />
-              <span className="text-xs font-semibold">{testMode ? 'End Test Mode' : 'Start Test Mode'}</span>
+              <FlaskConical className="w-4.5 h-4.5" strokeWidth={2} />
+              <span className="text-sm font-semibold">{testMode ? 'End Test' : 'Test Mode'}</span>
               {/* Switch track */}
-              <div className={`relative w-8 h-[18px] rounded-full transition-colors ${
+              <div className={`relative w-9 h-5 rounded-full transition-colors ${
                 testMode ? 'bg-amber-500' : 'bg-night/15'
               }`}>
-                <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform ${
-                  testMode ? 'translate-x-[16px]' : 'translate-x-[2px]'
+                <div className={`absolute top-[3px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform ${
+                  testMode ? 'translate-x-[18px]' : 'translate-x-[3px]'
                 }`} />
               </div>
             </button>
