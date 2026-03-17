@@ -1,8 +1,10 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useTestMode } from '../lib/testMode';
+import { daysSince } from '../lib/format';
 import AnimalCard, { type AnimalCardData } from '../components/animals/AnimalCard';
 import AnimalFilters, { type AnimalFilterState, DEFAULT_FILTERS } from '../components/animals/AnimalFilters';
 import EmptyState from '../components/shared/EmptyState';
@@ -33,12 +35,19 @@ const BATCH_SIZE = 40;
 export default function AnimalsPage() {
   const { isAdmin, session } = useAuth();
   const { testMode } = useTestMode();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [animals, setAnimals] = useState<RawAnimal[]>([]);
   const [situations, setSituations] = useState<Record<string, { status: string }>>({});
   const [lastSeenMap, setLastSeenMap] = useState<Record<string, string>>({});
   const [profilePhotos, setProfilePhotos] = useState<Record<string, string>>({});
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
-  const [filters, setFilters] = useState<AnimalFilterState>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<AnimalFilterState>(() => {
+    const initial = { ...DEFAULT_FILTERS };
+    if (searchParams.get('urgent') === '1') initial.urgentOnly = true;
+    if (searchParams.get('notSeen')) initial.notSeenDays = Number(searchParams.get('notSeen')) || 60;
+    if (searchParams.get('status')) initial.situationStatus = searchParams.get('status')!;
+    return initial;
+  });
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -137,6 +146,12 @@ export default function AnimalsPage() {
 
       // Urgent
       if (filters.urgentOnly && !a.urgent_medical) return false;
+
+      // Not seen in X days
+      if (filters.notSeenDays > 0) {
+        const days = daysSince(lastSeenMap[a.id]);
+        if (days <= filters.notSeenDays || a.deceased) return false;
+      }
 
       // Search
       if (filters.search) {

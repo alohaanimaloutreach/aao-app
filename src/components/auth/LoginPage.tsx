@@ -48,7 +48,7 @@ export default function LoginPage() {
           <img
             src="/logo.png"
             alt="Aloha Animal Outreach"
-            className="w-16 h-16 rounded-2xl mb-5 shadow-[0_4px_16px_rgba(110,168,50,0.3)]"
+            className="w-16 h-16 rounded-2xl mb-5 mx-auto shadow-[0_4px_16px_rgba(110,168,50,0.3)]"
           />
           <h1 className="text-2xl font-bold text-night font-heading tracking-tight">
             AAO Command Center

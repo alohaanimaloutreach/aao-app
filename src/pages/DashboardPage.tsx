@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import {
   PawPrint, Users, MapPin, Flag, AlertTriangle, Clock, CalendarHeart,
-  Plus, Pencil, ArrowRight, Eye, Stethoscope, Package, ListOrdered,
+  Pencil, ArrowRight, Eye, Stethoscope, Package, ListOrdered,
   CircleStop, Play, FlaskConical,
 } from 'lucide-react';
 import { formatRelative, daysSince, formatDate } from '../lib/format';
@@ -135,7 +135,7 @@ export default function DashboardPage() {
         type: 'havent_seen',
         title: `${notSeen.length} animal${notSeen.length > 1 ? 's' : ''} not seen in 60+ days`,
         description: notSeen.slice(0, 3).map((a: any) => a.name ?? a.aao_id).join(', ') + (notSeen.length > 3 ? ` and ${notSeen.length - 3} more` : ''),
-        link: '/animals',
+        link: '/animals?notSeen=60',
         color: 'border-gold/30 bg-gold/6',
         icon: Clock,
       });
@@ -149,7 +149,7 @@ export default function DashboardPage() {
         type: 'urgent_medical',
         title: `${urgent.length} urgent medical case${urgent.length > 1 ? 's' : ''}`,
         description: urgent.slice(0, 3).map((a: any) => a.name ?? a.aao_id).join(', '),
-        link: '/animals',
+        link: '/animals?urgent=1',
         color: 'border-ember/30 bg-ember/6',
         icon: AlertTriangle,
       });
@@ -164,7 +164,7 @@ export default function DashboardPage() {
         type: 'lost_contact',
         title: `${lostContact.length} animal${lostContact.length > 1 ? 's' : ''} with lost contact`,
         description: over30.length > 0 ? `${over30.length} over 30 days, please follow up` : lostContact.slice(0, 3).map((a: any) => a.name ?? a.aao_id).join(', '),
-        link: '/animals',
+        link: '/animals?status=lost_contact',
         color: 'border-amber-300/30 bg-amber-50',
         icon: Eye,
       });
@@ -259,11 +259,29 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">
-          Aloha, {profile?.name?.split(' ')[0] ?? 'friend'}
-        </h1>
-        <p className="text-muted mt-0.5">Here is what is happening at AAO today</p>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">
+            Aloha, {profile?.name?.split(' ')[0] ?? 'friend'}
+          </h1>
+          <p className="text-muted mt-0.5">Here is what is happening at AAO today</p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={() => setShowSetup(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.2)] transition-all whitespace-nowrap"
+          >
+            <CalendarHeart className="w-4 h-4" strokeWidth={2} />
+            <span className="hidden sm:inline">Start Outreach</span>
+          </button>
+          <button
+            onClick={() => navigate('/notes')}
+            className="flex items-center gap-2 px-3 py-2.5 bg-white border border-night/8 text-night text-sm font-medium rounded-xl hover:bg-sand transition-all whitespace-nowrap"
+          >
+            <Pencil className="w-4 h-4" strokeWidth={2} />
+            <span className="hidden sm:inline">Field Note</span>
+          </button>
+        </div>
       </div>
 
       {/* Active Event Card */}
@@ -371,30 +389,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-        <button
-          onClick={() => setShowSetup(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.2)] transition-all whitespace-nowrap"
-        >
-          <CalendarHeart className="w-4 h-4" strokeWidth={2} />
-          Start Outreach
-        </button>
-        <button
-          onClick={() => navigate('/animals')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-night/8 text-night text-sm font-medium rounded-xl hover:bg-sand transition-all whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" strokeWidth={2} />
-          Add Animal
-        </button>
-        <button
-          onClick={() => navigate('/notes')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-night/8 text-night text-sm font-medium rounded-xl hover:bg-sand transition-all whitespace-nowrap"
-        >
-          <Pencil className="w-4 h-4" strokeWidth={2} />
-          Field Note
-        </button>
-      </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">

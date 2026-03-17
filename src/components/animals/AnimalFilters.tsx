@@ -9,6 +9,7 @@ export interface AnimalFilterState {
   fixedStatus: string;
   photoFilter: string;
   urgentOnly: boolean;
+  notSeenDays: number;
   showArchived: boolean;
 }
 
@@ -20,6 +21,7 @@ export const DEFAULT_FILTERS: AnimalFilterState = {
   fixedStatus: '',
   photoFilter: '',
   urgentOnly: false,
+  notSeenDays: 0,
   showArchived: false,
 };
 
@@ -40,6 +42,7 @@ export default function AnimalFilters({ filters, onChange, locations, resultCoun
     filters.fixedStatus,
     filters.photoFilter,
     filters.urgentOnly,
+    filters.notSeenDays,
     filters.showArchived,
   ].filter(Boolean).length;
 
@@ -158,6 +161,15 @@ export default function AnimalFilters({ filters, onChange, locations, resultCoun
                   className="w-4 h-4 rounded border-night/20 text-ember focus:ring-ember/30 accent-ember"
                 />
                 Urgent medical only
+              </label>
+              <label className="flex items-center gap-2 text-sm text-night cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.notSeenDays > 0}
+                  onChange={(e) => update({ notSeenDays: e.target.checked ? 60 : 0 })}
+                  className="w-4 h-4 rounded border-night/20 text-gold focus:ring-gold/30 accent-amber-500"
+                />
+                Not seen 60+ days
               </label>
               <label className="flex items-center gap-2 text-sm text-night cursor-pointer">
                 <input

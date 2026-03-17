@@ -38,6 +38,7 @@ import {
 } from '../lib/constants';
 import StatusBadge from '../components/shared/StatusBadge';
 import DogTimeline from '../components/animals/DogTimeline';
+import DogLocationMap from '../components/animals/DogLocationMap';
 import FlagResolver from '../components/admin/FlagResolver';
 import ArchiveActions from '../components/admin/ArchiveActions';
 
@@ -94,6 +95,8 @@ interface FlagRecord {
   id: string;
   reason: string | null;
   resolved: boolean;
+  resolved_at: string | null;
+  resolution_note: string | null;
   created_at: string;
 }
 
@@ -108,7 +111,7 @@ export default function AnimalProfilePage() {
   const [flags, setFlags] = useState<FlagRecord[]>([]);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'timeline' | 'details' | 'photos'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'map' | 'details' | 'photos'>('timeline');
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Record<string, any>>({});
@@ -440,7 +443,7 @@ export default function AnimalProfilePage() {
 
       {/* Tab navigation */}
       <div className="flex gap-1 bg-white rounded-xl border border-night/5 p-1 mb-4">
-        {(['timeline', 'details', 'photos'] as const).map((tab) => (
+        {(['timeline', 'map', 'details', 'photos'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -450,7 +453,7 @@ export default function AnimalProfilePage() {
                 : 'text-muted hover:text-night'
             }`}
           >
-            {tab === 'photos' ? `Photos (${photos.length})` : tab === 'timeline' ? 'Timeline' : 'Details'}
+            {tab === 'photos' ? `Photos (${photos.length})` : tab === 'timeline' ? 'Timeline' : tab === 'map' ? 'Map' : 'Details'}
           </button>
         ))}
       </div>
@@ -462,6 +465,14 @@ export default function AnimalProfilePage() {
             <h2 className="font-heading font-bold text-night mb-4">Dog Timeline</h2>
             <DogTimeline animalId={animal.id} />
           </div>
+        )}
+
+        {activeTab === 'map' && (
+          <DogLocationMap
+            animalId={animal.id}
+            primaryLocationId={animal.primary_location?.id ?? null}
+            ownerId={animal.owner?.id ?? null}
+          />
         )}
 
         {activeTab === 'details' && (
