@@ -278,14 +278,14 @@ export default function DashboardPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.2)] transition-all whitespace-nowrap"
           >
             <CalendarHeart className="w-4 h-4" strokeWidth={2} />
-            <span className="hidden sm:inline">Start Outreach</span>
+            Start Outreach
           </button>
           <button
             onClick={() => navigate('/notes')}
             className="flex items-center gap-2 px-3 py-2.5 bg-white border border-night/8 text-night text-sm font-medium rounded-xl hover:bg-sand transition-all whitespace-nowrap"
           >
             <Pencil className="w-4 h-4" strokeWidth={2} />
-            <span className="hidden sm:inline">Field Note</span>
+            Field Note
           </button>
         </div>
       </div>
