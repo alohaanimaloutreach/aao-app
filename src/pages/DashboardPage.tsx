@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import {
   PawPrint, Users, MapPin, Flag, AlertTriangle, Clock, CalendarHeart,
   Pencil, ArrowRight, Eye, Stethoscope, Package, ListOrdered,
-  CircleStop, Play, FlaskConical,
+  CircleStop, Play, FlaskConical, X,
 } from 'lucide-react';
 import { formatRelative, daysSince, formatDate } from '../lib/format';
 import { HAVENT_SEEN_DAYS } from '../lib/constants';
@@ -52,6 +52,12 @@ export default function DashboardPage() {
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [endingEvent, setEndingEvent] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('aao-welcome-dismissed'));
+
+  function dismissWelcome() {
+    localStorage.setItem('aao-welcome-dismissed', '1');
+    setShowWelcome(false);
+  }
 
   useEffect(() => {
     if (session) loadDashboard();
@@ -283,6 +289,42 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* Welcome card — shown once */}
+      {showWelcome && (
+        <div className="mb-4 bg-white rounded-2xl border border-night/5 p-5 relative">
+          <button onClick={dismissWelcome} className="absolute top-3 right-3 p-1.5 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Dismiss">
+            <X className="w-4 h-4" />
+          </button>
+          <h2 className="font-heading font-bold text-night text-sm mb-2">Welcome to AAO Command Center</h2>
+          <p className="text-sm text-muted mb-3">Here are the quickest ways to get started:</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => { dismissWelcome(); setShowSetup(true); }}
+              className="flex items-center gap-2 px-3.5 py-2 bg-primary/10 text-primary text-sm font-medium rounded-xl hover:bg-primary/15 transition-colors"
+            >
+              <CalendarHeart className="w-4 h-4" />
+              Start Outreach
+            </button>
+            <Link
+              to="/animals"
+              onClick={dismissWelcome}
+              className="flex items-center gap-2 px-3.5 py-2 bg-sand text-night text-sm font-medium rounded-xl hover:bg-sand/80 transition-colors"
+            >
+              <PawPrint className="w-4 h-4" />
+              View Animals
+            </Link>
+            <Link
+              to="/people"
+              onClick={dismissWelcome}
+              className="flex items-center gap-2 px-3.5 py-2 bg-sand text-night text-sm font-medium rounded-xl hover:bg-sand/80 transition-colors"
+            >
+              <Users className="w-4 h-4" />
+              View Owners
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Active Event Card */}
       {activeEvent && (
