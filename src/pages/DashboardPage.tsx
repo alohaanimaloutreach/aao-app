@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import {
   PawPrint, Users, MapPin, Flag, AlertTriangle, Clock, CalendarHeart,
   Pencil, ArrowRight, Eye, Stethoscope, Package, ListOrdered,
-  CircleStop, Play, FlaskConical, X,
+  CircleStop, Play, FlaskConical, X, StickyNote, BarChart3, ChevronDown,
 } from 'lucide-react';
 import { formatRelative, daysSince, formatDate } from '../lib/format';
 import { HAVENT_SEEN_DAYS } from '../lib/constants';
@@ -263,14 +263,22 @@ export default function DashboardPage() {
     { label: 'Open Flags', value: stats.openFlags, icon: Flag, to: '/flags', color: 'from-muted/10 to-muted/4', iconColor: 'text-muted', accent: 'bg-muted' },
   ];
 
+  const [showMore, setShowMore] = useState(false);
+
+  const quickLinks = [
+    { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-ember', bg: 'bg-ember/10' },
+    { to: '/notes', icon: StickyNote, label: 'Notes', color: 'text-sky-600', bg: 'bg-sky-50' },
+    { to: '/flags', icon: Flag, label: 'Flags', color: 'text-gold', bg: 'bg-gold/15' },
+    { to: '/reports', icon: BarChart3, label: 'Reports', color: 'text-muted', bg: 'bg-muted/10' },
+  ];
+
   return (
     <div>
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">
-            Aloha, {profile?.name?.split(' ')[0] ?? 'friend'}
-          </h1>
-        </div>
+      {/* Desktop header */}
+      <div className="hidden md:flex items-start justify-between gap-4 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">
+          Aloha, {profile?.name?.split(' ')[0] ?? 'friend'}
+        </h1>
         <div className="flex gap-2 shrink-0">
           <button
             onClick={() => setShowSetup(true)}
@@ -289,39 +297,76 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Welcome card — shown once */}
-      {showWelcome && (
-        <div className="mb-4 bg-white rounded-2xl border border-night/5 p-5 relative">
-          <button onClick={dismissWelcome} className="absolute top-3 right-3 p-1.5 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Dismiss">
-            <X className="w-4 h-4" />
+      {/* Mobile action hub */}
+      <div className="md:hidden mb-5">
+        <h1 className="text-xl font-bold font-heading text-night tracking-tight mb-4">
+          Aloha, {profile?.name?.split(' ')[0] ?? 'friend'}
+        </h1>
+        <p className="text-sm text-muted mb-3">What do you want to do today?</p>
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            onClick={() => setShowSetup(true)}
+            className="flex flex-col items-center gap-2 p-4 bg-primary/10 rounded-2xl text-primary hover:bg-primary/15 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
+              <CalendarHeart className="w-5 h-5" strokeWidth={2} />
+            </div>
+            <span className="text-sm font-semibold">Start Outreach</span>
           </button>
-          <h2 className="font-heading font-bold text-night text-sm mb-2">Welcome to AAO Command Center</h2>
-          <p className="text-sm text-muted mb-3">Here are the quickest ways to get started:</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowSetup(true)}
-              className="flex items-center gap-2 px-3.5 py-2 bg-primary/10 text-primary text-sm font-medium rounded-xl hover:bg-primary/15 transition-colors"
-            >
-              <CalendarHeart className="w-4 h-4" />
-              Start Outreach
-            </button>
-            <Link
-              to="/animals"
-              className="flex items-center gap-2 px-3.5 py-2 bg-sand text-night text-sm font-medium rounded-xl hover:bg-sand/80 transition-colors"
-            >
-              <PawPrint className="w-4 h-4" />
-              View Animals
-            </Link>
-            <Link
-              to="/people"
-              className="flex items-center gap-2 px-3.5 py-2 bg-sand text-night text-sm font-medium rounded-xl hover:bg-sand/80 transition-colors"
-            >
-              <Users className="w-4 h-4" />
-              View Owners
-            </Link>
-          </div>
+          <Link
+            to="/animals"
+            className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <PawPrint className="w-5 h-5 text-primary" strokeWidth={1.75} />
+            </div>
+            <span className="text-sm font-semibold">Find Animal</span>
+          </Link>
+          <Link
+            to="/people"
+            className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gold/15 flex items-center justify-center">
+              <Users className="w-5 h-5 text-night" strokeWidth={1.75} />
+            </div>
+            <span className="text-sm font-semibold">Find Owner</span>
+          </Link>
+          <button
+            onClick={() => navigate('/notes')}
+            className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center">
+              <Pencil className="w-5 h-5 text-sky-600" strokeWidth={1.75} />
+            </div>
+            <span className="text-sm font-semibold">Add Field Note</span>
+          </button>
         </div>
-      )}
+
+        {/* More links */}
+        <button
+          onClick={() => setShowMore(!showMore)}
+          className="flex items-center justify-center gap-1.5 w-full mt-3 py-2 text-xs font-medium text-muted hover:text-night transition-colors"
+        >
+          More
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showMore ? 'rotate-180' : ''}`} />
+        </button>
+        {showMore && (
+          <div className="grid grid-cols-4 gap-2 mt-1">
+            {quickLinks.map((ql) => (
+              <Link
+                key={ql.to}
+                to={ql.to}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-white border border-night/5 hover:bg-sand/50 transition-colors"
+              >
+                <div className={`w-8 h-8 rounded-lg ${ql.bg} flex items-center justify-center`}>
+                  <ql.icon className={`w-4 h-4 ${ql.color}`} strokeWidth={1.75} />
+                </div>
+                <span className="text-xs font-medium text-night">{ql.label}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Active Event Card */}
       {activeEvent && (

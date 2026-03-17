@@ -370,7 +370,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
     await trackVolunteer(eventId, user.id);
     setSubmitting(false);
     setSuccessMsg('Check-in complete!');
-    setTimeout(() => { setSuccessMsg(''); resetFlow(); }, 1200);
+    setTimeout(() => { setSuccessMsg(''); resetFlow(); }, 2500);
     onCheckedIn();
   }
 
@@ -430,7 +430,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
     await trackVolunteer(eventId, user.id);
     setSubmitting(false);
     setSuccessMsg('Sent to outreach queue!');
-    setTimeout(() => { setSuccessMsg(''); resetFlow(); }, 1200);
+    setTimeout(() => { setSuccessMsg(''); resetFlow(); }, 2500);
     onCheckedIn();
   }
 
@@ -734,13 +734,13 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
 
                     {isChecked && (
                       <div className="mt-2 ml-9 space-y-2">
-                        <div className="grid grid-cols-3 gap-1.5">
+                        <div className="grid grid-cols-3 gap-2">
                           <ServiceTag active={c.food} icon={Package} label="Food" onClick={() => updateAnimal(animal.id, { food: !c.food })} />
                           <ServiceTag active={c.vaccines} icon={Syringe} label="Vaccines" onClick={() => updateAnimal(animal.id, { vaccines: !c.vaccines })} />
-                          <ServiceTag active={c.preventatives} icon={Pill} label="Prevent." onClick={() => updateAnimal(animal.id, { preventatives: !c.preventatives })} />
+                          <ServiceTag active={c.preventatives} icon={Pill} label="Preventatives" onClick={() => updateAnimal(animal.id, { preventatives: !c.preventatives })} />
                           <ServiceTag active={c.nailTrim} icon={Scissors} label="Nail Trim" onClick={() => updateAnimal(animal.id, { nailTrim: !c.nailTrim })} />
                           <ServiceTag active={c.needsMedical} icon={Stethoscope} label="Medical" onClick={() => updateAnimal(animal.id, { needsMedical: !c.needsMedical })} color="amber" />
-                          <ServiceTag active={c.needsSN} icon={Heart} label="S/N" onClick={() => updateAnimal(animal.id, { needsSN: !c.needsSN })} />
+                          <ServiceTag active={c.needsSN} icon={Heart} label="Spay/Neuter" onClick={() => updateAnimal(animal.id, { needsSN: !c.needsSN })} />
                         </div>
                         {c.needsMedical && (
                           <textarea
@@ -895,11 +895,11 @@ function ServiceTag({ active, icon: Icon, label, onClick, color }: { active: boo
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+      className={`flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl text-xs font-medium border transition-all ${
         active ? activeClass : 'bg-white border-night/8 text-muted'
       }`}
     >
-      <Icon className="w-3 h-3" />
+      <Icon className="w-3.5 h-3.5" />
       {label}
     </button>
   );

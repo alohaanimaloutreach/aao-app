@@ -91,7 +91,7 @@ export default function OutreachPage() {
           className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.25)] hover:shadow-[0_4px_12px_rgba(110,168,50,0.35)] transition-all"
         >
           <Plus className="w-4 h-4" strokeWidth={2.5} />
-          <span className="hidden sm:inline">Start Event</span>
+          Start Event
         </button>
       </div>
 
