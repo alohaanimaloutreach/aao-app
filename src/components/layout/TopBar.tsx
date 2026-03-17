@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { FlaskConical, Search } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTestMode } from '../../lib/testMode';
@@ -30,10 +31,10 @@ export default function TopBar() {
       }`} role="banner">
         <div className="flex items-center justify-between h-14">
           {/* Mobile title */}
-          <div className="md:hidden flex items-center gap-2">
+          <Link to="/" className="md:hidden flex items-center gap-2">
             <img src="/logo.png" alt="AAO" className="w-7 h-7 rounded-lg" />
             <h1 className="font-heading font-bold text-night text-[13px]">Aloha Animal Outreach</h1>
-          </div>
+          </Link>
 
           {/* Desktop search bar trigger */}
           <button
@@ -70,7 +71,7 @@ export default function TopBar() {
               title={testMode ? 'End Test Mode' : 'Start Test Mode'}
             >
               <FlaskConical className="w-4 h-4" strokeWidth={2} />
-              <span className="hidden sm:inline text-xs font-semibold">{testMode ? 'End Test Mode' : 'Start Test Mode'}</span>
+              <span className="text-xs font-semibold">{testMode ? 'End Test Mode' : 'Start Test Mode'}</span>
               {/* Switch track */}
               <div className={`relative w-8 h-[18px] rounded-full transition-colors ${
                 testMode ? 'bg-amber-500' : 'bg-night/15'
