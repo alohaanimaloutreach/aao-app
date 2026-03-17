@@ -68,7 +68,7 @@ export default function CompletedList({ eventId }: Props) {
       <div className="text-center py-10">
         <CheckCircle2 className="w-10 h-10 text-muted/20 mx-auto mb-3" />
         <p className="text-sm text-muted">No completed check-ins yet</p>
-        <p className="text-xs text-muted/60 mt-1">Completed records will appear here</p>
+        <p className="text-xs text-muted mt-1">Completed records will appear here</p>
       </div>
     );
   }
@@ -100,14 +100,14 @@ export default function CompletedList({ eventId }: Props) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-night truncate">{entry.owner?.name ?? 'Unknown'}</span>
-                    {time && <span className="text-[10px] text-muted">{time}</span>}
+                    {time && <span className="text-xs text-muted">{time}</span>}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[11px] text-muted flex items-center gap-1">
+                    <span className="text-xs text-muted flex items-center gap-1">
                       <PawPrint className="w-3 h-3" />
                       {animalCount} animal{animalCount !== 1 ? 's' : ''}
                     </span>
-                    <span className="text-[11px] text-muted capitalize">{label}</span>
+                    <span className="text-xs text-muted capitalize">{label}</span>
                   </div>
                 </div>
               </div>

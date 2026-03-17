@@ -40,7 +40,7 @@ export default function LocationCard({ location }: Props) {
             <h3 className="font-heading font-bold text-night text-sm leading-tight truncate group-hover:text-primary transition-colors">
               {location.name}
             </h3>
-            <span className={`shrink-0 inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
+            <span className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
               {statusConfig.label}
             </span>
@@ -48,23 +48,23 @@ export default function LocationCard({ location }: Props) {
 
           {/* Address / description */}
           {(location.address || location.precise_location) && (
-            <p className="text-[11px] text-muted mt-0.5 truncate">
+            <p className="text-xs text-muted mt-0.5 truncate">
               {location.address || location.precise_location}
             </p>
           )}
 
           {/* Stats row */}
           <div className="flex items-center gap-3 mt-2">
-            <span className="inline-flex items-center gap-1 text-[11px] text-primary font-medium bg-primary/8 px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-xs text-primary font-medium bg-primary/8 px-2 py-0.5 rounded-full">
               <PawPrint className="w-3 h-3" />
               {location.animal_count}
             </span>
-            <span className="inline-flex items-center gap-1 text-[11px] text-night font-medium bg-gold/12 px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-xs text-night font-medium bg-gold/12 px-2 py-0.5 rounded-full">
               <Users className="w-3 h-3" />
               {location.owner_count}
             </span>
             {location.last_visited && (
-              <span className="text-[10px] text-muted flex items-center gap-1">
+              <span className="text-xs text-muted flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 Visited {formatRelative(location.last_visited)}
               </span>
@@ -73,7 +73,7 @@ export default function LocationCard({ location }: Props) {
 
           {/* Coordinates */}
           {location.latitude && location.longitude && (
-            <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted/50">
+            <div className="flex items-center gap-1 mt-1.5 text-xs text-muted">
               <Navigation className="w-2.5 h-2.5" />
               {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
             </div>

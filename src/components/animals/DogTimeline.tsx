@@ -190,7 +190,7 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
       <div className="flex-1 min-w-0 pt-0.5">
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-medium text-night leading-tight">{entry.title}</p>
-          <span className="text-[11px] text-muted shrink-0">{formatDate(entry.date)}</span>
+          <span className="text-xs text-muted shrink-0">{formatDate(entry.date)}</span>
         </div>
 
         {entry.status && (
@@ -204,7 +204,7 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
         )}
 
         {entry.created_by_name && (
-          <p className="text-[10px] text-muted/60 mt-1">{entry.created_by_name}</p>
+          <p className="text-xs text-muted mt-1">{entry.created_by_name}</p>
         )}
       </div>
     </div>

@@ -57,7 +57,7 @@ function ReportSection({ reportKey, label, description, expanded, onToggle }: {
           </div>
           <div>
             <p className="text-sm font-semibold text-night">{label}</p>
-            <p className="text-[11px] text-muted">{description}</p>
+            <p className="text-xs text-muted">{description}</p>
           </div>
         </div>
         {expanded ? <ChevronUp className="w-4 h-4 text-muted" /> : <ChevronDown className="w-4 h-4 text-muted" />}
@@ -211,7 +211,7 @@ function ReportContent({ reportKey }: { reportKey: ReportKey }) {
             </tbody>
           </table>
           {data.rows.length > 50 && (
-            <p className="text-[10px] text-muted text-center py-2">Showing 50 of {data.rows.length}. Export CSV for full data.</p>
+            <p className="text-xs text-muted text-center py-2">Showing 50 of {data.rows.length}. Export CSV for full data.</p>
           )}
         </div>
       )}

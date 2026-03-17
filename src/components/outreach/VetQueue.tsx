@@ -212,9 +212,9 @@ export default function VetQueue({ eventId, eventLocationId, eventDate }: Props)
               <div className="flex items-center gap-2">
                 <PawPrint className="w-4 h-4 text-primary" strokeWidth={1.5} />
                 <span className="text-sm font-medium text-night">{animal.animal_name}</span>
-                <span className="text-[10px] text-muted font-mono">{animal.aao_id}</span>
+                <span className="text-xs text-muted font-mono">{animal.aao_id}</span>
                 {animal.food_bag_size && (
-                  <span className="text-[10px] text-muted bg-sand px-1.5 py-0.5 rounded-md ml-auto">{animal.food_bag_size}</span>
+                  <span className="text-xs text-muted bg-sand px-1.5 py-0.5 rounded-md ml-auto">{animal.food_bag_size}</span>
                 )}
               </div>
 
@@ -223,7 +223,7 @@ export default function VetQueue({ eventId, eventLocationId, eventDate }: Props)
                 {/* Food toggle */}
                 <button
                   onClick={() => toggleService(idx, 'food')}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     animal.services.includes('food') ? 'bg-primary/10 text-primary' : 'bg-night/5 text-muted'
                   }`}
                 >
@@ -234,7 +234,7 @@ export default function VetQueue({ eventId, eventLocationId, eventDate }: Props)
                   <button
                     key={svc.value}
                     onClick={() => toggleService(idx, svc.value)}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       animal.services.includes(svc.value) ? 'bg-primary/10 text-primary' : 'bg-night/5 text-muted'
                     }`}
                   >
@@ -304,7 +304,7 @@ export default function VetQueue({ eventId, eventLocationId, eventDate }: Props)
         <div className="text-center py-10">
           <Clock className="w-10 h-10 text-muted/20 mx-auto mb-3" />
           <p className="text-sm text-muted">No one waiting</p>
-          <p className="text-xs text-muted/60 mt-1">People needing services will appear here after check-in</p>
+          <p className="text-xs text-muted mt-1">People needing services will appear here after check-in</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -328,15 +328,15 @@ export default function VetQueue({ eventId, eventLocationId, eventDate }: Props)
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-night truncate">{entry.owner?.name ?? 'Unknown'}</span>
                       {entry.status === 'in_progress' && (
-                        <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">In Progress</span>
+                        <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">In Progress</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[11px] text-muted flex items-center gap-1">
+                      <span className="text-xs text-muted flex items-center gap-1">
                         <PawPrint className="w-3 h-3" />
                         {animalCount} animal{animalCount !== 1 ? 's' : ''}
                       </span>
-                      <span className="text-[11px] text-muted flex items-center gap-1">
+                      <span className="text-xs text-muted flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {mins < 1 ? 'Just now' : `${mins}m`}
                       </span>
@@ -344,7 +344,7 @@ export default function VetQueue({ eventId, eventLocationId, eventDate }: Props)
                     {serviceList.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {serviceList.map((s) => (
-                          <span key={s} className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md font-medium capitalize">
+                          <span key={s} className="text-xs bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md font-medium capitalize">
                             {s.replace(/_/g, ' ')}
                           </span>
                         ))}
@@ -410,7 +410,7 @@ function FieldInput({
   const cls = 'w-full px-2.5 py-2 bg-sand/50 border border-night/5 rounded-lg text-xs text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40';
   return (
     <div>
-      <label className="block text-[10px] text-muted font-medium mb-0.5">{label}</label>
+      <label className="block text-xs text-muted font-medium mb-0.5">{label}</label>
       {multiline ? (
         <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={2} className={`${cls} resize-none`} placeholder={placeholder} />
       ) : (

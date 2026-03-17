@@ -134,7 +134,7 @@ export default function Sidebar() {
             </div>
             <div className="ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
               <p className="text-xs font-medium text-white/70 whitespace-nowrap truncate">{profile.name}</p>
-              <p className="text-[10px] text-white/30 whitespace-nowrap truncate capitalize">{profile.role}</p>
+              <p className="text-xs text-white/30 whitespace-nowrap truncate capitalize">{profile.role}</p>
             </div>
           </div>
         )}

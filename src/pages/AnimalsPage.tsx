@@ -275,7 +275,7 @@ export default function AnimalsPage() {
           )}
 
           {visibleCount >= filtered.length && filtered.length > BATCH_SIZE && (
-            <p className="text-center text-xs text-muted/50 py-4">
+            <p className="text-center text-xs text-muted py-4">
               Showing all {filtered.length} animals
             </p>
           )}

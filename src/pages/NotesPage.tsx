@@ -126,7 +126,7 @@ export default function NotesPage() {
           >
             <SlidersHorizontal className="w-4 h-4" strokeWidth={1.75} />
             {activeFilterCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">{activeFilterCount}</span>
+              <span className="w-5 h-5 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">{activeFilterCount}</span>
             )}
           </button>
         </div>
@@ -178,9 +178,9 @@ export default function NotesPage() {
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
                   {n.flagged && <Flag className="w-3.5 h-3.5 text-gold fill-gold/20" />}
-                  <span className="text-[11px] text-muted">{formatDateTime(n.created_at)}</span>
+                  <span className="text-xs text-muted">{formatDateTime(n.created_at)}</span>
                 </div>
-                {n.author_name && <span className="text-[10px] text-muted/60">{n.author_name}</span>}
+                {n.author_name && <span className="text-xs text-muted">{n.author_name}</span>}
               </div>
 
               {/* Note text */}
@@ -190,19 +190,19 @@ export default function NotesPage() {
               {(n.animal_id || n.owner_id || n.location_id) && (
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   {n.animal_id && (
-                    <Link to={`/animals/${n.animal_id}`} className="inline-flex items-center gap-1 bg-primary/8 text-primary text-[11px] font-medium px-2 py-0.5 rounded-full hover:bg-primary/15 transition-colors">
+                    <Link to={`/animals/${n.animal_id}`} className="inline-flex items-center gap-1 bg-primary/8 text-primary text-xs font-medium px-2 py-0.5 rounded-full hover:bg-primary/15 transition-colors">
                       <PawPrint className="w-3 h-3" />
                       {n.animal_name ?? n.animal_aao_id ?? 'Animal'}
                     </Link>
                   )}
                   {n.owner_id && (
-                    <Link to={`/people/${n.owner_id}`} className="inline-flex items-center gap-1 bg-gold/12 text-night text-[11px] font-medium px-2 py-0.5 rounded-full hover:bg-gold/20 transition-colors">
+                    <Link to={`/people/${n.owner_id}`} className="inline-flex items-center gap-1 bg-gold/12 text-night text-xs font-medium px-2 py-0.5 rounded-full hover:bg-gold/20 transition-colors">
                       <User className="w-3 h-3" />
                       {n.owner_name ?? 'Person'}
                     </Link>
                   )}
                   {n.location_id && (
-                    <Link to={`/locations/${n.location_id}`} className="inline-flex items-center gap-1 bg-ember/8 text-ember text-[11px] font-medium px-2 py-0.5 rounded-full hover:bg-ember/15 transition-colors">
+                    <Link to={`/locations/${n.location_id}`} className="inline-flex items-center gap-1 bg-ember/8 text-ember text-xs font-medium px-2 py-0.5 rounded-full hover:bg-ember/15 transition-colors">
                       <MapPin className="w-3 h-3" />
                       {n.location_name ?? 'Location'}
                     </Link>

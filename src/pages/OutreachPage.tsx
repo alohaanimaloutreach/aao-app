@@ -116,11 +116,11 @@ export default function OutreachPage() {
                     </h3>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       {e.location?.name && (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                        <span className="inline-flex items-center gap-1 text-xs text-muted">
                           <MapPin className="w-3 h-3" /> {e.location.name}
                         </span>
                       )}
-                      <span className="text-[11px] text-muted">{formatDate(e.event_date)}</span>
+                      <span className="text-xs text-muted">{formatDate(e.event_date)}</span>
                     </div>
                   </div>
                   <span className="text-xs font-semibold text-primary">Resume</span>
@@ -182,22 +182,22 @@ export default function OutreachPage() {
                         <p className="text-xs text-muted mt-0.5">{formatDate(e.event_date)}</p>
                         <div className="flex flex-wrap items-center gap-2 mt-2">
                           {e.location?.name && (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-muted bg-sand rounded-full px-2 py-0.5">
+                            <span className="inline-flex items-center gap-1 text-xs text-muted bg-sand rounded-full px-2 py-0.5">
                               <MapPin className="w-3 h-3" /> {e.location.name}
                             </span>
                           )}
                           {e.volunteer_count > 0 && (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-muted bg-sand rounded-full px-2 py-0.5">
+                            <span className="inline-flex items-center gap-1 text-xs text-muted bg-sand rounded-full px-2 py-0.5">
                               <Users className="w-3 h-3" /> {e.volunteer_count}
                             </span>
                           )}
                           {e.animal_count > 0 && (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-primary font-medium bg-primary/8 rounded-full px-2 py-0.5">
+                            <span className="inline-flex items-center gap-1 text-xs text-primary font-medium bg-primary/8 rounded-full px-2 py-0.5">
                               <PawPrint className="w-3 h-3" /> {e.animal_count} animal{e.animal_count !== 1 ? 's' : ''}
                             </span>
                           )}
                           {(e.total_bags || e.total_food_lbs) && (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-muted bg-sand rounded-full px-2 py-0.5">
+                            <span className="inline-flex items-center gap-1 text-xs text-muted bg-sand rounded-full px-2 py-0.5">
                               <Package className="w-3 h-3" />
                               {e.total_bags ? `${e.total_bags} bags` : ''}{e.total_bags && e.total_food_lbs ? ', ' : ''}{e.total_food_lbs ? `${e.total_food_lbs} lbs` : ''}
                             </span>

@@ -154,7 +154,7 @@ export default function DogLocationMap({ animalId, primaryLocationId, ownerId }:
   if (error) {
     return (
       <div className="bg-white rounded-2xl border border-night/5 p-8 text-center">
-        <MapPin className="w-8 h-8 text-muted/20 mx-auto mb-2" />
+        <MapPin className="w-8 h-8 text-muted/40 mx-auto mb-2" />
         <p className="text-sm text-ember">{error}</p>
       </div>
     );
@@ -163,7 +163,7 @@ export default function DogLocationMap({ animalId, primaryLocationId, ownerId }:
   if (pins.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-night/5 p-8 text-center">
-        <MapPin className="w-8 h-8 text-muted/20 mx-auto mb-2" />
+        <MapPin className="w-8 h-8 text-muted/40 mx-auto mb-2" />
         <p className="text-sm text-muted">No location data available</p>
       </div>
     );
@@ -184,7 +184,7 @@ export default function DogLocationMap({ animalId, primaryLocationId, ownerId }:
         </Suspense>
       </div>
       {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 px-5 py-2.5 border-t border-night/5 text-[11px] text-muted">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 px-5 py-2.5 border-t border-night/5 text-xs text-muted">
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#6EA832]" /> Home</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#E8A317]" /> Owner</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" /> Outreach</span>

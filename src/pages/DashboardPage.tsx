@@ -304,7 +304,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold text-night">Outreach Event Active</p>
                 {testMode && (
-                  <span className="text-[10px] font-bold bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-full">TEST</span>
+                  <span className="text-xs font-bold bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-full">TEST</span>
                 )}
               </div>
               {activeEvent.location_name && (
@@ -383,7 +383,7 @@ export default function DashboardPage() {
                 <p className="text-sm font-semibold text-night">{alert.title}</p>
                 <p className="text-xs text-muted mt-0.5">{alert.description}</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-muted/30 mt-1 shrink-0" />
+              <ArrowRight className="w-4 h-4 text-muted/50 mt-1 shrink-0" />
             </Link>
           ))}
         </div>
@@ -403,7 +403,7 @@ export default function DashboardPage() {
               <div className={`w-9 h-9 rounded-xl bg-white/60 flex items-center justify-center ${card.iconColor}`}>
                 <card.icon className="w-4.5 h-4.5" strokeWidth={1.75} />
               </div>
-              <ArrowRight className="w-4 h-4 text-muted/30 group-hover:text-muted/60 group-hover:translate-x-0.5 transition-all" />
+              <ArrowRight className="w-4 h-4 text-muted/50 group-hover:text-muted/60 group-hover:translate-x-0.5 transition-all" />
             </div>
             {card.value === null ? (
               <div className="space-y-2"><div className="skeleton h-7 w-12" /><div className="skeleton h-3.5 w-16" /></div>
@@ -429,7 +429,7 @@ export default function DashboardPage() {
             ) : (
               <div className="skeleton h-5 w-8" />
             )}
-            <p className="text-[11px] text-muted">Outreach events this month</p>
+            <p className="text-xs text-muted">Outreach events this month</p>
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-night/5 p-4 flex items-center gap-3">
@@ -442,7 +442,7 @@ export default function DashboardPage() {
             ) : (
               <div className="skeleton h-5 w-12" />
             )}
-            <p className="text-[11px] text-muted">Food distributed this month</p>
+            <p className="text-xs text-muted">Food distributed this month</p>
           </div>
         </div>
       </div>
@@ -480,8 +480,8 @@ export default function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-night leading-tight truncate">{item.description}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] text-muted">{formatRelative(item.date)}</span>
-                      {item.author && <span className="text-[10px] text-muted/50">{item.author}</span>}
+                      <span className="text-xs text-muted">{formatRelative(item.date)}</span>
+                      {item.author && <span className="text-xs text-muted">{item.author}</span>}
                     </div>
                   </div>
                   {item.link && <ArrowRight className="w-3.5 h-3.5 text-muted/25 shrink-0 mt-1" />}

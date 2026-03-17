@@ -36,13 +36,13 @@ export default function PersonCard({ person }: Props) {
           {/* Meta */}
           <div className="mt-1.5 space-y-1">
             {person.primary_location && (
-              <div className="flex items-center gap-1.5 text-[11px] text-muted">
+              <div className="flex items-center gap-1.5 text-xs text-muted">
                 <MapPin className="w-3 h-3 shrink-0" />
                 <span className="truncate">{person.primary_location.name}</span>
               </div>
             )}
             {person.phone_primary && (
-              <div className="flex items-center gap-1.5 text-[11px] text-muted">
+              <div className="flex items-center gap-1.5 text-xs text-muted">
                 <Phone className="w-3 h-3 shrink-0" />
                 <span>{person.phone_primary}</span>
               </div>
@@ -51,12 +51,12 @@ export default function PersonCard({ person }: Props) {
 
           {/* Bottom row */}
           <div className="flex items-center gap-3 mt-2">
-            <span className="inline-flex items-center gap-1 text-[11px] text-primary font-medium bg-primary/8 px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-xs text-primary font-medium bg-primary/8 px-2 py-0.5 rounded-full">
               <PawPrint className="w-3 h-3" />
               {person.animal_count} animal{person.animal_count !== 1 ? 's' : ''}
             </span>
             {person.last_contact && (
-              <span className="text-[10px] text-muted">
+              <span className="text-xs text-muted">
                 Last contact {formatRelative(person.last_contact)}
               </span>
             )}

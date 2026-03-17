@@ -213,7 +213,7 @@ export default function LocationProfilePage() {
             <div>
               <div className="flex items-center gap-2.5 mb-1">
                 <h1 className="text-xl md:text-2xl font-heading font-bold text-night">{location.name}</h1>
-                <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
+                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
                   {statusConfig.label}
                 </span>
@@ -243,7 +243,7 @@ export default function LocationProfilePage() {
             {events.length} outreach event{events.length !== 1 ? 's' : ''}
           </span>
           {location.latitude && location.longitude && (
-            <span className="inline-flex items-center gap-1 text-[10px] text-muted/50">
+            <span className="inline-flex items-center gap-1 text-xs text-muted">
               <Navigation className="w-3 h-3" />
               {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
             </span>
@@ -266,7 +266,7 @@ export default function LocationProfilePage() {
                 href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
               >
                 Directions <ExternalLink className="w-3 h-3" />
               </a>
@@ -369,7 +369,7 @@ export default function LocationProfilePage() {
         </div>
       )}
 
-      <div className="text-[11px] text-muted/50 flex gap-4 pt-4">
+      <div className="text-xs text-muted flex gap-4 pt-4">
         <span>Added {formatDate(location.date_added)}</span>
         <span>Updated {formatDate(location.updated_at)}</span>
       </div>
@@ -401,14 +401,14 @@ function AnimalsTab({ animals }: { animals: LinkedAnimal[] }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-heading font-bold text-sm text-night truncate">{a.name ?? 'Unnamed'}</span>
-              <span className="text-[10px] text-muted font-mono">{a.aao_id}</span>
+              <span className="text-xs text-muted font-mono">{a.aao_id}</span>
               {a.urgent_medical && (
-                <span className="text-[10px] font-bold text-ember bg-ember/10 px-1.5 py-0.5 rounded-full">Urgent</span>
+                <span className="text-xs font-bold text-ember bg-ember/10 px-1.5 py-0.5 rounded-full">Urgent</span>
               )}
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               {a.current_status && <StatusBadge status={a.current_status} />}
-              {a.food_bag_size && <span className="text-[10px] text-muted">{a.food_bag_size} bag</span>}
+              {a.food_bag_size && <span className="text-xs text-muted">{a.food_bag_size} bag</span>}
             </div>
           </div>
         </Link>
@@ -441,8 +441,8 @@ function PeopleTab({ owners }: { owners: LinkedOwner[] }) {
           <div className="flex-1 min-w-0">
             <span className="font-heading font-bold text-sm text-night truncate block">{o.name}</span>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-[11px] text-primary font-medium">{o.animal_count} animal{o.animal_count !== 1 ? 's' : ''}</span>
-              {o.phone_primary && <span className="text-[10px] text-muted">{o.phone_primary}</span>}
+              <span className="text-xs text-primary font-medium">{o.animal_count} animal{o.animal_count !== 1 ? 's' : ''}</span>
+              {o.phone_primary && <span className="text-xs text-muted">{o.phone_primary}</span>}
             </div>
           </div>
         </Link>
@@ -474,11 +474,11 @@ function OutreachTab({ events }: { events: OutreachEvent[] }) {
                 <p className="text-sm font-medium text-night capitalize">
                   {e.event_type.replace(/_/g, ' ')}
                 </p>
-                <p className="text-[11px] text-muted">{formatDate(e.event_date)}</p>
+                <p className="text-xs text-muted">{formatDate(e.event_date)}</p>
               </div>
             </div>
             {e.volunteer_count > 0 && (
-              <span className="text-[10px] text-muted bg-sand px-2 py-0.5 rounded-full">
+              <span className="text-xs text-muted bg-sand px-2 py-0.5 rounded-full">
                 {e.volunteer_count} volunteer{e.volunteer_count !== 1 ? 's' : ''}
               </span>
             )}
@@ -507,9 +507,9 @@ function NotesTab({ notes }: { notes: LocNote[] }) {
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="flex items-center gap-1.5">
               {n.is_flagged && <Flag className="w-3 h-3 text-gold" />}
-              <span className="text-[11px] text-muted">{formatDate(n.created_at)}</span>
+              <span className="text-xs text-muted">{formatDate(n.created_at)}</span>
             </div>
-            {n.created_by_name && <span className="text-[10px] text-muted/60">{n.created_by_name}</span>}
+            {n.created_by_name && <span className="text-xs text-muted">{n.created_by_name}</span>}
           </div>
           <p className="text-sm text-night leading-relaxed">{n.content}</p>
         </div>

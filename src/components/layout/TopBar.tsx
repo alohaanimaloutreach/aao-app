@@ -42,7 +42,7 @@ export default function TopBar() {
           >
             <Search className="w-3.5 h-3.5" />
             <span className="flex-1 text-left">Search...</span>
-            <kbd className="text-[10px] font-mono bg-white border border-night/10 rounded px-1.5 py-0.5">⌘K</kbd>
+            <kbd className="text-xs font-mono bg-white border border-night/10 rounded px-1.5 py-0.5">⌘K</kbd>
           </button>
 
           {/* Right side */}
@@ -70,7 +70,7 @@ export default function TopBar() {
               title={testMode ? 'End Test Mode' : 'Start Test Mode'}
             >
               <FlaskConical className="w-4 h-4" strokeWidth={2} />
-              <span className="hidden sm:inline text-[11px] font-semibold">{testMode ? 'End Test Mode' : 'Start Test Mode'}</span>
+              <span className="hidden sm:inline text-xs font-semibold">{testMode ? 'End Test Mode' : 'Start Test Mode'}</span>
               {/* Switch track */}
               <div className={`relative w-8 h-[18px] rounded-full transition-colors ${
                 testMode ? 'bg-amber-500' : 'bg-night/15'
@@ -89,7 +89,7 @@ export default function TopBar() {
                 </div>
                 <div className="hidden lg:block">
                   <p className="text-sm font-medium text-night leading-tight">{profile.name.split(' ')[0]}</p>
-                  <p className="text-[10px] text-muted capitalize leading-tight">{profile.role}</p>
+                  <p className="text-xs text-muted capitalize leading-tight">{profile.role}</p>
                 </div>
               </div>
             )}

@@ -153,7 +153,7 @@ export default function FieldNotesDrawer({ open, onClose }: Props) {
                   <button onClick={() => { setLinking(null); setLinkSearch(''); }} className="text-xs text-muted hover:text-night">Cancel</button>
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted/50" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" />
                   <input
                     type="text"
                     value={linkSearch}
@@ -167,7 +167,7 @@ export default function FieldNotesDrawer({ open, onClose }: Props) {
                   <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
                     {linkResults.map((r) => (
                       <button key={r.id} onClick={() => selectLink(r)} className="w-full text-left p-2 rounded-lg hover:bg-white text-sm text-night transition-colors">
-                        {r.label}{r.sub && <span className="text-[10px] text-muted ml-2 font-mono">{r.sub}</span>}
+                        {r.label}{r.sub && <span className="text-xs text-muted ml-2 font-mono">{r.sub}</span>}
                       </button>
                     ))}
                   </div>
@@ -180,7 +180,7 @@ export default function FieldNotesDrawer({ open, onClose }: Props) {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="What did you observe? Note anything important..."
-              className="w-full h-40 p-4 bg-sand/70 border border-night/5 rounded-xl text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 placeholder:text-muted/50 transition-all"
+              className="w-full h-40 p-4 bg-sand/70 border border-night/5 rounded-xl text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 placeholder:text-muted transition-all"
             />
 
             {/* Linked records */}

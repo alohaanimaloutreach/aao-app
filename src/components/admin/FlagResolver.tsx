@@ -72,12 +72,12 @@ export default function FlagResolver({ flags, onUpdate }: Props) {
               <Flag className="w-3.5 h-3.5 text-gold mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs text-night">{f.reason ?? 'Flagged for review'}</p>
-                <p className="text-[10px] text-muted mt-0.5">{formatDate(f.created_at)}</p>
+                <p className="text-xs text-muted mt-0.5">{formatDate(f.created_at)}</p>
               </div>
             </div>
             <button
               onClick={() => setResolvingId(resolvingId === f.id ? null : f.id)}
-              className="flex items-center gap-1 px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-medium rounded-lg transition-all shrink-0"
+              className="flex items-center gap-1 px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium rounded-lg transition-all shrink-0"
             >
               <Check className="w-3 h-3" strokeWidth={2.5} />
               Resolve
@@ -88,7 +88,7 @@ export default function FlagResolver({ flags, onUpdate }: Props) {
           {/* Resolution choices */}
           {resolvingId === f.id && (
             <div className="mt-3 space-y-1.5 pl-5">
-              <p className="text-[11px] font-medium text-muted mb-1">How was this resolved?</p>
+              <p className="text-xs font-medium text-muted mb-1">How was this resolved?</p>
               {RESOLVE_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -111,9 +111,9 @@ export default function FlagResolver({ flags, onUpdate }: Props) {
             <div>
               <p className="text-xs text-night/60">{f.reason ?? 'Flagged for review'}</p>
               {f.resolution_note && (
-                <p className="text-[10px] text-primary font-medium mt-0.5">{f.resolution_note}</p>
+                <p className="text-xs text-primary font-medium mt-0.5">{f.resolution_note}</p>
               )}
-              <p className="text-[10px] text-muted mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Resolved {f.resolved_at ? formatDate(f.resolved_at) : ''}
               </p>
             </div>
@@ -121,7 +121,7 @@ export default function FlagResolver({ flags, onUpdate }: Props) {
           <button
             onClick={() => unresolve(f.id)}
             disabled={saving}
-            className="flex items-center gap-1 px-2.5 py-1 bg-sand hover:bg-night/8 text-muted text-[11px] font-medium rounded-lg transition-all shrink-0 disabled:opacity-40"
+            className="flex items-center gap-1 px-2.5 py-1 bg-sand hover:bg-night/8 text-muted text-xs font-medium rounded-lg transition-all shrink-0 disabled:opacity-40"
           >
             <Undo2 className="w-3 h-3" />
             Undo

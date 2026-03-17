@@ -401,7 +401,7 @@ export default function AnimalProfilePage() {
                 <h1 className="text-xl md:text-2xl font-heading font-bold text-night">
                   {animal.name ?? 'Unnamed'}
                 </h1>
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${typeConfig.bg} ${typeConfig.text}`}>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${typeConfig.bg} ${typeConfig.text}`}>
                   {typeConfig.label}
                 </span>
               </div>
@@ -561,7 +561,7 @@ export default function AnimalProfilePage() {
                 ) : (
                   <div className="space-y-2">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted/50" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" />
                       <input
                         type="text"
                         value={editLocationSearch}
@@ -586,7 +586,7 @@ export default function AnimalProfilePage() {
                         <MapPin className="w-4 h-4 text-muted shrink-0" />
                         <div className="flex-1 min-w-0">
                           <span className="font-medium text-night block truncate">{loc.name}</span>
-                          {loc.address && <span className="text-[11px] text-muted truncate block">{loc.address}</span>}
+                          {loc.address && <span className="text-xs text-muted truncate block">{loc.address}</span>}
                         </div>
                       </button>
                     ))}
@@ -801,7 +801,7 @@ function DetailsTab({ animal, situations }: { animal: AnimalDetail; situations: 
                 <div className="flex items-center justify-between mb-1">
                   <StatusBadge status={s.status} />
                   {s.is_active && (
-                    <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                       Current
                     </span>
                   )}
@@ -818,7 +818,7 @@ function DetailsTab({ animal, situations }: { animal: AnimalDetail; situations: 
       </DetailSection>
 
       {/* Meta */}
-      <div className="text-[11px] text-muted/50 flex gap-4 pt-2">
+      <div className="text-xs text-muted flex gap-4 pt-2">
         <span>Created {formatDate(animal.created_at)}</span>
         <span>Updated {formatDate(animal.updated_at)}</span>
       </div>
@@ -862,13 +862,13 @@ function PhotosTab({
             </div>
           )}
           {p.is_profile && (
-            <span className="absolute top-2 left-2 bg-white/80 text-[10px] font-semibold text-night px-1.5 py-0.5 rounded-md">
+            <span className="absolute top-2 left-2 bg-white/80 text-xs font-semibold text-night px-1.5 py-0.5 rounded-md">
               Profile
             </span>
           )}
           {p.caption && (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-night/60 to-transparent p-2 pt-6">
-              <p className="text-[11px] text-white truncate">{p.caption}</p>
+              <p className="text-xs text-white truncate">{p.caption}</p>
             </div>
           )}
         </button>
@@ -899,7 +899,7 @@ function DetailRow({
 
   return (
     <div className="flex items-start gap-2 py-1.5">
-      {Icon && <Icon className="w-3.5 h-3.5 text-muted/50 mt-0.5 shrink-0" strokeWidth={1.5} />}
+      {Icon && <Icon className="w-3.5 h-3.5 text-muted mt-0.5 shrink-0" strokeWidth={1.5} />}
       <span className="text-xs text-muted min-w-[80px] shrink-0">{label}</span>
       <span className="text-sm text-night">{value}</span>
     </div>

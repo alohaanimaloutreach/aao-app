@@ -88,7 +88,7 @@ export default function ArchiveActions({ tableName, recordId, isArchived, record
             <h3 className="font-heading font-bold text-ember text-sm mb-2">Permanently Delete {recordLabel}?</h3>
             <p className="text-xs text-muted mb-3">This action cannot be undone. All linked data will also be removed.</p>
             <div className="mb-4">
-              <label className="block text-[11px] text-muted font-medium mb-1">Type DELETE to confirm</label>
+              <label className="block text-xs text-muted font-medium mb-1">Type DELETE to confirm</label>
               <input
                 type="text"
                 value={deleteText}

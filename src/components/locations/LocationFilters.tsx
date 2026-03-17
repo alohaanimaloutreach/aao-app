@@ -67,7 +67,7 @@ export default function LocationFilters({ filters, onChange, resultCount }: Prop
         <div className="bg-white rounded-2xl border border-night/5 p-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] text-muted font-medium mb-1">Status</label>
+              <label className="block text-xs text-muted font-medium mb-1">Status</label>
               <select
                 value={filters.status}
                 onChange={(e) => update({ status: e.target.value })}

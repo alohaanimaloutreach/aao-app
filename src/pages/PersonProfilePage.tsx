@@ -411,7 +411,7 @@ export default function PersonProfilePage() {
                 ) : (
                   <div className="space-y-2">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted/50" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" />
                       <input
                         type="text"
                         value={editLocationSearch}
@@ -436,7 +436,7 @@ export default function PersonProfilePage() {
                         <MapPin className="w-4 h-4 text-muted shrink-0" />
                         <div className="flex-1 min-w-0">
                           <span className="font-medium text-night block truncate">{loc.name}</span>
-                          {loc.address && <span className="text-[11px] text-muted truncate block">{loc.address}</span>}
+                          {loc.address && <span className="text-xs text-muted truncate block">{loc.address}</span>}
                         </div>
                       </button>
                     ))}
@@ -537,7 +537,7 @@ export default function PersonProfilePage() {
                     />
                   </div>
                 )}
-                <p className="text-[10px] text-muted/60 mt-1">Optional — for exact GPS coordinates</p>
+                <p className="text-xs text-muted mt-1">Optional — for exact GPS coordinates</p>
               </div>
             </div>
             <div className="p-5 border-t border-night/5 shrink-0 space-y-2">
@@ -612,18 +612,18 @@ function AnimalsTab({ animals }: { animals: LinkedAnimal[] }) {
               <span className="font-heading font-bold text-sm text-night truncate">
                 {a.name ?? 'Unnamed'}
               </span>
-              <span className="text-[10px] text-muted font-mono">{a.aao_id}</span>
+              <span className="text-xs text-muted font-mono">{a.aao_id}</span>
               {a.urgent_medical && (
-                <span className="text-[10px] font-bold text-ember bg-ember/10 px-1.5 py-0.5 rounded-full">Urgent</span>
+                <span className="text-xs font-bold text-ember bg-ember/10 px-1.5 py-0.5 rounded-full">Urgent</span>
               )}
               {a.deceased && (
-                <span className="text-[10px] font-bold text-muted bg-night/8 px-1.5 py-0.5 rounded-full">Deceased</span>
+                <span className="text-xs font-bold text-muted bg-night/8 px-1.5 py-0.5 rounded-full">Deceased</span>
               )}
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               {a.current_status && <StatusBadge status={a.current_status} />}
               {a.food_bag_size && (
-                <span className="text-[10px] text-muted">{a.food_bag_size} bag</span>
+                <span className="text-xs text-muted">{a.food_bag_size} bag</span>
               )}
             </div>
           </div>
@@ -659,14 +659,14 @@ function DetailsTab({ owner }: { owner: OwnerDetail }) {
               loading="lazy"
             />
             <div className="flex items-center justify-between px-3 py-1.5 bg-sand/50">
-              <span className="text-[10px] text-muted">
+              <span className="text-xs text-muted">
                 {owner.precise_lat.toFixed(5)}, {owner.precise_lng.toFixed(5)}
               </span>
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${owner.precise_lat},${owner.precise_lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
               >
                 Directions <ExternalLink className="w-3 h-3" />
               </a>
@@ -682,7 +682,7 @@ function DetailsTab({ owner }: { owner: OwnerDetail }) {
         )}
       </div>
 
-      <div className="text-[11px] text-muted/50 flex gap-4 pt-2">
+      <div className="text-xs text-muted flex gap-4 pt-2">
         <span>Created {formatDate(owner.created_at)}</span>
         <span>Updated {formatDate(owner.updated_at)}</span>
       </div>
@@ -712,10 +712,10 @@ function NotesTab({ notes }: { notes: OwnerNote[] }) {
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="flex items-center gap-1.5">
               {n.is_flagged && <Flag className="w-3 h-3 text-gold" />}
-              <span className="text-[11px] text-muted">{formatDate(n.created_at)}</span>
+              <span className="text-xs text-muted">{formatDate(n.created_at)}</span>
             </div>
             {n.created_by_name && (
-              <span className="text-[10px] text-muted/60">{n.created_by_name}</span>
+              <span className="text-xs text-muted">{n.created_by_name}</span>
             )}
           </div>
           <p className="text-sm text-night leading-relaxed">{n.content}</p>

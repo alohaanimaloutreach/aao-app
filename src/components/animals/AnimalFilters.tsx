@@ -211,7 +211,7 @@ function FilterSelect({
 }) {
   return (
     <div>
-      <label className="block text-[11px] text-muted font-medium mb-1">{label}</label>
+      <label className="block text-xs text-muted font-medium mb-1">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

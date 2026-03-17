@@ -130,18 +130,18 @@ export default function ActiveEventPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-heading font-bold text-night">Active Event</h1>
             {testMode && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-400 text-amber-900 px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-xs font-bold bg-amber-400 text-amber-900 px-2 py-0.5 rounded-full">
                 <FlaskConical className="w-3 h-3" /> TEST
               </span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-1">
             {event.location?.name && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+              <span className="inline-flex items-center gap-1 text-xs text-muted">
                 <MapPin className="w-3 h-3" /> {event.location.name}
               </span>
             )}
-            <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+            <span className="inline-flex items-center gap-1 text-xs text-muted">
               <Calendar className="w-3 h-3" /> {formatDate(event.event_date)}
             </span>
           </div>
@@ -173,7 +173,7 @@ export default function ActiveEventPage() {
         >
           Queue
           {queueCount > 0 && (
-            <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">{queueCount}</span>
+            <span className="text-xs font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">{queueCount}</span>
           )}
         </button>
         <button
@@ -184,7 +184,7 @@ export default function ActiveEventPage() {
         >
           Complete
           {completeCount > 0 && (
-            <span className="text-[10px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">{completeCount}</span>
+            <span className="text-xs font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">{completeCount}</span>
           )}
         </button>
       </div>

@@ -519,7 +519,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
                   <MapPin className="w-4 h-4 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
                     <span className="font-medium text-night block truncate">{eventLocationName || 'Event location'}</span>
-                    <span className="text-[11px] text-primary">Current event location</span>
+                    <span className="text-xs text-primary">Current event location</span>
                   </div>
                 </button>
                 {locationSearching && <p className="text-xs text-muted text-center py-1">Searching...</p>}
@@ -533,7 +533,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
                     <MapPin className="w-4 h-4 text-muted shrink-0" />
                     <div className="flex-1 min-w-0">
                       <span className="font-medium text-night block truncate">{loc.name}</span>
-                      {loc.address && <span className="text-[11px] text-muted truncate block">{loc.address}</span>}
+                      {loc.address && <span className="text-xs text-muted truncate block">{loc.address}</span>}
                     </div>
                   </button>
                 ))}
@@ -698,7 +698,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
 
           {ownerAnimals.length === 0 ? (
             <div className="text-center py-6 bg-white rounded-xl border border-night/5">
-              <PawPrint className="w-8 h-8 text-muted/30 mx-auto mb-2" />
+              <PawPrint className="w-8 h-8 text-muted/50 mx-auto mb-2" />
               <p className="text-sm text-muted">No animals found for this owner</p>
               <button
                 onClick={() => setStep('add-animal')}
@@ -725,10 +725,10 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
                       </button>
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium text-night">{animal.name ?? 'Unnamed'}</span>
-                        <span className="text-[10px] text-muted ml-2 font-mono">{animal.aao_id}</span>
+                        <span className="text-xs text-muted ml-2 font-mono">{animal.aao_id}</span>
                       </div>
                       {animal.food_bag_size && (
-                        <span className="text-[10px] text-muted bg-sand px-1.5 py-0.5 rounded-md">{animal.food_bag_size}</span>
+                        <span className="text-xs text-muted bg-sand px-1.5 py-0.5 rounded-md">{animal.food_bag_size}</span>
                       )}
                     </div>
 
@@ -854,7 +854,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium text-night block truncate">{o.name}</span>
-                <span className="text-[11px] text-muted">
+                <span className="text-xs text-muted">
                   {o.phone_primary ?? 'No phone'}
                   {o.primary_location?.name && ` · ${o.primary_location.name}`}
                 </span>
@@ -895,7 +895,7 @@ function ServiceTag({ active, icon: Icon, label, onClick, color }: { active: boo
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium border transition-all ${
+      className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-all ${
         active ? activeClass : 'bg-white border-night/8 text-muted'
       }`}
     >

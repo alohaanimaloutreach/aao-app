@@ -195,7 +195,7 @@ export default function LocationsPage() {
                 <MapInner pins={mapPins} />
               </Suspense>
             </div>
-            <div className="px-5 py-2.5 border-t border-night/5 text-[11px] text-muted">
+            <div className="px-5 py-2.5 border-t border-night/5 text-xs text-muted">
               {mapPins.length} location{mapPins.length !== 1 ? 's' : ''} shown
             </div>
           </div>

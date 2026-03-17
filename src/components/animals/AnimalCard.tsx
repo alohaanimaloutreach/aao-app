@@ -46,13 +46,13 @@ export default function AnimalCard({ animal }: Props) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <PawPrint className="w-10 h-10 text-muted/20" strokeWidth={1} />
+            <PawPrint className="w-10 h-10 text-muted/40" strokeWidth={1} />
           </div>
         )}
 
         {/* Urgent badge */}
         {animal.urgent_medical && (
-          <div className="absolute top-2 left-2 bg-ember text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+          <div className="absolute top-2 left-2 bg-ember text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" />
             Urgent
           </div>
@@ -60,7 +60,7 @@ export default function AnimalCard({ animal }: Props) {
 
         {/* Food bag badge */}
         {animal.food_bag_size && (
-          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-night text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-night text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
             <Package className="w-3 h-3" />
             {animal.food_bag_size}
           </div>
@@ -68,7 +68,7 @@ export default function AnimalCard({ animal }: Props) {
 
         {/* Haven't seen warning */}
         {haventSeen && (
-          <div className="absolute bottom-2 left-2 bg-gold/90 text-night text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+          <div className="absolute bottom-2 left-2 bg-gold/90 text-night text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {lastSeenDays === Infinity ? 'Never seen' : `${lastSeenDays}d since last seen`}
           </div>
@@ -83,9 +83,9 @@ export default function AnimalCard({ animal }: Props) {
             <h3 className="font-heading font-bold text-night text-sm leading-tight truncate">
               {animal.name ?? 'Unnamed'}
             </h3>
-            <p className="text-[11px] text-muted font-mono">{animal.aao_id}</p>
+            <p className="text-xs text-muted font-mono">{animal.aao_id}</p>
           </div>
-          <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${typeConfig.bg} ${typeConfig.text}`}>
+          <span className={`shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-md ${typeConfig.bg} ${typeConfig.text}`}>
             {typeConfig.label}
           </span>
         </div>
@@ -100,19 +100,19 @@ export default function AnimalCard({ animal }: Props) {
         {/* Meta info */}
         <div className="space-y-1">
           {animal.owner && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted">
+            <div className="flex items-center gap-1.5 text-xs text-muted">
               <User className="w-3 h-3 shrink-0" />
               <span className="truncate">{animal.owner.name}</span>
             </div>
           )}
           {animal.primary_location && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted">
+            <div className="flex items-center gap-1.5 text-xs text-muted">
               <MapPin className="w-3 h-3 shrink-0" />
               <span className="truncate">{animal.primary_location.name}</span>
             </div>
           )}
           {animal.last_seen && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted">
+            <div className="flex items-center gap-1.5 text-xs text-muted">
               <Clock className="w-3 h-3 shrink-0" />
               <span>Last seen {formatRelative(animal.last_seen)}</span>
             </div>

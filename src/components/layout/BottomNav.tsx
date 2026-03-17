@@ -126,7 +126,7 @@ export default function BottomNav() {
               `flex flex-col items-center justify-center flex-1 h-full min-h-[48px] rounded-lg transition-all duration-150 ${
                 isActive
                   ? 'text-primary'
-                  : 'text-muted/60 active:text-muted'
+                  : 'text-muted active:text-night'
               }`
             }
           >
@@ -138,7 +138,7 @@ export default function BottomNav() {
                     <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-amber-500 rounded-full border-2 border-white" />
                   )}
                 </div>
-                <span className={`text-[10px] mt-0.5 ${isActive ? 'font-semibold' : 'font-medium'}`}>
+                <span className={`text-xs mt-0.5 ${isActive ? 'font-semibold' : 'font-medium'}`}>
                   {tab.label}
                 </span>
               </>
@@ -153,13 +153,13 @@ export default function BottomNav() {
             aria-label="More pages"
             aria-expanded={moreOpen}
             className={`flex flex-col items-center justify-center w-full h-full min-h-[48px] rounded-lg transition-all duration-150 ${
-              isMoreActive ? 'text-primary' : 'text-muted/60 active:text-muted'
+              isMoreActive ? 'text-primary' : 'text-muted active:text-night'
             }`}
           >
             <div className={`p-1.5 rounded-lg transition-colors ${isMoreActive ? 'bg-primary/10' : ''}`}>
               <MoreHorizontal className="w-5 h-5" strokeWidth={isMoreActive ? 2 : 1.5} />
             </div>
-            <span className={`text-[10px] mt-0.5 ${isMoreActive ? 'font-semibold' : 'font-medium'}`}>
+            <span className={`text-xs mt-0.5 ${isMoreActive ? 'font-semibold' : 'font-medium'}`}>
               More
             </span>
           </button>

@@ -229,7 +229,7 @@ export default function EventSummaryPage() {
               href={`https://www.google.com/maps/search/?api=1&query=${event.location.latitude},${event.location.longitude}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+              className="flex items-center gap-1 text-xs text-primary hover:underline"
             >
               Directions <ExternalLink className="w-3 h-3" />
             </a>
@@ -322,10 +322,10 @@ function StatCard({ icon: Icon, label, value, sub }: { icon: any; label: string;
     <div className="bg-white rounded-xl border border-night/5 p-3">
       <div className="flex items-center gap-2 mb-1">
         <Icon className="w-4 h-4 text-primary" strokeWidth={1.5} />
-        <span className="text-[11px] text-muted">{label}</span>
+        <span className="text-xs text-muted">{label}</span>
       </div>
       <p className="text-xl font-bold text-night">{value}</p>
-      {sub && <p className="text-[10px] text-muted">{sub}</p>}
+      {sub && <p className="text-xs text-muted">{sub}</p>}
     </div>
   );
 }

@@ -226,12 +226,12 @@ export default function EventSetup({ onCreated, onCancel }: Props) {
                       loading="lazy"
                     />
                     <div className="flex items-center justify-between px-2.5 py-1.5 bg-sand/50">
-                      <span className="text-[10px] font-mono text-muted">
+                      <span className="text-xs font-mono text-muted">
                         {newLocLat.toFixed(5)}, {newLocLng.toFixed(5)}
                       </span>
                       <button
                         onClick={() => { setNewLocLat(null); setNewLocLng(null); }}
-                        className="text-[10px] text-ember hover:underline"
+                        className="text-xs text-ember hover:underline"
                       >
                         Remove pin
                       </button>
