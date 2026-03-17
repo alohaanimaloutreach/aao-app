@@ -103,6 +103,7 @@ export default function EventSetup({ onCreated, onCancel }: Props) {
         location_id: finalLocationId,
         status: 'active',
         notes: isTestMode() ? '[TEST]' : null,
+        is_test: isTestMode(),
         created_by: user.id,
       })
       .select('id')

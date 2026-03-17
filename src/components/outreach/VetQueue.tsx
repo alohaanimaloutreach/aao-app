@@ -156,6 +156,7 @@ export default function VetQueue({ eventId, eventLocationId, eventDate }: Props)
       preventative_dosage: animal.preventative_dosage || null,
       health_notes: animal.health_notes || null,
       other_notes: animal.other_notes || testTag || null,
+      is_test: isTestMode(),
       created_by: user.id,
     }));
 

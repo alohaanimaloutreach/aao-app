@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { CalendarHeart, Plus, MapPin, Users, PawPrint, Package, Play } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useTestMode } from '../lib/testMode';
 import { formatDate } from '../lib/format';
 import EmptyState from '../components/shared/EmptyState';
 import EventSetup from '../components/outreach/EventSetup';
@@ -22,6 +23,7 @@ interface OutreachEventRow {
 
 export default function OutreachPage() {
   const { session } = useAuth();
+  const { testMode } = useTestMode();
   const navigate = useNavigate();
   const [events, setEvents] = useState<OutreachEventRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,16 +31,19 @@ export default function OutreachPage() {
 
   useEffect(() => {
     if (session) loadEvents();
-  }, [session]);
+  }, [session, testMode]);
 
   async function loadEvents() {
     setLoading(true);
 
+    let eventsQuery = supabase
+      .from('outreach_events')
+      .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, location:locations(name)')
+      .order('event_date', { ascending: false });
+    if (!testMode) eventsQuery = eventsQuery.eq('is_test', false);
+
     const [eventRes, volRes, careRes] = await Promise.all([
-      supabase
-        .from('outreach_events')
-        .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, location:locations(name)')
-        .order('event_date', { ascending: false }),
+      eventsQuery,
       supabase.from('outreach_event_volunteers').select('outreach_event_id'),
       supabase.from('care_events').select('outreach_event_id, animal_id').not('outreach_event_id', 'is', null),
     ]);

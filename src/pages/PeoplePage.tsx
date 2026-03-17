@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useTestMode } from '../lib/testMode';
 import PersonCard, { type PersonCardData } from '../components/people/PersonCard';
 import PeopleFilters, { type PeopleFilterState, DEFAULT_PEOPLE_FILTERS } from '../components/people/PeopleFilters';
 import EmptyState from '../components/shared/EmptyState';
@@ -21,6 +22,7 @@ const PAGE_SIZE = 50;
 
 export default function PeoplePage() {
   const { isAdmin, session } = useAuth();
+  const { testMode } = useTestMode();
   const [owners, setOwners] = useState<RawOwner[]>([]);
   const [animalCounts, setAnimalCounts] = useState<Record<string, number>>({});
   const [lastContactMap, setLastContactMap] = useState<Record<string, string>>({});
@@ -31,16 +33,19 @@ export default function PeoplePage() {
 
   useEffect(() => {
     if (session) loadData();
-  }, [session]);
+  }, [session, testMode]);
 
   async function loadData() {
     setLoading(true);
 
+    let ownersQuery = supabase
+      .from('owners')
+      .select('id, name, phone_primary, phone_secondary, address, primary_location_id, archived, primary_location:locations(name)')
+      .order('name');
+    if (!testMode) ownersQuery = ownersQuery.eq('is_test', false);
+
     const [ownerRes, animalRes, careRes, locRes] = await Promise.all([
-      supabase
-        .from('owners')
-        .select('id, name, phone_primary, phone_secondary, address, primary_location_id, archived, primary_location:locations(name)')
-        .order('name'),
+      ownersQuery,
       supabase
         .from('animals')
         .select('owner_id')

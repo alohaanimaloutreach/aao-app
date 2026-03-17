@@ -202,6 +202,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
         phone_primary: newOwnerPhone.trim() || null,
         primary_location_id: newOwnerLocationId,
         notes: isTestMode() ? '[TEST]' : null,
+        is_test: isTestMode(),
         created_by: user.id,
       })
       .select('id, name, phone_primary')
@@ -234,6 +235,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
         owner_id: owner.id,
         primary_location_id: eventLocationId,
         general_notes: noteParts.length > 0 ? noteParts.join(' ') : null,
+        is_test: isTestMode(),
         created_by: user.id,
       })
       .select('id, aao_id, name, animal_type, size_category, food_bag_size, sex')
@@ -291,6 +293,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
 
     const testTag = isTestMode() ? '[TEST]' : null;
     const foodAnimals = checked.filter((a) => a.food);
+    const isTest = isTestMode();
     const careInserts = foodAnimals.map((a) => ({
       outreach_event_id: eventId,
       animal_id: a.id,
@@ -301,6 +304,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
       food_bags: 1,
       food_lbs: a.food_bag_size ? parseInt(a.food_bag_size) : 6,
       other_notes: testTag,
+      is_test: isTest,
       created_by: user.id,
     }));
 
@@ -314,6 +318,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
       event_date: eventDate,
       care_types: ['seen'],
       other_notes: testTag,
+      is_test: isTest,
       created_by: user.id,
     }));
 
@@ -359,6 +364,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
       completed_by: user.id,
       completed_at: new Date().toISOString(),
       staged_care: stagedCare,
+      is_test: isTest,
     });
 
     await trackVolunteer(eventId, user.id);
@@ -411,6 +417,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
       status: 'waiting',
       checked_in_by: user.id,
       staged_care: stagedCare,
+      is_test: isTestMode(),
     });
 
     if (queueErr) {

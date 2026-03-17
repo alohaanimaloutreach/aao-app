@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { PawPrint } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useTestMode } from '../lib/testMode';
 import AnimalCard, { type AnimalCardData } from '../components/animals/AnimalCard';
 import AnimalFilters, { type AnimalFilterState, DEFAULT_FILTERS } from '../components/animals/AnimalFilters';
 import EmptyState from '../components/shared/EmptyState';
@@ -31,6 +32,7 @@ const BATCH_SIZE = 40;
 
 export default function AnimalsPage() {
   const { isAdmin, session } = useAuth();
+  const { testMode } = useTestMode();
   const [animals, setAnimals] = useState<RawAnimal[]>([]);
   const [situations, setSituations] = useState<Record<string, { status: string }>>({});
   const [lastSeenMap, setLastSeenMap] = useState<Record<string, string>>({});
@@ -43,16 +45,19 @@ export default function AnimalsPage() {
 
   useEffect(() => {
     if (session) loadData();
-  }, [session]);
+  }, [session, testMode]);
 
   async function loadData() {
     setLoading(true);
 
+    let animalsQuery = supabase
+      .from('animals')
+      .select('id, aao_id, name, animal_type, breed, sex, size_category, food_bag_size, urgent_medical, deceased, fixed_status, archived, owner_id, primary_location_id, microchip_primary, updated_at, is_test, owner:owners(name), primary_location:locations(name)')
+      .order('updated_at', { ascending: false });
+    if (!testMode) animalsQuery = animalsQuery.eq('is_test', false);
+
     const [animalRes, sitRes, lastSeenRes, locRes, photoRes] = await Promise.all([
-      supabase
-        .from('animals')
-        .select('id, aao_id, name, animal_type, breed, sex, size_category, food_bag_size, urgent_medical, deceased, fixed_status, archived, owner_id, primary_location_id, microchip_primary, updated_at, owner:owners(name), primary_location:locations(name)')
-        .order('updated_at', { ascending: false }),
+      animalsQuery,
       supabase
         .from('situations')
         .select('animal_id, status')
