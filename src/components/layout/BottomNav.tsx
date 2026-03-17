@@ -10,6 +10,10 @@ import {
   StickyNote,
   Flag,
   BarChart3,
+  KeyRound,
+  X,
+  Check,
+  Loader2,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -35,6 +39,24 @@ export default function BottomNav() {
   const [hasActiveQueue, setHasActiveQueue] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState(false);
+
+  async function handleChangePassword() {
+    if (newPassword.length < 6) { setPwError('Password must be at least 6 characters'); return; }
+    if (newPassword !== confirmPassword) { setPwError('Passwords do not match'); return; }
+    setPwSaving(true);
+    setPwError('');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setPwSaving(false);
+    if (error) { setPwError(error.message); return; }
+    setPwSuccess(true);
+    setTimeout(() => { setShowPassword(false); setPwSuccess(false); setNewPassword(''); setConfirmPassword(''); }, 1500);
+  }
 
   useEffect(() => {
     checkActiveQueue();
@@ -158,10 +180,70 @@ export default function BottomNav() {
                   {item.label}
                 </Link>
               ))}
+              <div className="border-t border-night/5" />
+              <button
+                onClick={() => { setMoreOpen(false); setShowPassword(true); setPwError(''); setPwSuccess(false); setNewPassword(''); setConfirmPassword(''); }}
+                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-night hover:bg-sand transition-colors w-full"
+              >
+                <KeyRound className="w-4 h-4 text-muted" strokeWidth={1.75} />
+                Change Password
+              </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      {showPassword && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Change password">
+          <div className="bg-white rounded-2xl max-w-sm w-full shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-night/5">
+              <h2 className="font-heading font-bold text-night text-base">Change Password</h2>
+              <button onClick={() => setShowPassword(false)} className="p-2 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">New Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Confirm Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  onKeyDown={(e) => e.key === 'Enter' && handleChangePassword()}
+                />
+              </div>
+              {pwError && (
+                <div className="bg-ember/10 border border-ember/20 text-ember text-xs rounded-xl px-3 py-2" role="alert">{pwError}</div>
+              )}
+              {pwSuccess && (
+                <div className="bg-primary/10 border border-primary/20 text-primary text-sm font-medium rounded-xl px-3 py-2 text-center" role="status">Password changed!</div>
+              )}
+              <button
+                onClick={handleChangePassword}
+                disabled={pwSaving || pwSuccess}
+                className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold text-sm rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.25)] disabled:opacity-30 transition-all flex items-center justify-center gap-2"
+              >
+                {pwSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                {pwSaving ? 'Saving...' : 'Update Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
