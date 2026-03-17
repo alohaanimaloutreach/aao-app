@@ -23,6 +23,8 @@ import {
   X,
   Check,
   Loader2,
+  Upload,
+  Search,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatDate, daysSince } from '../lib/format';
@@ -98,7 +100,7 @@ interface FlagRecord {
 export default function AnimalProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
 
   const [animal, setAnimal] = useState<AnimalDetail | null>(null);
   const [situations, setSituations] = useState<Situation[]>([]);
@@ -112,6 +114,12 @@ export default function AnimalProfilePage() {
   const [editData, setEditData] = useState<Record<string, any>>({});
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [editLocationSearch, setEditLocationSearch] = useState('');
+  const [editLocationResults, setEditLocationResults] = useState<{ id: string; name: string; address: string | null }[]>([]);
+  const [showEditLocationPicker, setShowEditLocationPicker] = useState(false);
 
   useEffect(() => {
     if (id) loadAnimal(id);
@@ -176,15 +184,79 @@ export default function AnimalProfilePage() {
       urgent_medical: animal.urgent_medical,
       general_notes: animal.general_notes ?? '',
       medical_notes: animal.medical_notes ?? '',
+      primary_location_id: animal.primary_location?.id ?? '',
+      primary_location_name: animal.primary_location?.name ?? '',
     });
     setEditError('');
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setShowEditLocationPicker(false);
+    setEditLocationSearch('');
     setEditing(true);
+  }
+
+  // Location search for edit modal
+  useEffect(() => {
+    if (!showEditLocationPicker || editLocationSearch.trim().length < 2) {
+      setEditLocationResults([]);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      const { data } = await supabase
+        .from('locations')
+        .select('id, name, address')
+        .eq('archived', false)
+        .ilike('name', `%${editLocationSearch.trim()}%`)
+        .order('name')
+        .limit(10);
+      setEditLocationResults(data ?? []);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [editLocationSearch, showEditLocationPicker]);
+
+  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setPhotoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  async function uploadPhoto(animalId: string) {
+    if (!photoFile) return;
+    setUploadingPhoto(true);
+    const ext = photoFile.name.split('.').pop() ?? 'jpg';
+    const path = `animals/${animalId}/${Date.now()}.${ext}`;
+    const { error: uploadErr } = await supabase.storage
+      .from('photos')
+      .upload(path, photoFile, { upsert: false });
+    if (uploadErr) {
+      setEditError(`Photo upload failed: ${uploadErr.message}`);
+      setUploadingPhoto(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path);
+    await supabase.from('photos').insert({
+      animal_id: animalId,
+      storage_path: urlData.publicUrl,
+      is_profile: photos.length === 0,
+      created_by: user?.id,
+    });
+    setUploadingPhoto(false);
   }
 
   async function saveEdit() {
     if (!animal) return;
     setEditSaving(true);
     setEditError('');
+
+    // Upload photo if selected
+    if (photoFile) {
+      await uploadPhoto(animal.id);
+      if (editError) { setEditSaving(false); return; }
+    }
+
     const { error } = await supabase.from('animals').update({
       name: editData.name || null,
       breed: editData.breed || null,
@@ -199,6 +271,7 @@ export default function AnimalProfilePage() {
       urgent_medical: editData.urgent_medical,
       general_notes: editData.general_notes || null,
       medical_notes: editData.medical_notes || null,
+      primary_location_id: editData.primary_location_id || null,
     }).eq('id', animal.id);
     setEditSaving(false);
     if (error) {
@@ -431,6 +504,90 @@ export default function AnimalProfilePage() {
               </label>
               <EditField label="General notes" value={editData.general_notes} onChange={(v) => setEditData({ ...editData, general_notes: v })} multiline />
               <EditField label="Medical notes" value={editData.medical_notes} onChange={(v) => setEditData({ ...editData, medical_notes: v })} multiline />
+
+              {/* Location */}
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Location</label>
+                {!showEditLocationPicker ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-muted shrink-0" />
+                        <span className="truncate">{editData.primary_location_name || 'No location set'}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowEditLocationPicker(true)}
+                      className="px-3 py-2.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/15 rounded-xl transition-colors whitespace-nowrap"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted/50" />
+                      <input
+                        type="text"
+                        value={editLocationSearch}
+                        onChange={(e) => setEditLocationSearch(e.target.value)}
+                        placeholder="Search locations..."
+                        className="w-full pl-9 pr-4 py-2.5 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                        autoFocus
+                      />
+                    </div>
+                    {editLocationResults.map((loc) => (
+                      <button
+                        key={loc.id}
+                        type="button"
+                        onClick={() => {
+                          setEditData({ ...editData, primary_location_id: loc.id, primary_location_name: loc.name });
+                          setShowEditLocationPicker(false);
+                          setEditLocationSearch('');
+                        }}
+                        className="w-full flex items-center gap-2 p-2.5 rounded-xl border border-night/5 bg-white text-left text-sm hover:bg-sand/50 transition-colors"
+                      >
+                        <MapPin className="w-4 h-4 text-muted shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-night block truncate">{loc.name}</span>
+                          {loc.address && <span className="text-[11px] text-muted truncate block">{loc.address}</span>}
+                        </div>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => { setShowEditLocationPicker(false); setEditLocationSearch(''); }}
+                      className="w-full py-2 text-xs text-muted hover:text-night font-medium transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Photo upload */}
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Add Photo</label>
+                {photoPreview ? (
+                  <div className="relative">
+                    <img src={photoPreview} alt="Preview" className="w-full h-40 object-cover rounded-xl" />
+                    <button
+                      type="button"
+                      onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
+                      className="absolute top-2 right-2 p-1 bg-night/60 hover:bg-night/80 text-white rounded-lg transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-night/15 rounded-xl text-sm text-muted hover:border-primary/30 hover:text-primary cursor-pointer transition-colors">
+                    <Upload className="w-4 h-4" />
+                    <span>Choose a photo</span>
+                    <input type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" />
+                  </label>
+                )}
+              </div>
             </div>
             <div className="p-5 border-t border-night/5 shrink-0 space-y-2">
               {editError && (
@@ -438,7 +595,7 @@ export default function AnimalProfilePage() {
               )}
               <button onClick={saveEdit} disabled={editSaving} className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold text-sm rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.25)] disabled:opacity-30 transition-all flex items-center justify-center gap-2">
                 {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                {editSaving ? 'Saving...' : 'Save Changes'}
+                {editSaving ? (uploadingPhoto ? 'Uploading photo...' : 'Saving...') : 'Save Changes'}
               </button>
             </div>
           </div>
