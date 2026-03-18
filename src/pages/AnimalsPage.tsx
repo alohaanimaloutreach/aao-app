@@ -3,8 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { PawPrint, List, Map, Loader2, Plus, X, Check, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useTestMode } from '../lib/testMode';
-import { isTestMode } from '../lib/testMode';
+
 import { daysSince } from '../lib/format';
 import AnimalCard, { type AnimalCardData } from '../components/animals/AnimalCard';
 import AnimalFilters, { type AnimalFilterState, DEFAULT_FILTERS } from '../components/animals/AnimalFilters';
@@ -37,7 +36,7 @@ const BATCH_SIZE = 40;
 
 export default function AnimalsPage() {
   const { isAdmin, session, user } = useAuth();
-  const { testMode } = useTestMode();
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [animals, setAnimals] = useState<RawAnimal[]>([]);
   const [situations, setSituations] = useState<Record<string, { status: string }>>({});
@@ -65,16 +64,16 @@ export default function AnimalsPage() {
 
   useEffect(() => {
     if (session) loadData();
-  }, [session, testMode]);
+  }, [session]);
 
   async function loadData() {
     setLoading(true);
 
     let animalsQuery = supabase
       .from('animals')
-      .select('id, aao_id, name, animal_type, breed, sex, size_category, food_bag_size, urgent_medical, deceased, fixed_status, archived, owner_id, primary_location_id, microchip_primary, updated_at, is_test, owner:owners(name), primary_location:locations(name)')
+      .select('id, aao_id, name, animal_type, breed, sex, size_category, food_bag_size, urgent_medical, deceased, fixed_status, archived, owner_id, primary_location_id, microchip_primary, updated_at, owner:owners(name), primary_location:locations(name)')
       .order('updated_at', { ascending: false });
-    if (!testMode) animalsQuery = animalsQuery.eq('is_test', false);
+
 
     const [animalRes, sitRes, lastSeenRes, locRes, photoRes] = await Promise.all([
       animalsQuery,
@@ -252,7 +251,6 @@ export default function AnimalsPage() {
         sex: newAnimalSex,
         size_category: newAnimalSize,
         fixed_status: 'unknown',
-        is_test: isTestMode(),
       })
       .select('id')
       .single();

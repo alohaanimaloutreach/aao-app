@@ -5,11 +5,11 @@ import { supabase } from '../lib/supabase';
 import {
   PawPrint, Users, MapPin, Flag, AlertTriangle, Clock, CalendarHeart,
   Pencil, ArrowRight, Eye, Stethoscope, Package, ListOrdered,
-  CircleStop, Play, FlaskConical, X, StickyNote, BarChart3, ChevronDown, Scissors,
+  CircleStop, Play, X, StickyNote, BarChart3, ChevronDown, Scissors,
 } from 'lucide-react';
 import { formatRelative, daysSince, formatDate } from '../lib/format';
 import { HAVENT_SEEN_DAYS } from '../lib/constants';
-import { useTestMode } from '../lib/testMode';
+
 import EventSetup from '../components/outreach/EventSetup';
 
 interface Stats {
@@ -42,7 +42,7 @@ interface ActivityItem {
 
 export default function DashboardPage() {
   const { profile, session } = useAuth();
-  const { testMode } = useTestMode();
+
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({ animals: null, people: null, locations: null, openFlags: null, outreachThisMonth: null, foodThisMonth: null });
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -61,35 +61,22 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (session) loadDashboard();
-  }, [session, testMode]);
+  }, [session]);
 
   async function loadDashboard() {
     setLoading(true);
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const noTest = !testMode;
-
     // Build filtered queries
-    let animalsCountQ = supabase.from('animals').select('id', { count: 'exact', head: true }).eq('archived', false);
-    let ownersCountQ = supabase.from('owners').select('id', { count: 'exact', head: true }).eq('archived', false);
-    let outreachCountQ = supabase.from('outreach_events').select('id', { count: 'exact', head: true }).gte('event_date', monthStart);
-    let foodQ = supabase.from('outreach_events').select('total_food_lbs').gte('event_date', monthStart);
-    let allAnimalsQ = supabase.from('animals').select('id, name, aao_id, urgent_medical, interested_in_fixing, deceased').eq('archived', false).eq('deceased', false);
-    let careQ = supabase.from('care_events').select('animal_id, event_date').order('event_date', { ascending: false });
-    let recentCareQ = supabase.from('care_events').select('id, animal_id, event_date, care_types, animal:animals(name, aao_id), author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
-    let recentNotesQ = supabase.from('field_notes').select('id, animal_id, owner_id, location_id, note, created_at, author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
-
-    if (noTest) {
-      animalsCountQ = animalsCountQ.eq('is_test', false);
-      ownersCountQ = ownersCountQ.eq('is_test', false);
-      outreachCountQ = outreachCountQ.eq('is_test', false);
-      foodQ = foodQ.eq('is_test', false);
-      allAnimalsQ = allAnimalsQ.eq('is_test', false);
-      careQ = careQ.eq('is_test', false);
-      recentCareQ = recentCareQ.eq('is_test', false);
-      recentNotesQ = recentNotesQ.eq('is_test', false);
-    }
+    const animalsCountQ = supabase.from('animals').select('id', { count: 'exact', head: true }).eq('archived', false);
+    const ownersCountQ = supabase.from('owners').select('id', { count: 'exact', head: true }).eq('archived', false);
+    const outreachCountQ = supabase.from('outreach_events').select('id', { count: 'exact', head: true }).gte('event_date', monthStart);
+    const foodQ = supabase.from('outreach_events').select('total_food_lbs').gte('event_date', monthStart);
+    const allAnimalsQ = supabase.from('animals').select('id, name, aao_id, urgent_medical, interested_in_fixing, deceased').eq('archived', false).eq('deceased', false);
+    const careQ = supabase.from('care_events').select('animal_id, event_date').order('event_date', { ascending: false });
+    const recentCareQ = supabase.from('care_events').select('id, animal_id, event_date, care_types, animal:animals(name, aao_id), author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
+    const recentNotesQ = supabase.from('field_notes').select('id, animal_id, owner_id, location_id, note, created_at, author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
 
     const [
       animalsRes, peopleRes, locRes, flagsRes,
@@ -384,27 +371,13 @@ export default function DashboardPage() {
 
       {/* Active Event Card */}
       {activeEvent && (
-        <div className={`mb-4 rounded-2xl border-2 p-4 ${
-          testMode
-            ? 'border-amber-300 bg-amber-50'
-            : 'border-primary/25 bg-primary/5'
-        }`}>
+        <div className="mb-4 rounded-2xl border-2 p-4 border-primary/25 bg-primary/5">
           <div className="flex items-center gap-3 mb-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-              testMode ? 'bg-amber-200' : 'bg-primary/15'
-            }`}>
-              {testMode
-                ? <FlaskConical className="w-5 h-5 text-amber-700" />
-                : <Play className="w-5 h-5 text-primary" fill="currentColor" />
-              }
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/15">
+              <Play className="w-5 h-5 text-primary" fill="currentColor" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-night">Outreach Event Active</p>
-                {testMode && (
-                  <span className="text-xs font-bold bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-full">TEST</span>
-                )}
-              </div>
+              <p className="text-sm font-bold text-night">Outreach Event Active</p>
               {activeEvent.location_name && (
                 <p className="text-sm text-muted mt-0.5">{activeEvent.location_name}</p>
               )}

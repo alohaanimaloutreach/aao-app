@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FlaskConical, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTestMode } from '../../lib/testMode';
+
 import GlobalSearch from './GlobalSearch';
 
 export default function TopBar() {
   const { profile } = useAuth();
-  const { testMode, setTestMode } = useTestMode();
   const [searchOpen, setSearchOpen] = useState(false);
 
   // Cmd+K / Ctrl+K shortcut
@@ -24,11 +23,7 @@ export default function TopBar() {
 
   return (
     <>
-      <header className={`sticky top-0 z-30 backdrop-blur-md px-4 md:px-6 safe-top ${
-        testMode
-          ? 'bg-amber-50/95 border-b-2 border-amber-400'
-          : 'bg-white/90 border-b border-night/5'
-      }`} role="banner">
+      <header className="sticky top-0 z-30 backdrop-blur-md px-4 md:px-6 safe-top bg-white/90 border-b border-night/5" role="banner">
         <div className="flex items-center justify-between h-14">
           {/* Mobile title */}
           <Link to="/" className="md:hidden flex items-center gap-2">
@@ -55,31 +50,6 @@ export default function TopBar() {
               aria-label="Search"
             >
               <Search className="w-5 h-5" strokeWidth={1.75} />
-            </button>
-
-            {/* Test Mode Switch */}
-            <button
-              onClick={() => setTestMode(!testMode)}
-              className={`flex items-center gap-2 rounded-xl px-3 py-2 transition-all ${
-                testMode
-                  ? 'bg-amber-100 text-amber-700 border border-amber-300'
-                  : 'text-muted hover:text-night hover:bg-sand border border-transparent'
-              }`}
-              role="switch"
-              aria-checked={testMode}
-              aria-label={testMode ? 'End test mode' : 'Start test mode'}
-              title={testMode ? 'End Test Mode' : 'Start Test Mode'}
-            >
-              <FlaskConical className="w-4.5 h-4.5" strokeWidth={2} />
-              <span className="text-sm font-semibold">{testMode ? 'End Test' : 'Test Mode'}</span>
-              {/* Switch track */}
-              <div className={`relative w-9 h-5 rounded-full transition-colors ${
-                testMode ? 'bg-amber-500' : 'bg-night/15'
-              }`}>
-                <div className={`absolute top-[3px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform ${
-                  testMode ? 'translate-x-[18px]' : 'translate-x-[3px]'
-                }`} />
-              </div>
             </button>
 
             {/* Avatar — desktop */}

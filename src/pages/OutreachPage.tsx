@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { CalendarHeart, Plus, MapPin, Users, PawPrint, Package, Play, Search, ArrowUpDown, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useTestMode } from '../lib/testMode';
+
 import { formatDate } from '../lib/format';
 import EmptyState from '../components/shared/EmptyState';
 import EventSetup from '../components/outreach/EventSetup';
@@ -24,7 +24,7 @@ interface OutreachEventRow {
 
 export default function OutreachPage() {
   const { session } = useAuth();
-  const { testMode } = useTestMode();
+
   const navigate = useNavigate();
   const [events, setEvents] = useState<OutreachEventRow[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
@@ -36,7 +36,7 @@ export default function OutreachPage() {
 
   useEffect(() => {
     if (session) loadEvents();
-  }, [session, testMode]);
+  }, [session]);
 
   async function loadEvents() {
     setLoading(true);
@@ -45,7 +45,7 @@ export default function OutreachPage() {
       .from('outreach_events')
       .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, location_id, location:locations(name)')
       .order('event_date', { ascending: false });
-    if (!testMode) eventsQuery = eventsQuery.eq('is_test', false);
+
 
     const [eventRes, volRes, careRes, locRes] = await Promise.all([
       eventsQuery,

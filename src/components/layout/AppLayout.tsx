@@ -1,19 +1,17 @@
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Pencil, FlaskConical, X } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 import TopBar from './TopBar';
 import FieldNotesDrawer from './FieldNotesDrawer';
-import { useTestMode } from '../../lib/testMode';
+
 
 export default function AppLayout() {
   const [notesOpen, setNotesOpen] = useState(false);
   const location = useLocation();
-  const { testMode, setTestMode } = useTestMode();
-
   return (
-    <div className={`min-h-screen bg-sand ${testMode ? 'test-mode-frame' : ''}`}>
+    <div className="min-h-screen bg-sand">
       {/* Skip to content for keyboard users */}
       <a href="#main-content" className="skip-link">
         Skip to content
@@ -24,18 +22,6 @@ export default function AppLayout() {
       {/* Main content area */}
       <div className="md:ml-16 min-h-screen flex flex-col">
         <TopBar />
-
-        {testMode && (
-          <div className="test-mode-banner bg-amber-400 text-amber-900 px-4 py-2 flex items-center justify-between text-xs font-bold tracking-wide">
-            <div className="flex items-center gap-2">
-              <FlaskConical className="w-4 h-4" />
-              TEST MODE — Nothing you do here will affect real data
-            </div>
-            <button onClick={() => setTestMode(false)} className="p-1 hover:bg-amber-500/30 rounded" aria-label="Exit test mode">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
 
         <main
           id="main-content"

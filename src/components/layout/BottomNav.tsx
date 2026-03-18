@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTestMode } from '../../lib/testMode';
+
 
 const TABS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -34,7 +34,7 @@ const MORE_ITEMS = [
 
 export default function BottomNav() {
   const { isAdmin } = useAuth();
-  const { testMode } = useTestMode();
+
   const location = useLocation();
   const [hasActiveQueue, setHasActiveQueue] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -107,11 +107,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className={`md:hidden fixed bottom-0 left-0 right-0 backdrop-blur-md z-40 safe-bottom ${
-        testMode
-          ? 'bg-amber-50/95 border-t-2 border-amber-400'
-          : 'bg-white/95 border-t border-night/5'
-      }`}
+      className="md:hidden fixed bottom-0 left-0 right-0 backdrop-blur-md z-40 safe-bottom bg-white/95 border-t border-night/5"
       role="navigation"
       aria-label="Main navigation"
     >

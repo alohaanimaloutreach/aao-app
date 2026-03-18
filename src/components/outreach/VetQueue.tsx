@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { isTestMode } from '../../lib/testMode';
+
 import { trackVolunteer } from '../../lib/trackVolunteer';
 
 interface Props {
@@ -138,7 +138,6 @@ export default function VetQueue({ eventId, eventLocationId, eventDate }: Props)
     if (!user || !selected) return;
     setSubmitting(true);
 
-    const testTag = isTestMode() ? '[TEST]' : null;
     // Write care_events for each animal
     const careInserts = editCare.map((animal) => ({
       outreach_event_id: eventId,
@@ -155,8 +154,7 @@ export default function VetQueue({ eventId, eventLocationId, eventDate }: Props)
       preventative_product: animal.preventative_product || null,
       preventative_dosage: animal.preventative_dosage || null,
       health_notes: animal.health_notes || null,
-      other_notes: animal.other_notes || testTag || null,
-      is_test: isTestMode(),
+      other_notes: animal.other_notes || null,
       created_by: user.id,
     }));
 

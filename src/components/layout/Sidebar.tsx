@@ -9,13 +9,13 @@ import {
   CalendarHeart,
   BarChart3,
   LogOut,
-  FlaskConical,
+
   KeyRound,
   X,
   Check,
   Loader2,
 } from 'lucide-react';
-import { useTestMode } from '../../lib/testMode';
+
 import { supabase } from '../../lib/supabase';
 
 const NAV_ITEMS = [
@@ -28,7 +28,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const { isAdmin, signOut, profile } = useAuth();
-  const { testMode, setTestMode } = useTestMode();
+
   const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -49,11 +49,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className={`group hidden md:flex flex-col w-16 hover:w-56 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] text-white h-screen fixed left-0 top-0 z-40 overflow-hidden ${
-      testMode
-        ? 'bg-amber-900 shadow-[4px_0_24px_rgba(245,158,11,0.3)]'
-        : 'bg-night shadow-[4px_0_24px_rgba(28,23,8,0.15)]'
-    }`} role="navigation" aria-label="Sidebar navigation">
+    <aside className="group hidden md:flex flex-col w-16 hover:w-56 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] text-white h-screen fixed left-0 top-0 z-40 overflow-hidden bg-night shadow-[4px_0_24px_rgba(28,23,8,0.15)]" role="navigation" aria-label="Sidebar navigation">
       {/* Logo */}
       <div className="flex items-center h-16 px-4 border-b border-white/8 shrink-0">
         <img src="/logo-white.png" alt="AAO" className="w-8 h-8 rounded-lg shrink-0" />
@@ -103,30 +99,8 @@ export default function Sidebar() {
         )}
       </nav>
 
-      {/* Test Mode & User & Sign Out */}
+      {/* User & Sign Out */}
       <div className="border-t border-white/8 p-2 space-y-0.5">
-        <button
-          onClick={() => setTestMode(!testMode)}
-          role="switch"
-          aria-checked={testMode}
-          aria-label={testMode ? 'End test mode' : 'Start test mode'}
-          className={`flex items-center h-11 px-3 rounded-lg transition-all duration-150 w-full ${
-            testMode ? 'bg-amber-500/20 text-amber-400' : 'text-white/40 hover:text-white hover:bg-white/8'
-          }`}
-        >
-          <FlaskConical className="w-5 h-5 shrink-0" strokeWidth={1.75} />
-          <span className="ml-3 text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2">
-            {testMode ? 'End Test Mode' : 'Start Test Mode'}
-            {/* Switch track */}
-            <span className={`relative inline-flex w-8 h-[18px] rounded-full transition-colors ${
-              testMode ? 'bg-amber-500' : 'bg-white/20'
-            }`}>
-              <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform ${
-                testMode ? 'translate-x-[16px]' : 'translate-x-[2px]'
-              }`} />
-            </span>
-          </span>
-        </button>
         {profile && (
           <div className="flex items-center h-11 px-3 text-white/40">
             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-[11px] font-bold shrink-0 shadow-sm">

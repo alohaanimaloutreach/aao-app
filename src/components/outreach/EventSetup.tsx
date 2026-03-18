@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, MapPin, Calendar, Plus, CalendarHeart, Navigation, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { isTestMode } from '../../lib/testMode';
+
 
 interface Props {
   onCreated: (eventId: string) => void;
@@ -102,8 +102,6 @@ export default function EventSetup({ onCreated, onCancel }: Props) {
         event_date: eventDate,
         location_id: finalLocationId,
         status: 'active',
-        notes: isTestMode() ? '[TEST]' : null,
-        is_test: isTestMode(),
         created_by: user.id,
       })
       .select('id')

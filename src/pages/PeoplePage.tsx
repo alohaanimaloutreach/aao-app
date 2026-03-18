@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, List, Map, Loader2, Plus, X, Check, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useTestMode, isTestMode } from '../lib/testMode';
+
 import PersonCard, { type PersonCardData } from '../components/people/PersonCard';
 import PeopleFilters, { type PeopleFilterState, DEFAULT_PEOPLE_FILTERS } from '../components/people/PeopleFilters';
 import EmptyState from '../components/shared/EmptyState';
@@ -25,7 +25,7 @@ const PAGE_SIZE = 50;
 
 export default function PeoplePage() {
   const { isAdmin, session, user } = useAuth();
-  const { testMode } = useTestMode();
+
   const [owners, setOwners] = useState<RawOwner[]>([]);
   const [animalCounts, setAnimalCounts] = useState<Record<string, number>>({});
   const [lastContactMap, setLastContactMap] = useState<Record<string, string>>({});
@@ -42,7 +42,7 @@ export default function PeoplePage() {
 
   useEffect(() => {
     if (session) loadData();
-  }, [session, testMode]);
+  }, [session]);
 
   async function loadData() {
     setLoading(true);
@@ -51,7 +51,7 @@ export default function PeoplePage() {
       .from('owners')
       .select('id, name, phone_primary, phone_secondary, address, primary_location_id, archived, primary_location:locations(name)')
       .order('name');
-    if (!testMode) ownersQuery = ownersQuery.eq('is_test', false);
+
 
     const [ownerRes, animalRes, careRes, locRes] = await Promise.all([
       ownersQuery,
@@ -158,7 +158,6 @@ export default function PeoplePage() {
       .insert({
         name: newPersonName.trim(),
         phone_primary: newPersonPhone.trim() || null,
-        is_test: isTestMode(),
       })
       .select('id')
       .single();
