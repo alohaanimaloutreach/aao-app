@@ -39,6 +39,17 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.01em;
 }
 
+/* Keep Leaflet map z-indexes below the sidebar (z-40) */
+.leaflet-pane,
+.leaflet-control,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1 !important;
+}
+.leaflet-popup-pane {
+  z-index: 2 !important;
+}
+
 /* iOS safe areas */
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);

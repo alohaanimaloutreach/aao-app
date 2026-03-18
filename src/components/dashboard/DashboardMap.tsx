@@ -234,8 +234,8 @@ export default function DashboardMap() {
   if (animals.length === 0) return null;
 
   return (
-    <div className={`bg-white rounded-2xl border border-night/5 overflow-hidden mb-6 ${expanded ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-night/5">
+    <div className={`bg-white rounded-2xl border border-night/5 overflow-hidden mb-6 relative ${expanded ? 'fixed inset-0 z-50 rounded-none' : 'z-0'}`}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-night/5 relative z-10">
         <h2 className="text-sm font-heading font-bold text-night">
           Animal Map
           <span className="text-muted font-normal ml-2">{animals.length} animals</span>
@@ -248,7 +248,7 @@ export default function DashboardMap() {
           {expanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </button>
       </div>
-      <div ref={mapRef} className={expanded ? 'h-[calc(100vh-48px)]' : 'h-[250px] md:h-[300px]'} />
+      <div ref={mapRef} style={{ isolation: 'isolate' }} className={expanded ? 'h-[calc(100vh-48px)]' : 'h-[250px] md:h-[300px]'} />
     </div>
   );
 }
