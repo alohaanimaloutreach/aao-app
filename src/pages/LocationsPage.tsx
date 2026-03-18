@@ -98,7 +98,8 @@ export default function LocationsPage() {
 
       if (filters.search) {
         const q = filters.search.toLowerCase();
-        const fields = [l.name, l.address, l.precise_location];
+        const statusLabel = l.status === 'active' ? 'Active' : l.status === 'cleared' ? 'Cleared' : l.status === 'unknown' ? 'Unknown' : l.status;
+        const fields = [l.name, l.address, l.precise_location, statusLabel];
         if (!fields.some((f) => f?.toLowerCase().includes(q))) return false;
       }
       return true;

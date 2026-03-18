@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 import { daysSince, formatDate } from '../lib/format';
+import { SITUATION_CONFIG, SIZE_LABELS, FIXED_STATUS_LABELS, ANIMAL_TYPE_CONFIG } from '../lib/constants';
 import AnimalCard, { type AnimalCardData } from '../components/animals/AnimalCard';
 import AnimalFilters, { type AnimalFilterState, DEFAULT_FILTERS } from '../components/animals/AnimalFilters';
 import EmptyState from '../components/shared/EmptyState';
@@ -174,12 +175,18 @@ export default function AnimalsPage() {
       // Search
       if (filters.search) {
         const q = filters.search.toLowerCase();
+        const sit = situations[a.id];
         const matchFields = [
           a.name,
           a.aao_id,
           a.microchip_primary,
           a.owner?.name,
           a.breed,
+          a.primary_location?.name,
+          sit ? SITUATION_CONFIG[sit.status]?.label : null,
+          SIZE_LABELS[a.size_category] || a.size_category,
+          FIXED_STATUS_LABELS[a.fixed_status] || a.fixed_status,
+          ANIMAL_TYPE_CONFIG[a.animal_type]?.label || a.animal_type,
         ];
         if (!matchFields.some((f) => f?.toLowerCase().includes(q))) return false;
       }
