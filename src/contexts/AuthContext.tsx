@@ -54,10 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (session?.user) {
         fetchProfile(session.user.id);
+        if (event === 'SIGNED_IN') {
+          supabase.from('login_history').insert({ user_id: session.user.id }).then(() => {});
+        }
       } else {
         setProfile(null);
       }

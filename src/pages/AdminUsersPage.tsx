@@ -10,6 +10,9 @@ import {
   Shield,
   Users,
   Copy,
+  Clock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface AppUser {
@@ -68,8 +71,14 @@ export default function AdminUsersPage() {
   // Copied state
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Login history state
+  const [loginHistory, setLoginHistory] = useState<{ user_id: string; user_name: string; user_email: string; logged_in_at: string }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
   useEffect(() => {
     loadUsers();
+    loadLoginHistory();
   }, []);
 
   async function loadUsers() {
@@ -86,6 +95,22 @@ export default function AdminUsersPage() {
       setUsers(data || []);
     }
     setLoading(false);
+  }
+
+  async function loadLoginHistory() {
+    setHistoryLoading(true);
+    const { data } = await supabase
+      .from('login_history')
+      .select('user_id, logged_in_at, user:users!user_id(name, email)')
+      .order('logged_in_at', { ascending: false })
+      .limit(50);
+    if (data) {
+      setLoginHistory(data.map((d: any) => {
+        const u = Array.isArray(d.user) ? d.user[0] : d.user;
+        return { user_id: d.user_id, user_name: u?.name ?? 'Unknown', user_email: u?.email ?? '', logged_in_at: d.logged_in_at };
+      }));
+    }
+    setHistoryLoading(false);
   }
 
   async function handleCreate() {
@@ -244,6 +269,46 @@ export default function AdminUsersPage() {
           ))}
         </div>
       )}
+
+      {/* Login History */}
+      <div className="mt-8">
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="flex items-center gap-2 text-sm font-semibold text-night mb-3"
+        >
+          <Clock className="w-4 h-4 text-muted" />
+          Login History
+          {showHistory ? <ChevronUp className="w-4 h-4 text-muted" /> : <ChevronDown className="w-4 h-4 text-muted" />}
+        </button>
+        {showHistory && (
+          historyLoading ? (
+            <div className="bg-white rounded-xl border border-night/5 p-6 text-center">
+              <Loader2 className="w-5 h-5 animate-spin text-muted mx-auto" />
+            </div>
+          ) : loginHistory.length === 0 ? (
+            <div className="bg-white rounded-xl border border-night/5 p-6 text-center">
+              <p className="text-sm text-muted">No login history recorded yet. History will appear after the next sign-in.</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-night/5 overflow-hidden">
+              <div className="divide-y divide-night/5">
+                {loginHistory.map((entry, i) => (
+                  <div key={i} className="px-4 py-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-night">{entry.user_name}</p>
+                      <p className="text-xs text-muted">{entry.user_email}</p>
+                    </div>
+                    <p className="text-sm text-muted whitespace-nowrap">
+                      {new Date(entry.logged_in_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{' '}
+                      {new Date(entry.logged_in_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        )}
+      </div>
 
       {/* Create User Modal */}
       {showCreate && (
