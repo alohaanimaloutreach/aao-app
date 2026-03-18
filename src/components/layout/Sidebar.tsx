@@ -7,6 +7,7 @@ import {
   Users,
   MapPin,
   CalendarHeart,
+  Clock,
   BarChart3,
   LogOut,
   UserCog,
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { to: '/people', icon: Users, label: 'People' },
   { to: '/locations', icon: MapPin, label: 'Locations' },
   { to: '/outreach', icon: CalendarHeart, label: 'Outreach' },
+  { to: '/activity', icon: Clock, label: 'Activity' },
 ];
 
 export default function Sidebar() {

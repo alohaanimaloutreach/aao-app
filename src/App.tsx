@@ -16,6 +16,7 @@ import EventSummaryPage from './pages/EventSummaryPage';
 import NotesPage from './pages/NotesPage';
 import FlagsPage from './pages/FlagsPage';
 import ReportsPage from './pages/ReportsPage';
+import ActivityPage from './pages/ActivityPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 
 export default function App() {
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="/outreach/summary/:id" element={<EventSummaryPage />} />
             <Route path="/notes" element={<NotesPage />} />
             <Route path="/flags" element={<FlagsPage />} />
+            <Route path="/activity" element={<ActivityPage />} />
             <Route
               path="/reports"
               element={

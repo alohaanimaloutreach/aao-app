@@ -9,6 +9,7 @@ import {
   MapPin,
   StickyNote,
   Flag,
+  Clock,
   BarChart3,
   UserCog,
   KeyRound,
@@ -31,6 +32,7 @@ const MORE_ITEMS = [
   { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-ember' },
   { to: '/notes', icon: StickyNote, label: 'Notes', color: 'text-sky-600' },
   { to: '/flags', icon: Flag, label: 'Flags', color: 'text-gold' },
+  { to: '/activity', icon: Clock, label: 'Activity', color: 'text-muted' },
 ];
 
 export default function BottomNav() {
@@ -98,7 +100,7 @@ export default function BottomNav() {
     setHasActiveQueue((count ?? 0) > 0);
   }
 
-  const isMoreActive = ['/locations', '/notes', '/flags', '/reports', '/admin'].some(
+  const isMoreActive = ['/locations', '/notes', '/flags', '/activity', '/reports', '/admin'].some(
     (p) => location.pathname.startsWith(p)
   );
 
