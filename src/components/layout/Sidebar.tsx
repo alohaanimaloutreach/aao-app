@@ -9,7 +9,7 @@ import {
   CalendarHeart,
   BarChart3,
   LogOut,
-
+  UserCog,
   KeyRound,
   X,
   Check,
@@ -94,6 +94,24 @@ export default function Sidebar() {
             <BarChart3 className="w-5 h-5 shrink-0" strokeWidth={1.75} />
             <span className="ml-3 text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Reports
+            </span>
+          </NavLink>
+        )}
+
+        {isAdmin && (
+          <NavLink
+            to="/admin/users"
+            className={({ isActive }) =>
+              `flex items-center h-11 px-3 rounded-lg transition-all duration-150 ${
+                isActive
+                  ? 'bg-primary text-white shadow-[0_2px_8px_rgba(110,168,50,0.3)]'
+                  : 'text-white/50 hover:text-white hover:bg-white/8'
+              }`
+            }
+          >
+            <UserCog className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+            <span className="ml-3 text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Users
             </span>
           </NavLink>
         )}

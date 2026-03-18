@@ -16,6 +16,7 @@ import EventSummaryPage from './pages/EventSummaryPage';
 import NotesPage from './pages/NotesPage';
 import FlagsPage from './pages/FlagsPage';
 import ReportsPage from './pages/ReportsPage';
+import AdminUsersPage from './pages/AdminUsersPage';
 
 export default function App() {
   return (
@@ -48,6 +49,14 @@ export default function App() {
               element={
                 <ProtectedRoute requireAdmin>
                   <ReportsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminUsersPage />
                 </ProtectedRoute>
               }
             />

@@ -10,6 +10,7 @@ import {
   StickyNote,
   Flag,
   BarChart3,
+  UserCog,
   KeyRound,
   X,
   Check,
@@ -97,12 +98,12 @@ export default function BottomNav() {
     setHasActiveQueue((count ?? 0) > 0);
   }
 
-  const isMoreActive = ['/locations', '/notes', '/flags', '/reports'].some(
+  const isMoreActive = ['/locations', '/notes', '/flags', '/reports', '/admin'].some(
     (p) => location.pathname.startsWith(p)
   );
 
   const allMoreItems = isAdmin
-    ? [...MORE_ITEMS, { to: '/reports', icon: BarChart3, label: 'Reports', color: 'text-muted' }]
+    ? [...MORE_ITEMS, { to: '/reports', icon: BarChart3, label: 'Reports', color: 'text-muted' }, { to: '/admin/users', icon: UserCog, label: 'Users', color: 'text-primary' }]
     : MORE_ITEMS;
 
   return (

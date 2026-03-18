@@ -5,6 +5,9 @@
 [build.environment]
   NPM_FLAGS = "--legacy-peer-deps"
 
+[functions]
+  directory = "netlify/functions"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
