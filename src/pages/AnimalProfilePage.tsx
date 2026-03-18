@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -124,6 +124,7 @@ export default function AnimalProfilePage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const quickPhotoRef = useRef<HTMLInputElement>(null);
   const [editLocationSearch, setEditLocationSearch] = useState('');
   const [editLocationResults, setEditLocationResults] = useState<{ id: string; name: string; address: string | null }[]>([]);
   const [showEditLocationPicker, setShowEditLocationPicker] = useState(false);
@@ -286,6 +287,33 @@ export default function AnimalProfilePage() {
     setUploadingPhoto(false);
   }
 
+  async function handleQuickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !animal) return;
+    setUploadingPhoto(true);
+    const ext = file.name.split('.').pop() ?? 'jpg';
+    const path = `animals/${animal.id}/${Date.now()}.${ext}`;
+    const { error: uploadErr } = await supabase.storage
+      .from('photos')
+      .upload(path, file, { upsert: false });
+    if (uploadErr) {
+      setUploadingPhoto(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path);
+    await supabase.from('photos').insert({
+      animal_id: animal.id,
+      storage_path: urlData.publicUrl,
+      is_profile: photos.length === 0,
+      created_by: user?.id,
+    });
+    setUploadingPhoto(false);
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+    // Reload to show new photo
+    loadAnimal(animal.id);
+  }
+
   async function saveEdit() {
     if (!animal) return;
     setEditSaving(true);
@@ -422,6 +450,27 @@ export default function AnimalProfilePage() {
 
             {/* Action buttons */}
             <div className="flex gap-2">
+              <button
+                onClick={() => quickPhotoRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-leaf/10 hover:bg-leaf/20 text-leaf font-medium transition-all text-sm"
+                aria-label="Add photo"
+              >
+                {uploadingPhoto ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4" strokeWidth={2} />
+                )}
+                <span>{uploadingPhoto ? 'Uploading...' : 'Add Photo'}</span>
+              </button>
+              <input
+                ref={quickPhotoRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleQuickPhoto}
+                className="hidden"
+              />
               <button onClick={openEdit} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-all text-sm" aria-label="Edit animal">
                 <Edit3 className="w-4 h-4" strokeWidth={2} />
                 <span>Edit</span>
