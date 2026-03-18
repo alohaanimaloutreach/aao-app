@@ -19,8 +19,8 @@ export default function AppLayout() {
       </a>
 
       {isTestEnv && (
-        <div className="bg-amber-500 text-white text-center text-sm font-semibold py-1.5 px-4 sticky top-0 z-50">
-          Training Mode — This is the practice environment. Nothing here affects real data.
+        <div className="bg-amber-500 text-white text-center text-base font-bold py-2 px-4 sticky top-0 z-50">
+          ⚠ PRACTICE APP — This is NOT the real app. You can tap anything here without worry.
         </div>
       )}
 
