@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
+import { useEffect, useState, useMemo, lazy, Suspense, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, List, Map, Loader2, Plus, X, Check, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -18,6 +18,7 @@ interface RawOwner {
   address: string | null;
   primary_location_id: string | null;
   archived: boolean;
+  archived_at: string | null;
   primary_location: { name: string } | null;
 }
 
@@ -49,7 +50,7 @@ export default function PeoplePage() {
 
     let ownersQuery = supabase
       .from('owners')
-      .select('id, name, phone_primary, phone_secondary, address, primary_location_id, archived, primary_location:locations(name)')
+      .select('id, name, phone_primary, phone_secondary, address, primary_location_id, archived, archived_at, primary_location:locations(name)')
       .order('name');
 
 
@@ -114,8 +115,29 @@ export default function PeoplePage() {
     });
   }, [owners, animalCounts, filters, isAdmin]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  // Split active vs archived
+  const activeFiltered = filtered.filter((o) => !o.archived);
+  const archivedFiltered = filtered.filter((o) => o.archived);
+
+  const archivedByMonth = useMemo(() => {
+    const groups: Record<string, RawOwner[]> = {};
+    archivedFiltered.forEach((o) => {
+      const date = o.archived_at ? new Date(o.archived_at) : null;
+      const key = date
+        ? `${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`
+        : 'Unknown date';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(o);
+    });
+    return Object.entries(groups).sort((a, b) => {
+      const dateA = a[1][0]?.archived_at ?? '';
+      const dateB = b[1][0]?.archived_at ?? '';
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
+  }, [archivedFiltered]);
+
+  const totalPages = Math.ceil(activeFiltered.length / PAGE_SIZE);
+  const paginated = activeFiltered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const cardData: PersonCardData[] = paginated.map((o) => ({
     id: o.id,
@@ -276,6 +298,34 @@ export default function PeoplePage() {
               >
                 Next
               </button>
+            </div>
+          )}
+
+          {/* Archived section */}
+          {filters.showArchived && archivedByMonth.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-px flex-1 bg-night/8" />
+                <span className="text-sm font-semibold text-muted px-2">Archived ({archivedFiltered.length})</span>
+                <div className="h-px flex-1 bg-night/8" />
+              </div>
+              {archivedByMonth.map(([month, items]) => (
+                <div key={month} className="mb-4">
+                  <p className="text-xs font-medium text-muted mb-2 uppercase tracking-wide">{month}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 opacity-60">
+                    {items.map((o) => (
+                      <PersonCard key={o.id} person={{
+                        id: o.id,
+                        name: o.name,
+                        phone_primary: o.phone_primary,
+                        primary_location: o.primary_location,
+                        animal_count: animalCounts[o.id] ?? 0,
+                        last_contact: lastContactMap[o.id] ?? null,
+                      }} />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </>

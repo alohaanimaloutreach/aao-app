@@ -77,7 +77,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@alohaanimaloutreach.org"
+              placeholder="your@email.com"
               required
               autoComplete="email"
               className="w-full px-4 py-2.5 border border-night/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 bg-sand/50 text-sm placeholder:text-muted/40 transition-all"
@@ -130,7 +130,7 @@ export default function LoginPage() {
         </form>
 
         <p className="text-center text-xs text-muted/60 mt-6">
-          Restricted to AAO team members
+          Invite only — contact your admin for access
         </p>
       </div>
     </div>

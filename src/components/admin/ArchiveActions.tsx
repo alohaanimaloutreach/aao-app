@@ -99,7 +99,7 @@ export default function ArchiveActions({ tableName, recordId, isArchived, record
             </div>
             <div className="flex gap-2">
               <button onClick={() => { setConfirming(null); setDeleteText(''); }} className="flex-1 py-2 text-sm font-medium text-muted bg-sand rounded-xl hover:bg-muted/15 transition-all">Cancel</button>
-              <button onClick={handleDelete} disabled={processing || deleteText !== 'DELETE'} className="flex-1 py-2 text-sm font-semibold text-white bg-ember hover:bg-red-700 rounded-xl transition-all disabled:opacity-30">
+              <button onClick={handleDelete} disabled={processing || deleteText !== 'DELETE'} className="flex-1 py-2 text-sm font-semibold text-white bg-ember hover:bg-ember/90 rounded-xl transition-all disabled:opacity-30">
                 {processing ? 'Deleting...' : 'Delete Forever'}
               </button>
             </div>

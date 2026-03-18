@@ -4,7 +4,7 @@ import { PawPrint, List, Map, Loader2, Plus, X, Check, MapPin } from 'lucide-rea
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
-import { daysSince } from '../lib/format';
+import { daysSince, formatDate } from '../lib/format';
 import AnimalCard, { type AnimalCardData } from '../components/animals/AnimalCard';
 import AnimalFilters, { type AnimalFilterState, DEFAULT_FILTERS } from '../components/animals/AnimalFilters';
 import EmptyState from '../components/shared/EmptyState';
@@ -24,6 +24,7 @@ interface RawAnimal {
   deceased: boolean;
   fixed_status: string;
   archived: boolean;
+  archived_at: string | null;
   owner_id: string | null;
   primary_location_id: string | null;
   microchip_primary: string | null;
@@ -71,7 +72,7 @@ export default function AnimalsPage() {
 
     let animalsQuery = supabase
       .from('animals')
-      .select('id, aao_id, name, animal_type, breed, sex, size_category, food_bag_size, urgent_medical, deceased, fixed_status, archived, owner_id, primary_location_id, microchip_primary, updated_at, owner:owners(name), primary_location:locations(name)')
+      .select('id, aao_id, name, animal_type, breed, sex, size_category, food_bag_size, urgent_medical, deceased, fixed_status, archived, archived_at, owner_id, primary_location_id, microchip_primary, updated_at, owner:owners(name), primary_location:locations(name)')
       .order('updated_at', { ascending: false });
 
 
@@ -264,8 +265,42 @@ export default function AnimalsPage() {
     if (data) navigate(`/animals/${data.id}`);
   }
 
+  // Split active vs archived
+  const activeFiltered = filtered.filter((a) => !a.archived);
+  const archivedFiltered = filtered.filter((a) => a.archived);
+
+  // Group archived by month
+  const archivedByMonth = useMemo(() => {
+    const groups: Record<string, RawAnimal[]> = {};
+    archivedFiltered.forEach((a) => {
+      const date = a.archived_at ? new Date(a.archived_at) : null;
+      const key = date
+        ? `${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`
+        : 'Unknown date';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(a);
+    });
+    // Sort keys newest first
+    return Object.entries(groups).sort((a, b) => {
+      const dateA = archivedFiltered.find((x) => {
+        const d = x.archived_at ? new Date(x.archived_at) : null;
+        const k = d ? `${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}` : 'Unknown date';
+        return k === a[0];
+      })?.archived_at ?? '';
+      const dateB = archivedFiltered.find((x) => {
+        const d = x.archived_at ? new Date(x.archived_at) : null;
+        const k = d ? `${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}` : 'Unknown date';
+        return k === b[0];
+      })?.archived_at ?? '';
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
+  }, [archivedFiltered]);
+
+  // Use active for visible/pagination, archived shown separately
+  const activeVisible = activeFiltered.slice(0, visibleCount);
+
   // Map to card data
-  const cardData: AnimalCardData[] = visible.map((a) => ({
+  const cardData: AnimalCardData[] = activeVisible.map((a) => ({
     id: a.id,
     aao_id: a.aao_id,
     name: a.name,
@@ -372,7 +407,7 @@ export default function AnimalsPage() {
           </div>
 
           {/* Infinite scroll sentinel */}
-          {visibleCount < filtered.length && (
+          {visibleCount < activeFiltered.length && (
             <div ref={sentinelRef} className="flex justify-center py-6">
               <div className="flex items-center gap-2 text-sm text-muted">
                 <div className="w-4 h-4 border-2 border-muted/30 border-t-primary rounded-full animate-spin" />
@@ -381,10 +416,47 @@ export default function AnimalsPage() {
             </div>
           )}
 
-          {visibleCount >= filtered.length && filtered.length > BATCH_SIZE && (
+          {visibleCount >= activeFiltered.length && activeFiltered.length > BATCH_SIZE && (
             <p className="text-center text-xs text-muted py-4">
-              Showing all {filtered.length} animals
+              Showing all {activeFiltered.length} animals
             </p>
+          )}
+
+          {/* Archived section */}
+          {filters.showArchived && archivedByMonth.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-px flex-1 bg-night/8" />
+                <span className="text-sm font-semibold text-muted px-2">Archived ({archivedFiltered.length})</span>
+                <div className="h-px flex-1 bg-night/8" />
+              </div>
+              {archivedByMonth.map(([month, items]) => (
+                <div key={month} className="mb-4">
+                  <p className="text-xs font-medium text-muted mb-2 uppercase tracking-wide">{month}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 opacity-60">
+                    {items.map((a) => (
+                      <AnimalCard key={a.id} animal={{
+                        id: a.id,
+                        aao_id: a.aao_id,
+                        name: a.name,
+                        animal_type: a.animal_type,
+                        breed: a.breed,
+                        sex: a.sex,
+                        size_category: a.size_category,
+                        food_bag_size: a.food_bag_size,
+                        urgent_medical: a.urgent_medical,
+                        deceased: a.deceased,
+                        owner: a.owner,
+                        primary_location: a.primary_location,
+                        current_situation: situations[a.id] ?? null,
+                        last_seen: lastSeenMap[a.id] ?? null,
+                        profile_photo_url: profilePhotos[a.id] ?? null,
+                      }} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </>
       )}

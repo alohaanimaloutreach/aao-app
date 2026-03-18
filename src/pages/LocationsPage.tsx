@@ -18,6 +18,7 @@ interface RawLocation {
   latitude: number | null;
   longitude: number | null;
   archived: boolean;
+  archived_at: string | null;
 }
 
 export default function LocationsPage() {
@@ -45,7 +46,7 @@ export default function LocationsPage() {
     const [locRes, animalRes, ownerRes, outreachRes] = await Promise.all([
       supabase
         .from('locations')
-        .select('id, name, address, precise_location, status, latitude, longitude, archived')
+        .select('id, name, address, precise_location, status, latitude, longitude, archived, archived_at')
         .order('name'),
       supabase
         .from('animals')
@@ -104,7 +105,28 @@ export default function LocationsPage() {
     });
   }, [locations, filters, isAdmin]);
 
-  const cardData: LocationCardData[] = filtered.map((l) => ({
+  // Split active vs archived
+  const activeFiltered = filtered.filter((l) => !l.archived);
+  const archivedFiltered = filtered.filter((l) => l.archived);
+
+  const archivedByMonth = useMemo(() => {
+    const groups: Record<string, RawLocation[]> = {};
+    archivedFiltered.forEach((l) => {
+      const date = l.archived_at ? new Date(l.archived_at) : null;
+      const key = date
+        ? `${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`
+        : 'Unknown date';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(l);
+    });
+    return Object.entries(groups).sort((a, b) => {
+      const dateA = a[1][0]?.archived_at ?? '';
+      const dateB = b[1][0]?.archived_at ?? '';
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
+  }, [archivedFiltered]);
+
+  const cardData: LocationCardData[] = activeFiltered.map((l) => ({
     id: l.id,
     name: l.name,
     address: l.address,
@@ -216,11 +238,45 @@ export default function LocationsPage() {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-          {cardData.map((loc) => (
-            <LocationCard key={loc.id} location={loc} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+            {cardData.map((loc) => (
+              <LocationCard key={loc.id} location={loc} />
+            ))}
+          </div>
+
+          {/* Archived section */}
+          {filters.showArchived && archivedByMonth.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-px flex-1 bg-night/8" />
+                <span className="text-sm font-semibold text-muted px-2">Archived ({archivedFiltered.length})</span>
+                <div className="h-px flex-1 bg-night/8" />
+              </div>
+              {archivedByMonth.map(([month, items]) => (
+                <div key={month} className="mb-4">
+                  <p className="text-xs font-medium text-muted mb-2 uppercase tracking-wide">{month}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 opacity-60">
+                    {items.map((l) => (
+                      <LocationCard key={l.id} location={{
+                        id: l.id,
+                        name: l.name,
+                        address: l.address,
+                        precise_location: l.precise_location,
+                        status: l.status,
+                        latitude: l.latitude,
+                        longitude: l.longitude,
+                        animal_count: animalCounts[l.id] ?? 0,
+                        owner_count: ownerCounts[l.id] ?? 0,
+                        last_visited: lastVisitedMap[l.id] ?? null,
+                      }} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Add Location FAB */}

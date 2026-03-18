@@ -78,7 +78,7 @@ export default function DashboardPage() {
     const foodQ = supabase.from('outreach_events').select('total_food_lbs').gte('event_date', monthStart);
     const allAnimalsQ = supabase.from('animals').select('id, name, aao_id, urgent_medical, interested_in_fixing, deceased').eq('archived', false).eq('deceased', false);
     const careQ = supabase.from('care_events').select('animal_id, event_date').order('event_date', { ascending: false });
-    const recentCareQ = supabase.from('care_events').select('id, animal_id, event_date, care_types, animal:animals(name, aao_id), author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
+    const recentCareQ = supabase.from('care_events').select('id, animal_id, outreach_event_id, event_date, care_types, animal:animals(name, aao_id), author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
     const recentNotesQ = supabase.from('field_notes').select('id, animal_id, owner_id, location_id, note, created_at, author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
 
     const [
@@ -221,15 +221,15 @@ export default function DashboardPage() {
         description: `${types || 'Care'} for ${animalName}`,
         date: c.event_date,
         author: (Array.isArray(c.author) ? c.author[0] : c.author)?.name ?? null,
-        link: c.animal_id ? `/animals/${c.animal_id}` : null,
+        link: c.animal_id ? `/animals/${c.animal_id}?highlight=care-${c.id}` : c.outreach_event_id ? `/outreach/summary/${c.outreach_event_id}` : '/outreach',
       });
     });
     (recentNotesRes.data ?? []).forEach((n: any) => {
-      const noteLink = n.animal_id ? `/animals/${n.animal_id}` : n.owner_id ? `/people/${n.owner_id}` : n.location_id ? `/locations/${n.location_id}` : null;
+      const noteLink = n.animal_id ? `/animals/${n.animal_id}?highlight=note-${n.id}` : n.owner_id ? `/people/${n.owner_id}?highlight=note-${n.id}` : n.location_id ? `/locations/${n.location_id}?highlight=note-${n.id}` : '/notes';
       actItems.push({
         id: `note-${n.id}`,
         type: 'note',
-        description: n.note.length > 80 ? n.note.slice(0, 80) + '...' : n.note,
+        description: (n.note ?? '').length > 80 ? n.note.slice(0, 80) + '...' : (n.note ?? 'Note'),
         date: n.created_at,
         author: (Array.isArray(n.author) ? n.author[0] : n.author)?.name ?? null,
         link: noteLink,

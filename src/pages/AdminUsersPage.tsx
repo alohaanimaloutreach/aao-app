@@ -40,7 +40,7 @@ async function adminFetch(action: string, body: Record<string, unknown>) {
 }
 
 export default function AdminUsersPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -91,10 +91,6 @@ export default function AdminUsersPage() {
   async function handleCreate() {
     if (!createName.trim()) { setCreateError('Name is required'); return; }
     if (!createEmail.trim()) { setCreateError('Email is required'); return; }
-    if (!createEmail.endsWith('@alohaanimaloutreach.org')) {
-      setCreateError('Email must end with @alohaanimaloutreach.org');
-      return;
-    }
     if (createPassword.length < 6) { setCreateError('Password must be at least 6 characters'); return; }
 
     setCreateSaving(true);
@@ -205,16 +201,29 @@ export default function AdminUsersPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-night text-sm truncate">{u.name}</p>
-                  <button
-                    onClick={() => handleChangeRole(u.id, u.role === 'admin' ? 'coordinator' : 'admin')}
-                    disabled={changingRoleId === u.id}
-                    className={`text-xs font-semibold px-2 py-0.5 rounded-md transition-all cursor-pointer hover:ring-2 hover:ring-primary/30 ${
+                  {u.email === 'shauna@alohaanimaloutreach.org' ? (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary">
+                      super admin
+                    </span>
+                  ) : u.id === user?.id ? (
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${
                       u.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-sand text-muted'
-                    } ${changingRoleId === u.id ? 'opacity-50' : ''}`}
-                    title={`Click to change to ${u.role === 'admin' ? 'coordinator' : 'admin'}`}
-                  >
-                    {changingRoleId === u.id ? '...' : u.role}
-                  </button>
+                    }`}>
+                      {u.role} (you)
+                    </span>
+                  ) : (
+                    <select
+                      value={u.role}
+                      onChange={(e) => handleChangeRole(u.id, e.target.value as 'admin' | 'coordinator')}
+                      disabled={changingRoleId === u.id}
+                      className={`text-xs font-semibold px-2 py-1 rounded-md border-0 cursor-pointer transition-all ${
+                        u.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-sand text-muted'
+                      } ${changingRoleId === u.id ? 'opacity-50' : ''}`}
+                    >
+                      <option value="coordinator">coordinator</option>
+                      <option value="admin">admin</option>
+                    </select>
+                  )}
                 </div>
                 <p className="text-sm text-muted truncate">{u.email}</p>
               </div>
@@ -267,7 +276,7 @@ export default function AdminUsersPage() {
                   type="email"
                   value={createEmail}
                   onChange={(e) => setCreateEmail(e.target.value)}
-                  placeholder="name@alohaanimaloutreach.org"
+                  placeholder="name@email.com"
                   className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>

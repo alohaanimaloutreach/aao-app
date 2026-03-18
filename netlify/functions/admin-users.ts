@@ -43,9 +43,9 @@ export default async function handler(req: Request) {
   if (action === 'create_user') {
     const { email, password, name, role } = body;
 
-    if (!email?.endsWith('@alohaanimaloutreach.org')) {
+    if (!email) {
       return new Response(
-        JSON.stringify({ error: 'Email must end with @alohaanimaloutreach.org' }),
+        JSON.stringify({ error: 'Email is required' }),
         { status: 400 }
       );
     }
@@ -122,6 +122,17 @@ export default async function handler(req: Request) {
     }
     if (!['admin', 'coordinator'].includes(new_role)) {
       return new Response(JSON.stringify({ error: 'Role must be admin or coordinator' }), { status: 400 });
+    }
+
+    // Protect super admin — no one can change this account's role
+    const { data: targetUser } = await supabase
+      .from('users')
+      .select('email')
+      .eq('id', user_id)
+      .single();
+
+    if (targetUser?.email === 'shauna@alohaanimaloutreach.org') {
+      return new Response(JSON.stringify({ error: 'Cannot change the super admin role' }), { status: 403 });
     }
 
     const { error: updateError } = await supabase

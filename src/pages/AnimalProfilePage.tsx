@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   PawPrint,
@@ -104,6 +104,8 @@ interface FlagRecord {
 export default function AnimalProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get('highlight');
   const { isAdmin, user } = useAuth();
 
   const [animal, setAnimal] = useState<AnimalDetail | null>(null);
@@ -455,7 +457,7 @@ export default function AnimalProfilePage() {
               <button
                 onClick={() => quickPhotoRef.current?.click()}
                 disabled={uploadingPhoto}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-leaf/10 hover:bg-leaf/20 text-leaf font-medium transition-all text-sm"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-all text-sm"
                 aria-label="Add photo"
               >
                 {uploadingPhoto ? (
@@ -607,7 +609,7 @@ export default function AnimalProfilePage() {
 
           <div className="bg-white rounded-2xl border border-night/5 p-5">
             <h2 className="font-heading font-bold text-night mb-4">Dog Timeline</h2>
-            <DogTimeline animalId={animal.id} />
+            <DogTimeline animalId={animal.id} highlightId={highlightId} />
           </div>
           </>
         )}

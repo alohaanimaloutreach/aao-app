@@ -170,7 +170,7 @@ export default function EventSummaryPage() {
     Object.values(byOwner).forEach(({ ownerName, animals }) => {
       body += `\n${ownerName}:\n`;
       animals.forEach((c) => {
-        const name = c.animal?.name ?? 'Unnamed';
+        const name = c.animal?.name || c.animal?.aao_id || 'Unnamed animal';
         const services = c.care_types.map((t) => CARE_LABELS[t] ?? t).join(', ');
         body += `  ${name} (${c.animal?.aao_id}): ${services}\n`;
       });
@@ -276,15 +276,23 @@ export default function EventSummaryPage() {
         <div className="space-y-2">
           {Object.entries(byOwner).map(([ownerId, { ownerName, animals }]) => (
             <div key={ownerId} className="bg-white rounded-xl border border-night/5 p-3">
-              <Link to={`/people/${ownerId}`} className="text-sm font-medium text-primary hover:underline">{ownerName}</Link>
+              {ownerId ? (
+                <Link to={`/people/${ownerId}`} className="text-sm font-medium text-primary hover:underline">{ownerName}</Link>
+              ) : (
+                <span className="text-sm font-medium text-muted italic">No owner linked</span>
+              )}
               <div className="mt-1.5 space-y-1">
                 {animals.map((c) => (
                   <div key={c.id} className="flex items-start gap-2">
                     <PawPrint className="w-3 h-3 text-muted mt-0.5 shrink-0" />
                     <div className="text-sm">
-                      <Link to={`/animals/${c.animal_id}`} className="font-medium text-night hover:text-primary">
-                        {c.animal?.name ?? 'Unnamed'}
-                      </Link>
+                      {c.animal_id ? (
+                        <Link to={`/animals/${c.animal_id}`} className="font-medium text-night hover:text-primary">
+                          {c.animal?.name || c.animal?.aao_id || 'Unnamed animal'}
+                        </Link>
+                      ) : (
+                        <span className="text-muted italic">No animal linked</span>
+                      )}
                       <span className="text-muted ml-1">
                         {c.care_types.map((t) => CARE_LABELS[t] ?? t).join(', ')}
                       </span>

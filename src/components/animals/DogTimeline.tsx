@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Stethoscope,
   ArrowRightLeft,
@@ -27,9 +27,10 @@ interface TimelineEntry {
 
 interface Props {
   animalId: string;
+  highlightId?: string | null;
 }
 
-export default function DogTimeline({ animalId }: Props) {
+export default function DogTimeline({ animalId, highlightId }: Props) {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -162,15 +163,30 @@ export default function DogTimeline({ animalId }: Props) {
       <div className="absolute left-[18px] top-5 bottom-5 w-px bg-night/8" />
 
       <div className="space-y-1">
-        {entries.map((entry) => (
-          <TimelineItem key={`${entry.type}-${entry.id}`} entry={entry} />
-        ))}
+        {entries.map((entry) => {
+          const entryKey = `${entry.type === 'care_event' ? 'care' : entry.type === 'field_note' ? 'note' : entry.type}-${entry.id}`;
+          return (
+            <TimelineItem key={entryKey} entry={entry} highlighted={entryKey === highlightId} />
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function TimelineItem({ entry }: { entry: TimelineEntry }) {
+function TimelineItem({ entry, highlighted }: { entry: TimelineEntry; highlighted?: boolean }) {
+  const itemRef = useRef<HTMLDivElement>(null);
+  const [flash, setFlash] = useState(false);
+
+  useEffect(() => {
+    if (highlighted && itemRef.current) {
+      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setFlash(true);
+      const timer = setTimeout(() => setFlash(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlighted]);
+
   const iconConfig = TIMELINE_ICON_CONFIG[entry.type];
   const Icon = {
     care_event: Stethoscope,
@@ -180,7 +196,7 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
   }[entry.type];
 
   return (
-    <div className="flex gap-3 py-3 relative">
+    <div ref={itemRef} className={`flex gap-3 py-3 relative rounded-xl transition-colors duration-700 ${flash ? 'bg-primary/10' : ''}`}>
       {/* Icon */}
       <div className={`w-9 h-9 rounded-xl ${iconConfig.bg} flex items-center justify-center shrink-0 z-10`}>
         <Icon className={`w-4 h-4 ${iconConfig.text}`} strokeWidth={1.75} />

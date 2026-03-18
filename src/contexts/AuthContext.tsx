@@ -66,10 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function signIn(email: string, password: string) {
-    if (!email.endsWith('@alohaanimaloutreach.org')) {
-      return { error: 'Only @alohaanimaloutreach.org emails are allowed' };
-    }
-
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       return { error: error.message };
