@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Pencil } from 'lucide-react';
 import Sidebar from './Sidebar';
@@ -11,6 +11,14 @@ const isTestEnv = import.meta.env.VITE_SUPABASE_URL?.includes('ybswvwbqweywhfjgd
 export default function AppLayout() {
   const [notesOpen, setNotesOpen] = useState(false);
   const location = useLocation();
+
+  // Override theme colors for test environment
+  useEffect(() => {
+    if (isTestEnv) {
+      document.documentElement.style.setProperty('--color-primary', '#d97706');
+      document.documentElement.style.setProperty('--color-primary-hover', '#b45309');
+    }
+  }, []);
   return (
     <div className={`min-h-screen ${isTestEnv ? 'bg-amber-50/60' : 'bg-sand'}`}>
       {/* Skip to content for keyboard users */}
@@ -18,16 +26,15 @@ export default function AppLayout() {
         Skip to content
       </a>
 
-      {isTestEnv && (
-        <div className="bg-amber-500 text-white text-center text-base font-bold py-2 px-4 sticky top-0 z-50">
-          ⚠ PRACTICE APP — This is NOT the real app. You can tap anything here without worry.
-        </div>
-      )}
-
       <Sidebar />
 
       {/* Main content area */}
       <div className="md:ml-16 min-h-screen flex flex-col">
+        {isTestEnv && (
+          <div className="bg-amber-500 text-white text-center text-base font-bold py-2 px-4">
+            ⚠ PRACTICE APP — This is NOT the real app. You can tap anything here without worry.
+          </div>
+        )}
         <TopBar />
 
         <main

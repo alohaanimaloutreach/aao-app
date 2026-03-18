@@ -166,7 +166,7 @@ const PHASES = [
   {
     phase:3, title:"Polish & Quality of Life",
     tasks:[
-      {id:"p3-test-mode",text:"Test mode toggle",note:"TopBar + Sidebar toggle. Tags all created records with [TEST] for easy cleanup. Amber banner when active",done:true},
+      {id:"p3-test-mode",text:"Separate test environment",note:"Replaced in-app test mode with dedicated test Supabase project + Netlify branch deploy at dev--aao-app.netlify.app. Amber 'PRACTICE APP' banner. Seed data with 12 dogs, 7 owners, photos",done:true},
       {id:"p3-activity-links",text:"Dashboard activity links",note:"Recent activity items link directly to associated animal/owner/location profiles",done:true},
       {id:"p3-photos",text:"Animal photo uploads",note:"Supabase storage bucket, profile photo selection, photo gallery on animal profile",done:true},
       {id:"p3-aao-ids",text:"Auto-generated AAO IDs",note:"Database function `generate_aao_id()` creates AAO-000001 format IDs for animals",done:true},
@@ -180,12 +180,15 @@ const PHASES = [
   {
     phase:4, title:"Deploy & Production",
     tasks:[
-      {id:"p4-env-prod",text:"Production environment setup",note:"Separate Supabase project for production or configure production environment variables",tag:"deploy"},
-      {id:"p4-build-test",text:"Production build & testing",note:"Run `vite build`, verify no TypeScript errors, test all flows in preview mode",tag:"testing"},
-      {id:"p4-deploy-netlify",text:"Deploy to Netlify",note:"Connect GitHub repo, configure build settings, set environment variables",tag:"deploy"},
-      {id:"p4-subdomain",text:"Configure app.alohaanimaloutreach.org",note:"Add subdomain DNS record at registrar pointing to Netlify. SSL auto-provisions",tag:"deploy"},
-      {id:"p4-supabase-prod",text:"Supabase production configuration",note:"Verify RLS policies, set up proper auth redirect URLs, configure storage policies for production domain",tag:"deploy"},
-      {id:"p4-seed-prod",text:"Seed production data",note:"Set up initial locations, create admin user accounts, verify all tables are ready",tag:"deploy"},
+      {id:"p4-env-prod",text:"Production environment setup",note:"Separate Supabase project for production or configure production environment variables",done:true},
+      {id:"p4-build-test",text:"Production build & testing",note:"Run `vite build`, verify no TypeScript errors, test all flows in preview mode",done:true},
+      {id:"p4-deploy-netlify",text:"Deploy to Netlify",note:"Connected GitHub repo, configured build settings, set environment variables. Auto-deploys on push to main",done:true},
+      {id:"p4-subdomain",text:"Configure app.alohaanimaloutreach.org",note:"CNAME at Dreamhost pointing to Netlify. SSL auto-provisioned. Domain is live",done:true},
+      {id:"p4-supabase-prod",text:"Supabase production configuration",note:"RLS policies verified, auth redirect URL added for custom domain",done:true},
+      {id:"p4-seed-prod",text:"Seed production data",note:"CSV data imported, admin user accounts created, all tables populated",done:true},
+      {id:"p4-test-env",text:"Separate test/training environment",note:"Second Supabase project (aao-test) with Netlify branch deploy. dev--aao-app.netlify.app with amber banner and seed data",done:true},
+      {id:"p4-admin-users",text:"Admin user management",note:"Netlify serverless function for secure user creation and password reset. Admin-only /admin/users page",done:true},
+      {id:"p4-quick-photo",text:"Quick Add Photo button on animal profiles",note:"One-tap photo upload button next to Edit, with camera capture on mobile",done:true},
       {id:"p4-smoke-test",text:"Production smoke test",note:"Full end-to-end test on live site: login, create animal, run outreach event, check reports",tag:"testing"},
       {id:"p4-backup",text:"Database backup strategy",note:"Configure Supabase automatic backups, document restore procedure",tag:"todo"},
     ]
@@ -194,11 +197,11 @@ const PHASES = [
     phase:5, title:"Future Enhancements",
     tasks:[
       {id:"p5-notifications",text:"In-app notifications",note:"Alert volunteers about queue items, overdue medical events, new flags",tag:"todo"},
-      {id:"p5-map-view",text:"Map view for locations",note:"Visual map showing location pins with animal/owner counts",tag:"todo"},
+      {id:"p5-map-view",text:"Map view for locations, animals, people",note:"List/Map toggle on Locations, Animals, People pages using Leaflet. Color-coded pins on animal profiles",done:true},
       {id:"p5-offline",text:"Offline support",note:"Service worker for basic offline access during outreach in areas with poor connectivity",tag:"todo"},
       {id:"p5-advanced-reports",text:"Advanced reporting & analytics",note:"Trends over time, monthly comparisons, impact metrics for grant applications",tag:"todo"},
       {id:"p5-printable",text:"Printable reports",note:"Print-friendly event summaries and animal records for fieldwork",tag:"todo"},
-      {id:"p5-user-mgmt",text:"User management & invites",note:"Admin panel for inviting new volunteers, managing roles, deactivating accounts",tag:"todo"},
+      {id:"p5-user-mgmt",text:"User management & invites",note:"Admin-only /admin/users page with create user, reset password, role assignment. Netlify serverless function for secure operations",done:true},
       {id:"p5-audit-log",text:"Audit log",note:"Track who changed what and when across all records",tag:"todo"},
       {id:"p5-medical-reminders",text:"Medical event reminders",note:"Scheduled reminders for upcoming vaccines, follow-ups, and preventative care due dates",tag:"todo"},
       {id:"p5-bulk-ops",text:"Bulk operations",note:"Bulk update animal statuses, bulk food distribution logging, batch CSV imports",tag:"todo"},

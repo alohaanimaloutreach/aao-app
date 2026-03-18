@@ -222,14 +222,4 @@ INSERT INTO flags (table_name, record_id, reason, resolved, created_by, created_
   ('animals', animal_2, 'Bruddah — owner wants neuter, needs transport arranged', false, admin_id, now() - interval '1 week'),
   ('animals', animal_8, 'Hoku — semi-feral, monitor socialization progress', false, admin_id, now() - interval '1 month');
 
--- ============================================================
--- CHECKIN QUEUE (from Event 1 — all completed)
--- ============================================================
-
-INSERT INTO checkin_queue (outreach_event_id, owner_id, queue_position, status, checked_in_by, completed_by, checked_in_at, completed_at, staged_care) VALUES
-  (event_1, owner_kimo, 1, 'completed', admin_id, admin_id, now() - interval '30 days', now() - interval '30 days' + interval '15 minutes', '[{"animal_id": "' || animal_1 || '", "services": ["food", "vaccines"]}, {"animal_id": "' || animal_2 || '", "services": ["food", "preventatives"]}]'::jsonb),
-  (event_1, owner_keanu, 2, 'completed', admin_id, admin_id, now() - interval '30 days' + interval '5 minutes', now() - interval '30 days' + interval '20 minutes', '[{"animal_id": "' || animal_7 || '", "services": ["food"]}]'::jsonb),
-  (event_1, owner_nalani, 3, 'completed', admin_id, admin_id, now() - interval '30 days' + interval '10 minutes', now() - interval '30 days' + interval '25 minutes', '[{"animal_id": "' || animal_8 || '", "services": ["food"]}]'::jsonb),
-  (event_1, owner_leilani, 4, 'completed', admin_id, admin_id, now() - interval '30 days' + interval '12 minutes', now() - interval '30 days' + interval '30 minutes', '[{"animal_id": "' || animal_3 || '", "services": ["food", "vaccines"]}, {"animal_id": "' || animal_4 || '", "services": ["food", "preventatives"]}]'::jsonb);
-
 END $$;

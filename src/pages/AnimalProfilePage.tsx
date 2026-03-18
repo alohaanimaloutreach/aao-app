@@ -403,9 +403,11 @@ export default function AnimalProfilePage() {
                 src={profilePhoto.storage_path}
                 alt={animal.name ?? 'Animal'}
                 className="w-full h-full object-cover"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
             </button>
-          ) : (
+          ) : null}
+          {!profilePhoto?.storage_path && (
             <div className="w-full h-full flex items-center justify-center">
               <PawPrint className="w-16 h-16 text-muted/15" strokeWidth={1} />
             </div>
@@ -1110,12 +1112,12 @@ function PhotosTab({
               src={p.storage_path}
               alt={p.caption ?? 'Photo'}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Camera className="w-8 h-8 text-muted/20" />
-            </div>
-          )}
+          ) : null}
+          <div className={`w-full h-full flex items-center justify-center ${p.storage_path ? 'hidden' : ''}`}>
+            <Camera className="w-8 h-8 text-muted/20" />
+          </div>
           {p.is_profile && (
             <span className="absolute top-2 left-2 bg-white/80 text-xs font-semibold text-night px-1.5 py-0.5 rounded-md">
               Profile

@@ -3,6 +3,10 @@ import { supabase } from '../lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 import type { AppUser } from '../types/user';
 
+const isTestEnv = import.meta.env.VITE_SUPABASE_URL?.includes('ybswvwbqweywhfjgdwro');
+const TEST_EMAIL = 'shauna@alohaanimaloutreach.org';
+const TEST_PASSWORD = 'AaoField2026!';
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -33,7 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session && isTestEnv) {
+        // Auto-login on test environment — no login screen needed
+        const { error } = await supabase.auth.signInWithPassword({
+          email: TEST_EMAIL,
+          password: TEST_PASSWORD,
+        });
+        if (!error) return; // onAuthStateChange will handle the rest
+      }
       setSession(session);
       if (session?.user) {
         fetchProfile(session.user.id);

@@ -11,6 +11,9 @@ import { formatRelative, daysSince, formatDate } from '../lib/format';
 import { HAVENT_SEEN_DAYS } from '../lib/constants';
 
 import EventSetup from '../components/outreach/EventSetup';
+import DashboardMap from '../components/dashboard/DashboardMap';
+
+const isTestEnv = import.meta.env.VITE_SUPABASE_URL?.includes('ybswvwbqweywhfjgdwro');
 
 interface Stats {
   animals: number | null;
@@ -275,36 +278,19 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* Desktop header */}
-      <div className="hidden md:flex items-start justify-between gap-4 mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">
+      {/* Header */}
+      <div className="mb-5">
+        <h1 className="text-xl md:text-3xl font-bold font-heading text-night tracking-tight mb-1">
           Aloha, {profile?.name?.split(' ')[0] ?? 'friend'}
         </h1>
-        <div className="flex gap-2 shrink-0">
-          <button
-            onClick={() => setShowSetup(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.2)] transition-all whitespace-nowrap"
-          >
-            <CalendarHeart className="w-4 h-4" strokeWidth={2} />
-            Start Outreach
-          </button>
-          <button
-            onClick={() => navigate('/notes')}
-            className="flex items-center gap-2 px-3 py-2.5 bg-white border border-night/8 text-night text-sm font-medium rounded-xl hover:bg-sand transition-all whitespace-nowrap"
-          >
-            <Pencil className="w-4 h-4" strokeWidth={2} />
-            Field Note
-          </button>
-        </div>
-      </div>
+        {isTestEnv ? (
+          <p className="text-sm text-amber-600 font-medium mb-4">You are in the practice app. Tap around freely — nothing here is real.</p>
+        ) : (
+          <p className="text-sm text-muted mb-4">What do you want to do today?</p>
+        )}
 
-      {/* Mobile action hub */}
-      <div className="md:hidden mb-5">
-        <h1 className="text-xl font-bold font-heading text-night tracking-tight mb-4">
-          Aloha, {profile?.name?.split(' ')[0] ?? 'friend'}
-        </h1>
-        <p className="text-sm text-muted mb-3">What do you want to do today?</p>
-        <div className="grid grid-cols-2 gap-2.5">
+        {/* Action cards — visible on all screen sizes */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
           <button
             onClick={() => setShowSetup(true)}
             className="flex flex-col items-center gap-2 p-4 bg-primary/10 rounded-2xl text-primary hover:bg-primary/15 transition-colors"
@@ -343,7 +329,7 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* More links */}
+        {/* Quick links */}
         <button
           onClick={() => setShowMore(!showMore)}
           className="flex items-center justify-center gap-1.5 w-full mt-3 py-2 text-xs font-medium text-muted hover:text-night transition-colors"
@@ -460,6 +446,9 @@ export default function DashboardPage() {
         </div>
       )}
 
+
+      {/* Animal Map */}
+      <DashboardMap />
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">

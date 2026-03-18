@@ -43,12 +43,12 @@ export default function AnimalCard({ animal }: Props) {
             src={animal.profile_photo_url}
             alt={animal.name ?? 'Animal'}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <PawPrint className="w-10 h-10 text-muted/40" strokeWidth={1} />
-          </div>
-        )}
+        ) : null}
+        <div className={`w-full h-full flex items-center justify-center ${animal.profile_photo_url ? 'hidden' : ''}`}>
+          <PawPrint className="w-10 h-10 text-muted/40" strokeWidth={1} />
+        </div>
 
         {/* Urgent badge */}
         {animal.urgent_medical && (
