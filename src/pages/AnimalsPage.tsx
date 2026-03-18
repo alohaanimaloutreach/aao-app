@@ -484,7 +484,7 @@ export default function AnimalsPage() {
           <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-night/5 shrink-0">
               <h2 className="font-heading font-bold text-night text-base">Add Animal</h2>
-              <button onClick={() => setShowAddAnimal(false)} className="p-2 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
+              <button onClick={() => setShowAddAnimal(false)} className="p-2.5 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
                 <X className="w-5 h-5" />
               </button>
             </div>

@@ -196,7 +196,7 @@ export default function BottomNav() {
           <div className="bg-white rounded-2xl max-w-sm w-full shadow-xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-night/5">
               <h2 className="font-heading font-bold text-night text-base">Change Password</h2>
-              <button onClick={() => setShowPassword(false)} className="p-2 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
+              <button onClick={() => setShowPassword(false)} className="p-2.5 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
                 <X className="w-5 h-5" />
               </button>
             </div>

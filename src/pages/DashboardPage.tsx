@@ -20,8 +20,8 @@ interface Stats {
   people: number | null;
   locations: number | null;
   openFlags: number | null;
-  outreachThisMonth: number | null;
-  foodThisMonth: number | null;
+  outreachThisYear: number | null;
+  foodThisYear: number | null;
 }
 
 interface Alert {
@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const { profile, session } = useAuth();
 
   const navigate = useNavigate();
-  const [stats, setStats] = useState<Stats>({ animals: null, people: null, locations: null, openFlags: null, outreachThisMonth: null, foodThisMonth: null });
+  const [stats, setStats] = useState<Stats>({ animals: null, people: null, locations: null, openFlags: null, outreachThisYear: null, foodThisYear: null });
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,12 +72,12 @@ export default function DashboardPage() {
     setLoading(true);
 
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
     // Build filtered queries
     const animalsCountQ = supabase.from('animals').select('id', { count: 'exact', head: true }).eq('archived', false);
     const ownersCountQ = supabase.from('owners').select('id', { count: 'exact', head: true }).eq('archived', false);
-    const outreachCountQ = supabase.from('outreach_events').select('id', { count: 'exact', head: true }).gte('event_date', monthStart);
-    const foodQ = supabase.from('outreach_events').select('total_food_lbs').gte('event_date', monthStart);
+    const outreachCountQ = supabase.from('outreach_events').select('id', { count: 'exact', head: true }).gte('event_date', yearStart);
+    const foodQ = supabase.from('outreach_events').select('total_food_lbs').gte('event_date', yearStart);
     const allAnimalsQ = supabase.from('animals').select('id, name, aao_id, urgent_medical, interested_in_fixing, deceased').eq('archived', false).eq('deceased', false);
     const careQ = supabase.from('care_events').select('animal_id, event_date').order('event_date', { ascending: false });
     const recentCareQ = supabase.from('care_events').select('id, animal_id, outreach_event_id, event_date, care_types, animal:animals(name, aao_id), author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
@@ -111,8 +111,8 @@ export default function DashboardPage() {
       people: peopleRes.count ?? 0,
       locations: locRes.count ?? 0,
       openFlags: flagsRes.count ?? 0,
-      outreachThisMonth: outreachRes.count ?? 0,
-      foodThisMonth: Math.round(totalFood),
+      outreachThisYear: outreachRes.count ?? 0,
+      foodThisYear: Math.round(totalFood),
     });
 
     // Build alerts
@@ -272,11 +272,136 @@ export default function DashboardPage() {
   const [showMore, setShowMore] = useState(false);
 
   const quickLinks = [
-    { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-ember', bg: 'bg-ember/10' },
-    { to: '/notes', icon: StickyNote, label: 'Notes', color: 'text-sky-600', bg: 'bg-sky-50' },
-    { to: '/flags', icon: Flag, label: 'Flags', color: 'text-gold', bg: 'bg-gold/15' },
-    { to: '/reports', icon: BarChart3, label: 'Reports', color: 'text-muted', bg: 'bg-muted/10' },
+    { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-muted' },
+    { to: '/notes', icon: StickyNote, label: 'Notes', color: 'text-muted' },
+    { to: '/flags', icon: Flag, label: 'Flags', color: 'text-muted' },
+    { to: '#activity', icon: Clock, label: 'Activity', color: 'text-muted' },
+    { to: '/reports', icon: BarChart3, label: 'Reports', color: 'text-muted' },
   ];
+
+  // Activity feed renderer (shared between mobile and desktop)
+  const filteredActivity = activityFilter === 'all' ? activity : activity.filter((a) => a.type === activityFilter);
+  const COLLAPSED_COUNT = 5;
+  const visibleActivity = activityExpanded ? filteredActivity : filteredActivity.slice(0, COLLAPSED_COUNT);
+  const hasMoreActivity = filteredActivity.length > COLLAPSED_COUNT;
+  const activityGroups: { label: string; items: ActivityItem[] }[] = [];
+  let currentGroupLabel = '';
+  visibleActivity.forEach((item) => {
+    const label = formatRelative(item.date);
+    const groupLabel = label === 'Today' ? 'Today' : label === 'Yesterday' ? 'Yesterday' : label.includes('days ago') ? 'This Week' : 'Earlier';
+    if (groupLabel !== currentGroupLabel) {
+      activityGroups.push({ label: groupLabel, items: [] });
+      currentGroupLabel = groupLabel;
+    }
+    activityGroups[activityGroups.length - 1].items.push(item);
+  });
+
+  const activityFeed = (
+    <div id="activity">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-heading font-bold text-night">Recent Activity</h2>
+        <div className="flex gap-1 bg-sand/50 rounded-lg p-0.5">
+          {([['all', 'All'], ['care', 'Care'], ['note', 'Notes']] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => { setActivityFilter(key); setActivityExpanded(false); }}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                activityFilter === key ? 'bg-white text-night shadow-sm' : 'text-muted hover:text-night'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {loading ? (
+        <div className="space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex gap-3">
+              <div className="skeleton w-8 h-8 rounded-lg shrink-0" />
+              <div className="flex-1 space-y-1.5"><div className="skeleton h-3.5 w-48" /><div className="skeleton h-3 w-24" /></div>
+            </div>
+          ))}
+        </div>
+      ) : filteredActivity.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-night/5 p-8 text-center">
+          <p className="text-muted text-sm">No recent activity</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-night/5 overflow-hidden">
+          {activityGroups.map((group) => (
+            <div key={group.label}>
+              <div className="px-4 py-1.5 bg-sand/30">
+                <span className="text-xs font-semibold text-muted uppercase tracking-wide">{group.label}</span>
+              </div>
+              <div className="divide-y divide-night/5">
+                {group.items.map((item) => {
+                  const content = (
+                    <>
+                      {item.type === 'care' ? (
+                        <Stethoscope className="w-4 h-4 text-muted shrink-0 mt-0.5" strokeWidth={1.75} />
+                      ) : (
+                        <Pencil className="w-4 h-4 text-muted shrink-0 mt-0.5" strokeWidth={1.75} />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-night leading-tight truncate">{item.description}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-sm text-muted">{formatRelative(item.date)}</span>
+                          {item.author && <span className="text-sm text-muted">{item.author}</span>}
+                        </div>
+                      </div>
+                      {item.link && <ArrowRight className="w-3.5 h-3.5 text-muted/25 shrink-0 mt-1" />}
+                    </>
+                  );
+                  return item.link ? (
+                    <Link key={item.id} to={item.link} className="px-4 py-3 flex items-start gap-3 hover:bg-sand/50 transition-colors">
+                      {content}
+                    </Link>
+                  ) : (
+                    <div key={item.id} className="px-4 py-3 flex items-start gap-3">
+                      {content}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {hasMoreActivity && (
+            <button
+              onClick={() => setActivityExpanded(!activityExpanded)}
+              className="w-full px-4 py-2.5 text-sm font-medium text-primary hover:bg-sand/50 transition-colors flex items-center justify-center gap-1.5 border-t border-night/5"
+            >
+              {activityExpanded ? (
+                <>Show less <ChevronUp className="w-3.5 h-3.5" /></>
+              ) : (
+                <>Show more ({filteredActivity.length - COLLAPSED_COUNT} more) <ChevronDown className="w-3.5 h-3.5" /></>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const alertsSection = alerts.length > 0 ? (
+    <div className="space-y-2 mb-6">
+      <h2 className="text-lg font-heading font-bold text-night">Needs Attention</h2>
+      {alerts.map((alert) => (
+        <Link
+          key={alert.id}
+          to={alert.link}
+          className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-night/5 card-hover block"
+        >
+          <alert.icon className="w-4.5 h-4.5 text-muted shrink-0 mt-0.5" strokeWidth={1.75} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-night">{alert.title}</p>
+            <p className="text-xs text-muted mt-0.5">{alert.description}</p>
+          </div>
+          <ArrowRight className="w-3.5 h-3.5 text-muted/40 mt-0.5 shrink-0" />
+        </Link>
+      ))}
+    </div>
+  ) : null;
 
   return (
     <div>
@@ -291,70 +416,82 @@ export default function DashboardPage() {
           <p className="text-sm text-muted mb-4">What do you want to do today?</p>
         )}
 
-        {/* Action cards — visible on all screen sizes */}
+        {/* Action cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
           <button
             onClick={() => setShowSetup(true)}
-            className="flex flex-col items-center gap-2 p-4 bg-primary/10 rounded-2xl text-primary hover:bg-primary/15 transition-colors"
+            className="flex flex-col items-center gap-2 p-4 bg-primary text-white rounded-2xl hover:bg-primary-hover transition-colors shadow-sm"
           >
-            <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
-              <CalendarHeart className="w-5 h-5" strokeWidth={2} />
-            </div>
+            <CalendarHeart className="w-6 h-6" strokeWidth={1.75} />
             <span className="text-sm font-semibold">Start Outreach</span>
           </button>
           <Link
             to="/animals"
             className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <PawPrint className="w-5 h-5 text-primary" strokeWidth={1.75} />
-            </div>
+            <PawPrint className="w-6 h-6 text-primary" strokeWidth={1.75} />
             <span className="text-sm font-semibold">Find Animal</span>
           </Link>
           <Link
             to="/people"
             className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-gold/15 flex items-center justify-center">
-              <Users className="w-5 h-5 text-night" strokeWidth={1.75} />
-            </div>
+            <Users className="w-6 h-6 text-muted" strokeWidth={1.75} />
             <span className="text-sm font-semibold">Find Owner</span>
           </Link>
           <button
             onClick={() => navigate('/notes')}
             className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center">
-              <Pencil className="w-5 h-5 text-sky-600" strokeWidth={1.75} />
-            </div>
+            <Pencil className="w-6 h-6 text-muted" strokeWidth={1.75} />
             <span className="text-sm font-semibold">Add Field Note</span>
           </button>
         </div>
 
-        {/* Quick links */}
-        <button
-          onClick={() => setShowMore(!showMore)}
-          className="flex items-center justify-center gap-1.5 w-full mt-3 py-2 text-xs font-medium text-muted hover:text-night transition-colors"
-        >
-          More
-          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showMore ? 'rotate-180' : ''}`} />
-        </button>
-        {showMore && (
-          <div className="grid grid-cols-4 gap-2 mt-1">
-            {quickLinks.map((ql) => (
+        {/* Outreach + Stats row */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Outreach this year */}
+          <div className="bg-white rounded-2xl border border-night/5 p-4 flex items-center gap-4">
+            <div className="flex-1 text-center">
+              {stats.outreachThisYear !== null ? (
+                <p className="text-3xl font-bold font-heading text-primary leading-none">{stats.outreachThisYear}</p>
+              ) : (
+                <div className="skeleton h-8 w-10 mx-auto" />
+              )}
+              <p className="text-sm text-muted mt-1">Outreach events this year</p>
+            </div>
+            <div className="w-px h-10 bg-night/8" />
+            <div className="flex-1 text-center">
+              {stats.foodThisYear !== null ? (
+                <p className="text-3xl font-bold font-heading text-primary leading-none">{stats.foodThisYear}<span className="text-lg font-semibold text-muted"> lbs</span></p>
+              ) : (
+                <div className="skeleton h-8 w-16 mx-auto" />
+              )}
+              <p className="text-sm text-muted mt-1">Food distributed this year</p>
+            </div>
+          </div>
+
+          {/* Stat Cards */}
+          <div className="grid grid-cols-4 gap-2">
+            {statCards.map((card) => (
               <Link
-                key={ql.to}
-                to={ql.to}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-white border border-night/5 hover:bg-sand/50 transition-colors"
+                key={card.label}
+                to={card.to}
+                className="bg-white rounded-xl p-3 card-hover border border-night/5 text-center"
               >
-                <div className={`w-8 h-8 rounded-lg ${ql.bg} flex items-center justify-center`}>
-                  <ql.icon className={`w-4 h-4 ${ql.color}`} strokeWidth={1.75} />
-                </div>
-                <span className="text-xs font-medium text-night">{ql.label}</span>
+                <card.icon className={`w-5 h-5 mx-auto mb-1.5 ${card.iconColor}`} strokeWidth={1.75} />
+                {card.value === null ? (
+                  <div className="space-y-1.5"><div className="skeleton h-6 w-8 mx-auto" /><div className="skeleton h-3 w-12 mx-auto" /></div>
+                ) : (
+                  <>
+                    <p className="text-xl font-bold font-heading text-night leading-none">{card.value.toLocaleString()}</p>
+                    <p className="text-xs text-muted mt-1">{card.label}</p>
+                  </>
+                )}
               </Link>
             ))}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Active Event Card */}
@@ -426,200 +563,57 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Alerts */}
-      {alerts.length > 0 && (
-        <div className="space-y-2 mb-6">
-          {alerts.map((alert) => (
-            <Link
-              key={alert.id}
-              to={alert.link}
-              className={`flex items-start gap-3 p-4 rounded-2xl border ${alert.color} card-hover block`}
-            >
-              <div className="w-9 h-9 rounded-xl bg-white/60 flex items-center justify-center shrink-0">
-                <alert.icon className="w-4.5 h-4.5 text-night/70" strokeWidth={1.75} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-night">{alert.title}</p>
-                <p className="text-sm text-muted mt-0.5">{alert.description}</p>
-              </div>
-              <ArrowRight className="w-4 h-4 text-muted/50 mt-1 shrink-0" />
-            </Link>
-          ))}
+      {/* Desktop: two-column layout | Mobile: stacked */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left column — Map + Alerts (mobile) */}
+        <div className="lg:col-span-2 space-y-6">
+          <DashboardMap />
+          {/* Alerts — show here on mobile, in right column on desktop */}
+          <div className="lg:hidden">{alertsSection}</div>
         </div>
-      )}
 
-
-      {/* Animal Map */}
-      <DashboardMap />
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
-        {statCards.map((card) => (
-          <Link
-            key={card.label}
-            to={card.to}
-            className={`bg-gradient-to-br ${card.color} rounded-2xl p-4 md:p-5 card-hover relative overflow-hidden group`}
-          >
-            <div className={`absolute top-0 left-0 w-1 h-full ${card.accent} rounded-r-full opacity-60`} />
-            <div className="flex items-start justify-between mb-3">
-              <div className={`w-9 h-9 rounded-xl bg-white/60 flex items-center justify-center ${card.iconColor}`}>
-                <card.icon className="w-4.5 h-4.5" strokeWidth={1.75} />
-              </div>
-              <ArrowRight className="w-4 h-4 text-muted/50 group-hover:text-muted/60 group-hover:translate-x-0.5 transition-all" />
-            </div>
-            {card.value === null ? (
-              <div className="space-y-2"><div className="skeleton h-7 w-12" /><div className="skeleton h-3.5 w-16" /></div>
-            ) : (
-              <>
-                <p className="text-2xl md:text-3xl font-bold font-heading text-night leading-none">{card.value.toLocaleString()}</p>
-                <p className="text-sm text-muted mt-1">{card.label}</p>
-              </>
-            )}
-          </Link>
-        ))}
-      </div>
-
-      {/* This Month summary */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-white rounded-2xl border border-night/5 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <CalendarHeart className="w-5 h-5 text-primary" strokeWidth={1.5} />
-          </div>
-          <div>
-            {stats.outreachThisMonth !== null ? (
-              <p className="text-lg font-bold font-heading text-night">{stats.outreachThisMonth}</p>
-            ) : (
-              <div className="skeleton h-5 w-8" />
-            )}
-            <p className="text-sm text-muted">Outreach events this month</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl border border-night/5 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gold/15 flex items-center justify-center">
-            <Package className="w-5 h-5 text-night" strokeWidth={1.5} />
-          </div>
-          <div>
-            {stats.foodThisMonth !== null ? (
-              <p className="text-lg font-bold font-heading text-night">{stats.foodThisMonth} lbs</p>
-            ) : (
-              <div className="skeleton h-5 w-12" />
-            )}
-            <p className="text-sm text-muted">Food distributed this month</p>
-          </div>
+        {/* Right column — Alerts (desktop) + Activity */}
+        <div className="space-y-6">
+          <div className="hidden lg:block">{alertsSection}</div>
+          {activityFeed}
         </div>
       </div>
 
-      {/* Activity Feed */}
-      {(() => {
-        const filteredActivity = activityFilter === 'all' ? activity : activity.filter((a) => a.type === activityFilter);
-        const COLLAPSED_COUNT = 5;
-        const visibleActivity = activityExpanded ? filteredActivity : filteredActivity.slice(0, COLLAPSED_COUNT);
-        const hasMore = filteredActivity.length > COLLAPSED_COUNT;
-
-        // Group by date period
-        const groups: { label: string; items: ActivityItem[] }[] = [];
-        let currentLabel = '';
-        visibleActivity.forEach((item) => {
-          const label = formatRelative(item.date);
-          const groupLabel = label === 'Today' ? 'Today' : label === 'Yesterday' ? 'Yesterday' : label.includes('days ago') ? 'This Week' : 'Earlier';
-          if (groupLabel !== currentLabel) {
-            groups.push({ label: groupLabel, items: [] });
-            currentLabel = groupLabel;
-          }
-          groups[groups.length - 1].items.push(item);
-        });
-
-        return (
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-heading font-bold text-night">Recent Activity</h2>
-              <div className="flex gap-1 bg-sand/50 rounded-lg p-0.5">
-                {([['all', 'All'], ['care', 'Care'], ['note', 'Notes']] as const).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => { setActivityFilter(key); setActivityExpanded(false); }}
-                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                      activityFilter === key ? 'bg-white text-night shadow-sm' : 'text-muted hover:text-night'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="flex gap-3">
-                    <div className="skeleton w-8 h-8 rounded-lg shrink-0" />
-                    <div className="flex-1 space-y-1.5"><div className="skeleton h-3.5 w-48" /><div className="skeleton h-3 w-24" /></div>
-                  </div>
-                ))}
-              </div>
-            ) : filteredActivity.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-night/5 p-8 text-center">
-                <p className="text-muted text-sm">No recent activity</p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-2xl border border-night/5 overflow-hidden">
-                {groups.map((group, gi) => (
-                  <div key={group.label}>
-                    <div className="px-4 py-1.5 bg-sand/30">
-                      <span className="text-xs font-semibold text-muted uppercase tracking-wide">{group.label}</span>
-                    </div>
-                    <div className="divide-y divide-night/5">
-                      {group.items.map((item) => {
-                        const content = (
-                          <>
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                              item.type === 'care' ? 'bg-primary/10' : 'bg-sky-50'
-                            }`}>
-                              {item.type === 'care' ? (
-                                <Stethoscope className="w-3.5 h-3.5 text-primary" strokeWidth={1.75} />
-                              ) : (
-                                <Pencil className="w-3.5 h-3.5 text-sky-600" strokeWidth={1.75} />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-night leading-tight truncate">{item.description}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-sm text-muted">{formatRelative(item.date)}</span>
-                                {item.author && <span className="text-sm text-muted">{item.author}</span>}
-                              </div>
-                            </div>
-                            {item.link && <ArrowRight className="w-3.5 h-3.5 text-muted/25 shrink-0 mt-1" />}
-                          </>
-                        );
-                        return item.link ? (
-                          <Link key={item.id} to={item.link} className="px-4 py-3 flex items-start gap-3 hover:bg-sand/50 transition-colors">
-                            {content}
-                          </Link>
-                        ) : (
-                          <div key={item.id} className="px-4 py-3 flex items-start gap-3">
-                            {content}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-                {hasMore && (
-                  <button
-                    onClick={() => setActivityExpanded(!activityExpanded)}
-                    className="w-full px-4 py-2.5 text-sm font-medium text-primary hover:bg-sand/50 transition-colors flex items-center justify-center gap-1.5 border-t border-night/5"
-                  >
-                    {activityExpanded ? (
-                      <>Show less <ChevronUp className="w-3.5 h-3.5" /></>
-                    ) : (
-                      <>Show more ({filteredActivity.length - COLLAPSED_COUNT} more) <ChevronDown className="w-3.5 h-3.5" /></>
-                    )}
-                  </button>
-                )}
-              </div>
+      {/* Quick links — mobile only */}
+      <div className="mt-6 mb-2 md:hidden">
+        <button
+          onClick={() => setShowMore(!showMore)}
+          className="flex items-center justify-center gap-1.5 w-full py-2 text-xs font-medium text-muted hover:text-night transition-colors"
+        >
+          More
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showMore ? 'rotate-180' : ''}`} />
+        </button>
+        {showMore && (
+          <div className="grid grid-cols-5 gap-2 mt-1">
+            {quickLinks.map((ql) =>
+              ql.to.startsWith('#') ? (
+                <button
+                  key={ql.to}
+                  onClick={() => document.getElementById(ql.to.slice(1))?.scrollIntoView({ behavior: 'smooth' })}
+                  className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-white border border-night/5 hover:bg-sand/50 transition-colors"
+                >
+                  <ql.icon className={`w-4.5 h-4.5 ${ql.color}`} strokeWidth={1.75} />
+                  <span className="text-xs font-medium text-night">{ql.label}</span>
+                </button>
+              ) : (
+                <Link
+                  key={ql.to}
+                  to={ql.to}
+                  className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-white border border-night/5 hover:bg-sand/50 transition-colors"
+                >
+                  <ql.icon className={`w-4.5 h-4.5 ${ql.color}`} strokeWidth={1.75} />
+                  <span className="text-xs font-medium text-night">{ql.label}</span>
+                </Link>
+              )
             )}
           </div>
-        );
-      })()}
+        )}
+      </div>
 
       {showSetup && (
         <EventSetup

@@ -884,12 +884,12 @@ function ServiceTag({ active, icon: Icon, label, onClick, color }: { active: boo
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl text-xs font-medium border transition-all ${
+      className={`flex items-center justify-center gap-1 px-1.5 py-2.5 rounded-xl text-xs font-medium border transition-all ${
         active ? activeClass : 'bg-white border-night/8 text-muted'
       }`}
     >
-      <Icon className="w-3.5 h-3.5" />
-      {label}
+      <Icon className="w-3.5 h-3.5 shrink-0" />
+      <span className="truncate">{label}</span>
     </button>
   );
 }

@@ -1,15 +1,22 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
-import { PawPrint, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { PawPrint, Eye, EyeOff, ArrowRight, Mail, Check } from 'lucide-react';
+
+function resolveEmail(input: string): string {
+  const trimmed = input.trim();
+  if (trimmed.includes('@')) return trimmed;
+  return `${trimmed}@alohaanimaloutreach.org`;
+}
 
 export default function LoginPage() {
-  const { signIn, session, loading } = useAuth();
-  const [email, setEmail] = useState('');
+  const { signIn, sendMagicLink, session, loading } = useAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   if (loading) {
     return (
@@ -25,16 +32,72 @@ export default function LoginPage() {
     return <Navigate to="/" replace />;
   }
 
-  async function handleSubmit(e: FormEvent) {
+  async function handlePasswordLogin(e: FormEvent) {
     e.preventDefault();
     setError('');
     setSubmitting(true);
 
+    const email = resolveEmail(username);
     const { error } = await signIn(email, password);
     if (error) {
       setError(error);
     }
     setSubmitting(false);
+  }
+
+  async function handleMagicLink() {
+    if (!username.trim()) {
+      setError('Enter your username or email first');
+      return;
+    }
+    setError('');
+    setSubmitting(true);
+
+    const email = resolveEmail(username);
+    const { error } = await sendMagicLink(email);
+    if (error) {
+      setError(error);
+    } else {
+      setMagicLinkSent(true);
+    }
+    setSubmitting(false);
+  }
+
+  if (magicLinkSent) {
+    const email = resolveEmail(username);
+    return (
+      <div className="min-h-screen bg-sand flex items-center justify-center px-4">
+        <div className="fixed inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(110,168,50,0.06),transparent_50%),radial-gradient(circle_at_70%_80%,rgba(232,200,74,0.05),transparent_50%)]" />
+        <div className="w-full max-w-sm relative">
+          <div className="text-center mb-8">
+            <img
+              src="/logo.png"
+              alt="Aloha Animal Outreach"
+              className="w-16 h-16 rounded-2xl mb-5 mx-auto shadow-[0_4px_16px_rgba(110,168,50,0.3)]"
+            />
+          </div>
+          <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(28,23,8,0.06)] p-6 text-center space-y-4">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <Check className="w-6 h-6 text-primary" />
+            </div>
+            <h2 className="text-lg font-bold text-night">Check your email</h2>
+            <p className="text-sm text-muted">
+              We sent a login link to<br />
+              <span className="font-medium text-night">{email}</span>
+            </p>
+            <p className="text-xs text-muted">
+              Tap the link in the email to sign in. It expires in 1 hour.
+            </p>
+            <button
+              onClick={() => { setMagicLinkSent(false); setError(''); }}
+              className="text-sm text-primary hover:text-primary-hover font-medium transition-colors"
+            >
+              Back to sign in
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -58,7 +121,7 @@ export default function LoginPage() {
 
         {/* Login card */}
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handlePasswordLogin}
           className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(28,23,8,0.06)] p-6 space-y-5"
         >
           {error && (
@@ -69,19 +132,24 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-night mb-1.5">
-              Email
+            <label htmlFor="username" className="block text-sm font-medium text-night mb-1.5">
+              Username or email
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="shauna or shauna@gmail.com"
               required
-              autoComplete="email"
+              autoComplete="username"
               className="w-full px-4 py-2.5 border border-night/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 bg-sand/50 text-sm placeholder:text-muted/40 transition-all"
             />
+            {username.trim() && !username.includes('@') && (
+              <p className="text-xs text-muted mt-1">
+                Will sign in as {username.trim()}@alohaanimaloutreach.org
+              </p>
+            )}
           </div>
 
           <div>
@@ -94,7 +162,6 @@ export default function LoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
                 autoComplete="current-password"
                 className="w-full px-4 py-2.5 border border-night/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 bg-sand/50 text-sm pr-11 transition-all"
               />
@@ -111,7 +178,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !password}
             aria-describedby={error ? 'login-error' : undefined}
             className="w-full bg-primary hover:bg-primary-hover text-white font-semibold py-2.5 rounded-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_2px_8px_rgba(110,168,50,0.25)] hover:shadow-[0_4px_12px_rgba(110,168,50,0.35)] flex items-center justify-center gap-2"
           >
@@ -126,6 +193,25 @@ export default function LoginPage() {
                 <ArrowRight className="w-4 h-4" strokeWidth={2} />
               </>
             )}
+          </button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-night/8" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-3 text-muted">or</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleMagicLink}
+            disabled={submitting}
+            className="w-full bg-sand hover:bg-sand/80 text-night font-medium py-2.5 rounded-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm border border-night/8"
+          >
+            <Mail className="w-4 h-4" />
+            Send me a login link instead
           </button>
         </form>
 

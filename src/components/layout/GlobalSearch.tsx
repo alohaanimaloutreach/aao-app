@@ -130,7 +130,7 @@ export default function GlobalSearch({ open, onClose }: Props) {
             className="flex-1 text-sm text-night bg-transparent outline-none placeholder:text-muted/40"
           />
           {loading && <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />}
-          <button onClick={onClose} className="p-1 text-muted hover:text-night transition-colors shrink-0" aria-label="Close search">
+          <button onClick={onClose} className="p-2.5 text-muted hover:text-night transition-colors shrink-0 rounded-lg" aria-label="Close search">
             <X className="w-4 h-4" />
           </button>
         </div>

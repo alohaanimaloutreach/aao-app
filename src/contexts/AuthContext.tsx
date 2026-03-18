@@ -13,6 +13,7 @@ interface AuthContextType {
   profile: AppUser | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  sendMagicLink: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
 }
@@ -74,6 +75,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   }
 
+  async function sendMagicLink(email: string) {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
+    });
+    if (error) {
+      return { error: error.message };
+    }
+    return { error: null };
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
     setSession(null);
@@ -88,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         loading,
         signIn,
+        sendMagicLink,
         signOut,
         isAdmin: profile?.role === 'admin',
       }}

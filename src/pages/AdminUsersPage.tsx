@@ -254,7 +254,7 @@ export default function AdminUsersPage() {
                 <UserPlus className="w-4 h-4 text-primary" />
                 Create User
               </h2>
-              <button onClick={() => setShowCreate(false)} className="p-2 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
+              <button onClick={() => setShowCreate(false)} className="p-2.5 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -355,7 +355,7 @@ export default function AdminUsersPage() {
                 <KeyRound className="w-4 h-4 text-primary" />
                 Reset Password
               </h2>
-              <button onClick={() => setResetUserId(null)} className="p-2 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
+              <button onClick={() => setResetUserId(null)} className="p-2.5 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close">
                 <X className="w-5 h-5" />
               </button>
             </div>
