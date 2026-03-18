@@ -12,14 +12,14 @@ export default function AppLayout() {
   const [notesOpen, setNotesOpen] = useState(false);
   const location = useLocation();
   return (
-    <div className={`min-h-screen ${isTestEnv ? 'bg-sky-50' : 'bg-sand'}`}>
+    <div className={`min-h-screen ${isTestEnv ? 'bg-amber-50/60' : 'bg-sand'}`}>
       {/* Skip to content for keyboard users */}
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
 
       {isTestEnv && (
-        <div className="bg-sky-500 text-white text-center text-sm font-semibold py-1.5 px-4 sticky top-0 z-50">
+        <div className="bg-amber-500 text-white text-center text-sm font-semibold py-1.5 px-4 sticky top-0 z-50">
           Training Mode — This is the practice environment. Nothing here affects real data.
         </div>
       )}
