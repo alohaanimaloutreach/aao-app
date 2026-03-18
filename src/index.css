@@ -3,11 +3,11 @@
 @theme {
   --color-primary: #6ea832;
   --color-primary-hover: #5d9128;
-  --color-night: #1c1708;
+  --color-night: #1a1a1a;
   --color-gold: #e8c84a;
   --color-sand: #f7f1e3;
   --color-ember: #c45c2a;
-  --color-muted: #5c5347;
+  --color-muted: #6b7280;
   --color-white: #ffffff;
 
   --font-heading: 'Fraunces', serif;
