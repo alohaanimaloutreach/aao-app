@@ -113,6 +113,29 @@ export default async function handler(req: Request) {
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   }
 
+  // CHANGE ROLE
+  if (action === 'change_role') {
+    const { user_id, new_role } = body;
+
+    if (!user_id) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), { status: 400 });
+    }
+    if (!['admin', 'coordinator'].includes(new_role)) {
+      return new Response(JSON.stringify({ error: 'Role must be admin or coordinator' }), { status: 400 });
+    }
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ role: new_role })
+      .eq('id', user_id);
+
+    if (updateError) {
+      return new Response(JSON.stringify({ error: updateError.message }), { status: 400 });
+    }
+
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
+  }
+
   // LIST USERS
   if (action === 'list_users') {
     const { data: users, error } = await supabase

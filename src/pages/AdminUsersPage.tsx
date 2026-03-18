@@ -62,6 +62,9 @@ export default function AdminUsersPage() {
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState(false);
 
+  // Change role state
+  const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
+
   // Copied state
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -143,6 +146,17 @@ export default function AdminUsersPage() {
     setResetSaving(false);
   }
 
+  async function handleChangeRole(userId: string, newRole: 'admin' | 'coordinator') {
+    setChangingRoleId(userId);
+    try {
+      await adminFetch('change_role', { user_id: userId, new_role: newRole });
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u));
+    } catch {
+      // silently fail — role didn't change
+    }
+    setChangingRoleId(null);
+  }
+
   function copyPassword(password: string, userId: string) {
     navigator.clipboard.writeText(password);
     setCopiedId(userId);
@@ -191,11 +205,16 @@ export default function AdminUsersPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-night text-sm truncate">{u.name}</p>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${
-                    u.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-sand text-muted'
-                  }`}>
-                    {u.role}
-                  </span>
+                  <button
+                    onClick={() => handleChangeRole(u.id, u.role === 'admin' ? 'coordinator' : 'admin')}
+                    disabled={changingRoleId === u.id}
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-md transition-all cursor-pointer hover:ring-2 hover:ring-primary/30 ${
+                      u.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-sand text-muted'
+                    } ${changingRoleId === u.id ? 'opacity-50' : ''}`}
+                    title={`Click to change to ${u.role === 'admin' ? 'coordinator' : 'admin'}`}
+                  >
+                    {changingRoleId === u.id ? '...' : u.role}
+                  </button>
                 </div>
                 <p className="text-sm text-muted truncate">{u.email}</p>
               </div>
