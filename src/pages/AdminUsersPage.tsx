@@ -13,7 +13,9 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  MessageSquarePlus,
 } from 'lucide-react';
+import { formatDateTime } from '../lib/format';
 
 interface AppUser {
   id: string;
@@ -77,9 +79,16 @@ export default function AdminUsersPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
 
+  // Suggestions state
+  const [suggestions, setSuggestions] = useState<{ id: string; message: string; status: string; submitted_by_name: string | null; completed_at: string | null; created_at: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
   useEffect(() => {
     loadUsers();
     loadLoginHistory();
+    loadSuggestions();
   }, []);
 
   async function loadUsers() {
@@ -112,6 +121,26 @@ export default function AdminUsersPage() {
       }));
     }
     setHistoryLoading(false);
+  }
+
+  async function loadSuggestions() {
+    setSuggestionsLoading(true);
+    const { data } = await supabase.from('suggestions').select('*').order('created_at', { ascending: false });
+    setSuggestions(data ?? []);
+    setSuggestionsLoading(false);
+  }
+
+  async function toggleSuggestion(id: string, currentStatus: string) {
+    setTogglingId(id);
+    const newStatus = currentStatus === 'open' ? 'complete' : 'open';
+    await supabase.from('suggestions').update({
+      status: newStatus,
+      completed_at: newStatus === 'complete' ? new Date().toISOString() : null,
+    }).eq('id', id);
+    setSuggestions((prev) =>
+      prev.map((s) => s.id === id ? { ...s, status: newStatus, completed_at: newStatus === 'complete' ? new Date().toISOString() : null } : s)
+    );
+    setTogglingId(null);
   }
 
   async function handleCreate() {
@@ -341,6 +370,67 @@ export default function AdminUsersPage() {
               </div>
             );
           })()
+        )}
+      </div>
+
+      {/* Suggestions */}
+      <div className="mt-8">
+        <button
+          onClick={() => setShowSuggestions(!showSuggestions)}
+          className="flex items-center gap-2 text-sm font-semibold text-night mb-3"
+        >
+          <MessageSquarePlus className="w-4 h-4 text-muted" />
+          Suggestions
+          {suggestions.filter((s) => s.status === 'open').length > 0 && (
+            <span className="text-xs font-medium text-white bg-primary rounded-full px-1.5 py-0.5 leading-none">
+              {suggestions.filter((s) => s.status === 'open').length}
+            </span>
+          )}
+          {showSuggestions ? <ChevronUp className="w-4 h-4 text-muted" /> : <ChevronDown className="w-4 h-4 text-muted" />}
+        </button>
+        {showSuggestions && (
+          suggestionsLoading ? (
+            <div className="bg-white rounded-xl border border-night/5 p-6 text-center">
+              <Loader2 className="w-5 h-5 animate-spin text-muted mx-auto" />
+            </div>
+          ) : suggestions.length === 0 ? (
+            <div className="bg-white rounded-xl border border-night/5 p-6 text-center">
+              <p className="text-sm text-muted">No suggestions yet. Users can submit from the Guide page.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {[...suggestions].sort((a, b) => {
+                if (a.status !== b.status) return a.status === 'open' ? -1 : 1;
+                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+              }).map((s) => {
+                const isComplete = s.status === 'complete';
+                return (
+                  <div key={s.id} className={`bg-white rounded-xl border border-night/5 p-3 flex items-start gap-3 ${isComplete ? 'opacity-50' : ''}`}>
+                    <button
+                      onClick={() => toggleSuggestion(s.id, s.status)}
+                      disabled={togglingId === s.id}
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                        isComplete ? 'border-primary bg-primary' : 'border-night/15 hover:border-primary/50'
+                      }`}
+                    >
+                      {togglingId === s.id ? (
+                        <Loader2 className="w-3 h-3 text-muted animate-spin" />
+                      ) : isComplete ? (
+                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                      ) : null}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm ${isComplete ? 'text-muted line-through' : 'text-night'}`}>{s.message}</p>
+                      <p className="text-xs text-muted mt-0.5">
+                        {formatDateTime(s.created_at)}
+                        {s.submitted_by_name && ` — ${s.submitted_by_name}`}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
         )}
       </div>
 

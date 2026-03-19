@@ -14,7 +14,6 @@ import {
   UserCog,
   KeyRound,
   LogOut,
-  MessageSquarePlus,
   X,
   Check,
   Loader2,
@@ -107,7 +106,7 @@ export default function BottomNav() {
   );
 
   const allMoreItems = isAdmin
-    ? [...MORE_ITEMS, { to: '/reports', icon: BarChart3, label: 'Reports', color: 'text-muted' }, { to: '/admin/users', icon: UserCog, label: 'Users', color: 'text-primary' }, { to: '/admin/suggestions', icon: MessageSquarePlus, label: 'Suggestions', color: 'text-primary' }]
+    ? [...MORE_ITEMS, { to: '/reports', icon: BarChart3, label: 'Reports', color: 'text-muted' }, { to: '/admin/users', icon: UserCog, label: 'Users', color: 'text-primary' }]
     : MORE_ITEMS;
 
   return (
