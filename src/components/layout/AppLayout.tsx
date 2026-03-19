@@ -47,7 +47,7 @@ export default function AppLayout() {
           </div>
         </main>
 
-        <footer className="hidden md:block text-center py-4 text-xs text-muted/50">
+        <footer className="text-center pb-20 md:pb-4 pt-4 text-xs text-muted/50">
           Made with 💓 by Shauna
         </footer>
       </div>
