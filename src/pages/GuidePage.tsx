@@ -1,7 +1,29 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, CalendarHeart, PawPrint, Users, MapPin, Stethoscope, StickyNote, Package, Syringe, Pill, Scissors, Heart, ClipboardList } from 'lucide-react';
+import { ArrowLeft, CalendarHeart, PawPrint, Users, MapPin, Stethoscope, StickyNote, Package, Syringe, Pill, Scissors, Heart, ClipboardList, MessageSquarePlus, Send, Check } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function GuidePage() {
+  const { user, profile } = useAuth();
+  const [suggestion, setSuggestion] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  async function handleSubmitSuggestion() {
+    if (!suggestion.trim() || !user) return;
+    setSubmitting(true);
+    await supabase.from('suggestions').insert({
+      message: suggestion.trim(),
+      submitted_by: user.id,
+      submitted_by_name: profile?.name ?? null,
+    });
+    setSubmitting(false);
+    setSubmitted(true);
+    setSuggestion('');
+    setTimeout(() => setSubmitted(false), 4000);
+  }
+
   return (
     <div className="max-w-2xl mx-auto">
       <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-night mb-4">
@@ -91,6 +113,43 @@ export default function GuidePage() {
           <p><strong className="text-night">Needs Attention</strong> — Dashboard alerts for animals needing follow-up</p>
           <p><strong className="text-night">Flags</strong> — Records that need coordinator review (imported data, volunteer notes)</p>
         </div>
+      </div>
+
+      {/* Suggestion Box */}
+      <div className="bg-white rounded-2xl border border-night/5 p-5 mb-8">
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <MessageSquarePlus className="w-5 h-5 text-primary" strokeWidth={1.75} />
+          </div>
+          <div>
+            <h2 className="text-lg font-heading font-bold text-night">Have a Suggestion?</h2>
+            <p className="text-xs text-muted">Ideas, requests, or things that would make this app better</p>
+          </div>
+        </div>
+        {submitted ? (
+          <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-4 py-3">
+            <Check className="w-4 h-4 text-primary" strokeWidth={2.5} />
+            <p className="text-sm font-medium text-primary">Thanks! Your suggestion has been submitted.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <textarea
+              value={suggestion}
+              onChange={(e) => setSuggestion(e.target.value)}
+              placeholder="What would make this app more helpful for you?"
+              rows={3}
+              className="w-full px-3 py-2.5 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40 resize-none"
+            />
+            <button
+              onClick={handleSubmitSuggestion}
+              disabled={!suggestion.trim() || submitting}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.25)] disabled:opacity-30 transition-all"
+            >
+              <Send className="w-3.5 h-3.5" />
+              {submitting ? 'Sending...' : 'Send Suggestion'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

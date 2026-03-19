@@ -11,6 +11,7 @@ import {
   BarChart3,
   LogOut,
   UserCog,
+  MessageSquarePlus,
   KeyRound,
   X,
   Check,
@@ -114,6 +115,24 @@ export default function Sidebar() {
             <UserCog className="w-5 h-5 shrink-0" strokeWidth={1.75} />
             <span className="ml-3 text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Users
+            </span>
+          </NavLink>
+        )}
+
+        {isAdmin && (
+          <NavLink
+            to="/admin/suggestions"
+            className={({ isActive }) =>
+              `flex items-center h-11 px-3 rounded-lg transition-all duration-150 ${
+                isActive
+                  ? 'bg-primary text-white shadow-[0_2px_8px_rgba(110,168,50,0.3)]'
+                  : 'text-white/75 hover:text-white hover:bg-white/10'
+              }`
+            }
+          >
+            <MessageSquarePlus className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+            <span className="ml-3 text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Suggestions
             </span>
           </NavLink>
         )}
