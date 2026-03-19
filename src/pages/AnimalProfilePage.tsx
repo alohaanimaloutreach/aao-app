@@ -458,7 +458,7 @@ export default function AnimalProfilePage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowLogCare(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-all text-sm"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-semibold shadow-[0_2px_8px_rgba(110,168,50,0.25)] transition-all text-sm"
                 aria-label="Log care"
               >
                 <Stethoscope className="w-4 h-4" strokeWidth={2} />
