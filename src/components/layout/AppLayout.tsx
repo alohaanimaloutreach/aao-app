@@ -46,6 +46,10 @@ export default function AppLayout() {
             <Outlet />
           </div>
         </main>
+
+        <footer className="hidden md:block text-center py-4 text-xs text-muted/50">
+          Made with 💓 by Shauna
+        </footer>
       </div>
 
       <BottomNav />
