@@ -40,6 +40,7 @@ import {
 import StatusBadge from '../components/shared/StatusBadge';
 import DogTimeline from '../components/animals/DogTimeline';
 import DogLocationMap from '../components/animals/DogLocationMap';
+import LogCareDrawer from '../components/animals/LogCareDrawer';
 import FlagResolver from '../components/admin/FlagResolver';
 import ArchiveActions from '../components/admin/ArchiveActions';
 
@@ -134,6 +135,7 @@ export default function AnimalProfilePage() {
   const [newLocName, setNewLocName] = useState('');
   const [newLocAddress, setNewLocAddress] = useState('');
   const [creatingLocation, setCreatingLocation] = useState(false);
+  const [showLogCare, setShowLogCare] = useState(false);
 
   useEffect(() => {
     if (id) loadAnimal(id);
@@ -454,6 +456,14 @@ export default function AnimalProfilePage() {
 
             {/* Action buttons */}
             <div className="flex gap-2">
+              <button
+                onClick={() => setShowLogCare(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-all text-sm"
+                aria-label="Log care"
+              >
+                <Stethoscope className="w-4 h-4" strokeWidth={2} />
+                <span>Log Care</span>
+              </button>
               <button
                 onClick={() => quickPhotoRef.current?.click()}
                 disabled={uploadingPhoto}
@@ -959,6 +969,17 @@ export default function AnimalProfilePage() {
           />
         </div>
       )}
+
+      <LogCareDrawer
+        open={showLogCare}
+        onClose={() => setShowLogCare(false)}
+        animalId={animal.id}
+        animalName={animal.name}
+        ownerId={animal.owner?.id ?? null}
+        locationId={animal.primary_location?.id ?? null}
+        foodBagSize={animal.food_bag_size}
+        onSaved={() => { if (id) loadAnimal(id); }}
+      />
     </div>
   );
 }
