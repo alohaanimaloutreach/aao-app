@@ -16,6 +16,8 @@ import {
   Loader2,
   UserCircle,
   ExternalLink,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -271,40 +273,8 @@ export default function EventSummaryPage() {
         )}
       </div>
 
-      {/* Owner details */}
-      <div className="mb-4">
-        <h2 className="text-sm font-semibold text-night mb-2">Details by Owner</h2>
-        <div className="space-y-2">
-          {Object.entries(byOwner).map(([ownerId, { ownerName, animals }]) => (
-            <div key={ownerId} className="bg-white rounded-xl border border-night/5 p-3">
-              {ownerId ? (
-                <Link to={`/people/${ownerId}`} className="text-sm font-medium text-primary hover:underline">{ownerName}</Link>
-              ) : (
-                <span className="text-sm font-medium text-muted italic">No owner linked</span>
-              )}
-              <div className="mt-1.5 space-y-1">
-                {animals.map((c) => (
-                  <div key={c.id} className="flex items-start gap-2">
-                    <PawPrint className="w-3 h-3 text-muted mt-0.5 shrink-0" />
-                    <div className="text-sm">
-                      {c.animal_id ? (
-                        <Link to={`/animals/${c.animal_id}`} className="font-medium text-night hover:text-primary">
-                          {c.animal?.name || c.animal?.aao_id || 'Unnamed animal'}
-                        </Link>
-                      ) : (
-                        <span className="text-muted italic">No animal linked</span>
-                      )}
-                      <span className="text-muted ml-1">
-                        {c.care_types.map((t) => CARE_LABELS[t] ?? t).join(', ')}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Owner details — collapsible */}
+      <OwnerDetails byOwner={byOwner} />
 
       {event.notes && (
         <div className="bg-white rounded-xl border border-night/5 p-3 mb-4">
@@ -327,6 +297,60 @@ export default function EventSummaryPage() {
         <Mail className="w-4 h-4" />
         {emailSent ? 'Email opened' : 'Email Summary'}
       </button>
+    </div>
+  );
+}
+
+function OwnerDetails({ byOwner }: { byOwner: Record<string, { ownerName: string; animals: CareEvent[] }> }) {
+  const [expanded, setExpanded] = useState(false);
+  const entries = Object.entries(byOwner);
+
+  return (
+    <div className="bg-white rounded-xl border border-night/5 mb-4 overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center justify-between w-full px-4 py-3 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-muted" strokeWidth={1.75} />
+          <span className="text-sm font-semibold text-night">Details by Owner ({entries.length})</span>
+        </div>
+        {expanded ? <ChevronUp className="w-4 h-4 text-muted" /> : <ChevronDown className="w-4 h-4 text-muted" />}
+      </button>
+
+      {expanded && (
+        <div className="border-t border-night/5 divide-y divide-night/5">
+          {entries.map(([ownerId, { ownerName, animals }]) => (
+            <div key={ownerId} className="px-4 py-2.5">
+              <div className="flex items-center justify-between">
+                {ownerId ? (
+                  <Link to={`/people/${ownerId}`} className="text-sm font-medium text-primary hover:underline">{ownerName}</Link>
+                ) : (
+                  <span className="text-sm font-medium text-muted italic">No owner linked</span>
+                )}
+                <span className="text-xs text-muted">{animals.length} {animals.length === 1 ? 'animal' : 'animals'}</span>
+              </div>
+              <div className="mt-1 space-y-0.5">
+                {animals.map((c) => (
+                  <div key={c.id} className="flex items-baseline gap-1.5 text-xs text-muted">
+                    <PawPrint className="w-3 h-3 shrink-0 relative top-0.5" />
+                    {c.animal_id ? (
+                      <Link to={`/animals/${c.animal_id}`} className="font-medium text-night hover:text-primary">
+                        {c.animal?.name || c.animal?.aao_id || 'Unnamed'}
+                      </Link>
+                    ) : (
+                      <span className="italic">No animal linked</span>
+                    )}
+                    <span className="text-muted">
+                      — {c.care_types.map((t) => CARE_LABELS[t] ?? t).join(', ')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
