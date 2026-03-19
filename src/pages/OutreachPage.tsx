@@ -31,8 +31,9 @@ export default function OutreachPage() {
   const [loading, setLoading] = useState(true);
   const [showSetup, setShowSetup] = useState(false);
   const [search, setSearch] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState<string[]>([]);
   const [sortNewest, setSortNewest] = useState(true);
+  const [locDropdownOpen, setLocDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (session) loadEvents();
@@ -99,8 +100,8 @@ export default function OutreachPage() {
       );
     }
 
-    if (locationFilter) {
-      list = list.filter((e) => e.location_id === locationFilter);
+    if (locationFilter.length > 0) {
+      list = list.filter((e) => e.location_id && locationFilter.includes(e.location_id));
     }
 
     if (!sortNewest) {
@@ -110,7 +111,7 @@ export default function OutreachPage() {
     return list;
   }, [events, search, locationFilter, sortNewest]);
 
-  const hasFilters = search || locationFilter;
+  const hasFilters = search || locationFilter.length > 0;
 
   return (
     <div>
@@ -177,16 +178,47 @@ export default function OutreachPage() {
               className="w-full pl-9 pr-3 py-2 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
             />
           </div>
-          <select
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-            className="px-3 py-2 bg-white border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30"
-          >
-            <option value="">All locations</option>
-            {locations.map((l) => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <button
+              onClick={() => setLocDropdownOpen(!locDropdownOpen)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 min-w-[140px]"
+            >
+              <MapPin className="w-3.5 h-3.5 text-muted shrink-0" />
+              <span className="truncate">
+                {locationFilter.length === 0
+                  ? 'All locations'
+                  : locationFilter.length === 1
+                    ? locations.find((l) => l.id === locationFilter[0])?.name ?? '1 location'
+                    : `${locationFilter.length} locations`}
+              </span>
+            </button>
+            {locDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setLocDropdownOpen(false)} />
+                <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-night/8 z-20 py-1 max-h-60 overflow-y-auto">
+                  {locations.map((l) => {
+                    const selected = locationFilter.includes(l.id);
+                    return (
+                      <button
+                        key={l.id}
+                        onClick={() => {
+                          setLocationFilter((prev) =>
+                            selected ? prev.filter((id) => id !== l.id) : [...prev, l.id]
+                          );
+                        }}
+                        className={`flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-sand transition-colors ${selected ? 'text-primary font-medium' : 'text-night'}`}
+                      >
+                        <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${selected ? 'bg-primary border-primary' : 'border-night/20'}`}>
+                          {selected && <span className="text-white text-xs">&#10003;</span>}
+                        </span>
+                        {l.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
           <button
             onClick={() => setSortNewest(!sortNewest)}
             className="flex items-center gap-1.5 px-3 py-2 bg-white border border-night/8 rounded-xl text-sm text-muted hover:text-night transition-colors"
@@ -197,7 +229,7 @@ export default function OutreachPage() {
           </button>
           {hasFilters && (
             <button
-              onClick={() => { setSearch(''); setLocationFilter(''); }}
+              onClick={() => { setSearch(''); setLocationFilter([]); }}
               className="flex items-center gap-1 px-2.5 py-2 text-xs text-muted hover:text-night transition-colors"
             >
               <X className="w-3 h-3" />

@@ -13,6 +13,7 @@ import {
   BarChart3,
   UserCog,
   KeyRound,
+  LogOut,
   X,
   Check,
   Loader2,
@@ -36,7 +37,7 @@ const MORE_ITEMS = [
 ];
 
 export default function BottomNav() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, signOut } = useAuth();
 
   const location = useLocation();
   const [hasActiveQueue, setHasActiveQueue] = useState(false);
@@ -164,7 +165,7 @@ export default function BottomNav() {
           </button>
 
           {moreOpen && (
-            <div className="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-night/8 overflow-hidden">
+            <div className="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-night/8 overflow-y-auto max-h-[70vh]">
               {allMoreItems.map((item) => (
                 <Link
                   key={item.to}
@@ -186,6 +187,13 @@ export default function BottomNav() {
               >
                 <KeyRound className="w-4 h-4 text-muted" strokeWidth={1.75} />
                 Change Password
+              </button>
+              <button
+                onClick={() => { setMoreOpen(false); signOut(); }}
+                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-night hover:bg-sand transition-colors w-full"
+              >
+                <LogOut className="w-4 h-4 text-muted" strokeWidth={1.75} />
+                Sign Out
               </button>
             </div>
           )}

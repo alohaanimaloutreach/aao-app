@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BarChart3, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import { BarChart3, Download, ChevronDown, ChevronUp, CalendarHeart, Scissors, Package } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { downloadCsv } from '../lib/csv-export';
 import { formatDate, daysSince } from '../lib/format';
@@ -19,6 +19,20 @@ const REPORTS: { key: ReportKey; label: string; description: string }[] = [
 
 export default function ReportsPage() {
   const [expanded, setExpanded] = useState<ReportKey | null>(null);
+  const [impactStats, setImpactStats] = useState<{ events: number; sn: number; food: number } | null>(null);
+
+  useEffect(() => {
+    async function loadStats() {
+      const [eventsRes, snRes, foodRes] = await Promise.all([
+        supabase.from('outreach_events').select('id', { count: 'exact', head: true }),
+        supabase.from('care_events').select('id', { count: 'exact', head: true }).contains('care_types', ['spay_neuter']),
+        supabase.from('outreach_events').select('total_food_lbs'),
+      ]);
+      const totalFood = (foodRes.data ?? []).reduce((sum: number, e: any) => sum + (e.total_food_lbs ?? 0), 0);
+      setImpactStats({ events: eventsRes.count ?? 0, sn: snRes.count ?? 0, food: Math.round(totalFood) });
+    }
+    loadStats();
+  }, []);
 
   return (
     <div>
@@ -27,6 +41,28 @@ export default function ReportsPage() {
           <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">Reports</h1>
           <p className="text-muted mt-0.5">Admin analytics and data exports</p>
         </div>
+      </div>
+
+      {/* Impact stats */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {[
+          { label: 'Outreach events', value: impactStats?.events, icon: CalendarHeart },
+          { label: 'Spayed / neutered', value: impactStats?.sn, icon: Scissors },
+          { label: 'Food distributed', value: impactStats?.food, icon: Package, suffix: ' lbs' },
+        ].map((s) => (
+          <div key={s.label} className="bg-white rounded-2xl border border-night/5 p-4 text-center">
+            <s.icon className="w-4 h-4 mx-auto mb-1 text-primary" strokeWidth={1.75} />
+            {s.value != null ? (
+              <p className="text-2xl font-bold font-heading text-night leading-none">
+                {s.value.toLocaleString()}
+                {'suffix' in s && s.suffix && <span className="text-sm font-semibold text-muted">{s.suffix}</span>}
+              </p>
+            ) : (
+              <div className="skeleton h-7 w-10 mx-auto" />
+            )}
+            <p className="text-xs text-muted mt-1">{s.label}</p>
+          </div>
+        ))}
       </div>
 
       <div className="space-y-3">

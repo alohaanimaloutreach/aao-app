@@ -140,7 +140,7 @@ export default function LoginPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="shauna or shauna@gmail.com"
+              placeholder="username@alohaanimaloutreach.org"
               required
               autoComplete="username"
               className="w-full px-4 py-2.5 border border-night/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 bg-sand/50 text-sm placeholder:text-muted/40 transition-all"

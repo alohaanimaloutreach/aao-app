@@ -75,6 +75,7 @@ export default function AdminUsersPage() {
   const [loginHistory, setLoginHistory] = useState<{ user_id: string; user_name: string; user_email: string; logged_in_at: string }[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -103,7 +104,7 @@ export default function AdminUsersPage() {
       .from('login_history')
       .select('user_id, logged_in_at, user:users!user_id(name, email)')
       .order('logged_in_at', { ascending: false })
-      .limit(50);
+      .limit(500);
     if (data) {
       setLoginHistory(data.map((d: any) => {
         const u = Array.isArray(d.user) ? d.user[0] : d.user;
@@ -289,24 +290,57 @@ export default function AdminUsersPage() {
             <div className="bg-white rounded-xl border border-night/5 p-6 text-center">
               <p className="text-sm text-muted">No login history recorded yet. History will appear after the next sign-in.</p>
             </div>
-          ) : (
-            <div className="bg-white rounded-xl border border-night/5 overflow-hidden">
-              <div className="divide-y divide-night/5">
-                {loginHistory.map((entry, i) => (
-                  <div key={i} className="px-4 py-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-night">{entry.user_name}</p>
-                      <p className="text-xs text-muted">{entry.user_email}</p>
-                    </div>
-                    <p className="text-sm text-muted whitespace-nowrap">
-                      {new Date(entry.logged_in_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{' '}
-                      {new Date(entry.logged_in_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                    </p>
+          ) : (() => {
+            // Group by user
+            const grouped = new Map<string, { name: string; email: string; logins: string[] }>();
+            loginHistory.forEach((entry) => {
+              if (!grouped.has(entry.user_id)) {
+                grouped.set(entry.user_id, { name: entry.user_name, email: entry.user_email, logins: [] });
+              }
+              grouped.get(entry.user_id)!.logins.push(entry.logged_in_at);
+            });
+
+            const formatDt = (dt: string) => {
+              const d = new Date(dt);
+              return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+            };
+
+            return (
+              <div className="space-y-2">
+                {[...grouped.entries()].map(([userId, { name, email, logins }]) => (
+                  <div key={userId} className="bg-white rounded-xl border border-night/5 overflow-hidden">
+                    <button
+                      onClick={() => setExpandedUser(expandedUser === userId ? null : userId)}
+                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-sand/30 transition-colors"
+                    >
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-night">{name}</p>
+                        <p className="text-xs text-muted">{email}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="text-right">
+                          <p className="text-xs text-muted">Last login</p>
+                          <p className="text-sm text-night whitespace-nowrap">{formatDt(logins[0])}</p>
+                        </div>
+                        <span className="text-xs font-medium text-muted bg-sand rounded-md px-1.5 py-0.5">{logins.length}</span>
+                        {logins.length > 1 && (expandedUser === userId ? <ChevronUp className="w-3.5 h-3.5 text-muted" /> : <ChevronDown className="w-3.5 h-3.5 text-muted" />)}
+                      </div>
+                    </button>
+                    {expandedUser === userId && logins.length > 1 && (
+                      <div className="border-t border-night/5 px-4 py-2 bg-sand/20">
+                        <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1.5">All logins</p>
+                        <div className="space-y-1">
+                          {logins.map((dt, i) => (
+                            <p key={i} className="text-sm text-muted">{formatDt(dt)}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-            </div>
-          )
+            );
+          })()
         )}
       </div>
 

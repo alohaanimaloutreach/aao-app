@@ -155,7 +155,7 @@ export default function DashboardMap() {
         map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
       }
 
-      // Handle popup link clicks
+      // Handle popup link clicks + owner row expand/collapse
       map.on('popupopen', () => {
         const container = map.getContainer();
         container.querySelectorAll('.dash-map-link').forEach((el: any) => {
@@ -163,6 +163,24 @@ export default function DashboardMap() {
             e.preventDefault();
             const href = (e.currentTarget as HTMLAnchorElement).getAttribute('data-href');
             if (href) navigate(href);
+          });
+        });
+        // Toggle animal list when owner row is clicked
+        container.querySelectorAll('.map-popup-owner-row').forEach((el: any) => {
+          el.addEventListener('click', () => {
+            const key = el.getAttribute('data-owner-key');
+            const animalDiv = container.querySelector(`.map-popup-animals[data-owner-key="${key}"]`) as HTMLElement;
+            if (animalDiv) {
+              const showing = animalDiv.style.display !== 'none';
+              // Collapse all
+              container.querySelectorAll('.map-popup-animals').forEach((d: any) => { d.style.display = 'none'; });
+              container.querySelectorAll('.map-popup-owner-row').forEach((r: any) => { r.style.background = '#f8f5ef'; });
+              // Expand clicked (if it was collapsed)
+              if (!showing) {
+                animalDiv.style.display = 'block';
+                el.style.background = '#e8e4d9';
+              }
+            }
           });
         });
       });
@@ -191,28 +209,43 @@ export default function DashboardMap() {
       owners.get(ownerKey)!.animals.push(a);
     });
 
-    let html = `<div style="font-family:system-ui,sans-serif;">`;
-    html += `<div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#1c1708;">${locName}</div>`;
+    const popupId = `map-popup-${Date.now()}`;
+
+    let html = `<div id="${popupId}" style="font-family:system-ui,sans-serif;min-width:180px;">`;
+    html += `<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:#1c1708;">${locName}</div>`;
     html += `<div style="font-size:11px;color:#7a7060;margin-bottom:8px;">${group.length} animal${group.length > 1 ? 's' : ''}</div>`;
 
-    owners.forEach((owner) => {
-      if (owner.id) {
-        html += `<a class="dash-map-link" data-href="/people/${owner.id}" style="font-size:12px;font-weight:600;color:#6EA832;cursor:pointer;text-decoration:none;display:block;margin-bottom:2px;">${owner.name}</a>`;
+    // Owner list view (default)
+    html += `<div class="map-popup-owners">`;
+    owners.forEach((owner, ownerKey) => {
+      const count = owner.animals.length;
+      const href = owner.id ? `/people/${owner.id}` : null;
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;margin:2px 0;border-radius:8px;background:#f8f5ef;cursor:pointer;" class="map-popup-owner-row" data-owner-key="${ownerKey}">`;
+      html += `<div style="display:flex;align-items:center;gap:6px;min-width:0;">`;
+      if (href) {
+        html += `<a class="dash-map-link" data-href="${href}" style="font-size:12px;font-weight:600;color:#6EA832;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="event.stopPropagation();">${owner.name}</a>`;
       } else {
-        html += `<div style="font-size:12px;font-weight:600;color:#7a7060;margin-bottom:2px;">${owner.name}</div>`;
+        html += `<span style="font-size:12px;font-weight:600;color:#7a7060;">${owner.name}</span>`;
       }
+      html += `</div>`;
+      html += `<span style="font-size:11px;color:#7a7060;font-weight:600;white-space:nowrap;margin-left:8px;">🐾 ${count}</span>`;
+      html += `</div>`;
+
+      // Animal detail (hidden by default, shown on owner click)
+      html += `<div class="map-popup-animals" data-owner-key="${ownerKey}" style="display:none;padding-left:4px;margin-bottom:4px;">`;
       owner.animals.forEach((a) => {
         const photoHtml = a.photo_url
-          ? `<img src="${a.photo_url}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;flex-shrink:0;" />`
-          : `<div style="width:28px;height:28px;border-radius:6px;background:#f0ece1;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:#bbb;">🐾</div>`;
-        html += `<a class="dash-map-link" data-href="/animals/${a.id}" style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;text-decoration:none;">`;
+          ? `<img src="${a.photo_url}" style="width:24px;height:24px;border-radius:5px;object-fit:cover;flex-shrink:0;" />`
+          : `<div style="width:24px;height:24px;border-radius:5px;background:#f0ece1;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#bbb;">🐾</div>`;
+        html += `<a class="dash-map-link" data-href="/animals/${a.id}" style="display:flex;align-items:center;gap:6px;padding:3px 4px;cursor:pointer;text-decoration:none;border-radius:6px;" onmouseover="this.style.background='#f0ece1'" onmouseout="this.style.background='transparent'">`;
         html += photoHtml;
-        html += `<div><div style="font-size:12px;font-weight:500;color:#1c1708;">${a.name ?? a.aao_id}</div>`;
-        if (a.breed) html += `<div style="font-size:10px;color:#7a7060;">${a.breed}</div>`;
+        html += `<div style="min-width:0;"><div style="font-size:11px;font-weight:500;color:#1c1708;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.name ?? a.aao_id}</div>`;
+        if (a.breed) html += `<div style="font-size:10px;color:#7a7060;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.breed}</div>`;
         html += `</div></a>`;
       });
-      html += `<div style="height:6px;"></div>`;
+      html += `</div>`;
     });
+    html += `</div>`;
 
     html += `</div>`;
     return html;

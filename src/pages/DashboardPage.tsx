@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import {
   PawPrint, Users, MapPin, Flag, AlertTriangle, Clock, CalendarHeart,
-  Pencil, ArrowRight, Eye, Stethoscope, Package, ListOrdered,
+  Pencil, ArrowRight, Eye, Stethoscope, ListOrdered,
   CircleStop, Play, X, StickyNote, BarChart3, ChevronDown, Scissors, ChevronUp,
 } from 'lucide-react';
 import { formatRelative, daysSince, formatDate } from '../lib/format';
@@ -20,8 +20,10 @@ interface Stats {
   people: number | null;
   locations: number | null;
   openFlags: number | null;
-  outreachThisYear: number | null;
-  foodThisYear: number | null;
+  outreachEvents: number | null;
+  snCount: number | null;
+  foodLbs: number | null;
+  sinceDate: string | null;
 }
 
 interface Alert {
@@ -41,13 +43,14 @@ interface ActivityItem {
   date: string;
   author: string | null;
   link: string | null;
+  careTypes?: string[];
 }
 
 export default function DashboardPage() {
   const { profile, session } = useAuth();
 
   const navigate = useNavigate();
-  const [stats, setStats] = useState<Stats>({ animals: null, people: null, locations: null, openFlags: null, outreachThisYear: null, foodThisYear: null });
+  const [stats, setStats] = useState<Stats>({ animals: null, people: null, locations: null, openFlags: null, outreachEvents: null, snCount: null, foodLbs: null, sinceDate: null });
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +58,7 @@ export default function DashboardPage() {
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [endingEvent, setEndingEvent] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
-  const [activityFilter, setActivityFilter] = useState<'all' | 'care' | 'note'>('all');
+  const [activityFilter, setActivityFilter] = useState<string>('all');
   const [activityExpanded, setActivityExpanded] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('aao-welcome-dismissed'));
 
@@ -71,37 +74,34 @@ export default function DashboardPage() {
   async function loadDashboard() {
     setLoading(true);
 
-    const now = new Date();
-    const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
     // Build filtered queries
     const animalsCountQ = supabase.from('animals').select('id', { count: 'exact', head: true }).eq('archived', false);
     const ownersCountQ = supabase.from('owners').select('id', { count: 'exact', head: true }).eq('archived', false);
-    const outreachCountQ = supabase.from('outreach_events').select('id', { count: 'exact', head: true }).gte('event_date', yearStart);
-    const foodQ = supabase.from('outreach_events').select('total_food_lbs').gte('event_date', yearStart);
     const allAnimalsQ = supabase.from('animals').select('id, name, aao_id, urgent_medical, interested_in_fixing, deceased').eq('archived', false).eq('deceased', false);
     const careQ = supabase.from('care_events').select('animal_id, event_date').order('event_date', { ascending: false });
-    const recentCareQ = supabase.from('care_events').select('id, animal_id, outreach_event_id, event_date, care_types, animal:animals(name, aao_id), author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
-    const recentNotesQ = supabase.from('field_notes').select('id, animal_id, owner_id, location_id, note, created_at, author:users!created_by(name)').order('created_at', { ascending: false }).limit(10);
+    const recentCareQ = supabase.from('care_events').select('id, animal_id, outreach_event_id, event_date, care_types, animal:animals(name, aao_id), author:users!created_by(name)').order('created_at', { ascending: false }).limit(100);
+    const recentNotesQ = supabase.from('field_notes').select('id, animal_id, owner_id, location_id, note, created_at, author:users!created_by(name)').order('created_at', { ascending: false }).limit(50);
 
     const [
       animalsRes, peopleRes, locRes, flagsRes,
-      outreachRes, foodRes,
       allAnimalsRes, careRes, situationsRes,
       recentCareRes, recentNotesRes,
-      activeEventRes,
+      activeEventRes, outreachCountRes, snCountRes, foodRes, earliestEventRes,
     ] = await Promise.all([
       animalsCountQ,
       ownersCountQ,
       supabase.from('locations').select('id', { count: 'exact', head: true }).eq('archived', false),
       supabase.from('flags').select('id', { count: 'exact', head: true }).eq('resolved', false),
-      outreachCountQ,
-      foodQ,
       allAnimalsQ,
       careQ,
       supabase.from('situations').select('animal_id, status, started_at').eq('is_active', true),
       recentCareQ,
       recentNotesQ,
       supabase.from('outreach_events').select('id, location:locations(name)').eq('status', 'active').limit(1).single(),
+      supabase.from('outreach_events').select('id', { count: 'exact', head: true }),
+      supabase.from('care_events').select('id', { count: 'exact', head: true }).contains('care_types', ['spay_neuter']),
+      supabase.from('outreach_events').select('total_food_lbs'),
+      supabase.from('outreach_events').select('event_date').order('event_date', { ascending: true }).limit(1).single(),
     ]);
 
     // Stats
@@ -111,8 +111,10 @@ export default function DashboardPage() {
       people: peopleRes.count ?? 0,
       locations: locRes.count ?? 0,
       openFlags: flagsRes.count ?? 0,
-      outreachThisYear: outreachRes.count ?? 0,
-      foodThisYear: Math.round(totalFood),
+      outreachEvents: outreachCountRes.count ?? 0,
+      snCount: snCountRes.count ?? 0,
+      foodLbs: Math.round(totalFood),
+      sinceDate: (earliestEventRes.data as any)?.event_date ?? null,
     });
 
     // Build alerts
@@ -195,6 +197,9 @@ export default function DashboardPage() {
       });
     }
 
+    // Order: sn_ready, urgent_medical, flagged, havent_seen, then anything else
+    const alertOrder: Record<string, number> = { sn_ready: 0, urgent_medical: 1, flagged: 2, havent_seen: 3 };
+    alertList.sort((a, b) => (alertOrder[a.type] ?? 99) - (alertOrder[b.type] ?? 99));
     setAlerts(alertList);
 
     // Active event
@@ -224,6 +229,7 @@ export default function DashboardPage() {
         date: c.event_date,
         author: (Array.isArray(c.author) ? c.author[0] : c.author)?.name ?? null,
         link: c.animal_id ? `/animals/${c.animal_id}?highlight=care-${c.id}` : c.outreach_event_id ? `/outreach/summary/${c.outreach_event_id}` : '/outreach',
+        careTypes: c.care_types ?? [],
       });
     });
     (recentNotesRes.data ?? []).forEach((n: any) => {
@@ -262,12 +268,6 @@ export default function DashboardPage() {
     navigate(`/outreach/summary/${activeEvent.id}`);
   }
 
-  const statCards = [
-    { label: 'Animals', value: stats.animals, icon: PawPrint, to: '/animals', color: 'from-primary/12 to-primary/5', iconColor: 'text-primary', accent: 'bg-primary' },
-    { label: 'People', value: stats.people, icon: Users, to: '/people', color: 'from-gold/15 to-gold/5', iconColor: 'text-night', accent: 'bg-gold' },
-    { label: 'Locations', value: stats.locations, icon: MapPin, to: '/locations', color: 'from-ember/10 to-ember/4', iconColor: 'text-ember', accent: 'bg-ember' },
-    { label: 'Open Flags', value: stats.openFlags, icon: Flag, to: '/flags', color: 'from-muted/10 to-muted/4', iconColor: 'text-muted', accent: 'bg-muted' },
-  ];
 
   const [showMore, setShowMore] = useState(false);
 
@@ -279,8 +279,21 @@ export default function DashboardPage() {
     { to: '/reports', icon: BarChart3, label: 'Reports', color: 'text-muted' },
   ];
 
-  // Activity feed renderer (shared between mobile and desktop)
-  const filteredActivity = activityFilter === 'all' ? activity : activity.filter((a) => a.type === activityFilter);
+  // Activity filter groups — map filter keys to matching care_types
+  const FILTER_GROUPS: Record<string, string[]> = {
+    vaccines: ['vaccine_dapp', 'vaccine_dapp_l', 'vaccine_parvo'],
+    preventatives: ['preventative_oral', 'preventative_topical'],
+  };
+
+  const filteredActivity = activityFilter === 'all'
+    ? activity
+    : activityFilter === 'note'
+      ? activity.filter((a) => a.type === 'note')
+      : activity.filter((a) => {
+          if (a.type !== 'care') return false;
+          const matchTypes = FILTER_GROUPS[activityFilter] ?? [activityFilter];
+          return matchTypes.some((t) => a.careTypes?.includes(t));
+        });
   const COLLAPSED_COUNT = 5;
   const visibleActivity = activityExpanded ? filteredActivity : filteredActivity.slice(0, COLLAPSED_COUNT);
   const hasMoreActivity = filteredActivity.length > COLLAPSED_COUNT;
@@ -296,23 +309,47 @@ export default function DashboardPage() {
     activityGroups[activityGroups.length - 1].items.push(item);
   });
 
+  // Build dynamic filter tabs from actual activity data
+  const allCareTypes = new Set(activity.filter((a) => a.type === 'care').flatMap((a) => a.careTypes ?? []));
+  const hasNotes = activity.some((a) => a.type === 'note');
+  // Ordered list of possible tabs — only shown if matching care_types exist
+  const POSSIBLE_TABS: { key: string; label: string; match: string[] }[] = [
+    { key: 'spay_neuter', label: 'Spay/Neuter', match: ['spay_neuter'] },
+    { key: 'vaccines', label: 'Vaccines', match: ['vaccine_dapp', 'vaccine_dapp_l', 'vaccine_parvo'] },
+    { key: 'preventatives', label: 'Preventatives', match: ['preventative_oral', 'preventative_topical'] },
+    { key: 'food', label: 'Food', match: ['food'] },
+    { key: 'medical', label: 'Medical', match: ['medical'] },
+    { key: 'grooming', label: 'Grooming', match: ['grooming'] },
+    { key: 'nail_trim', label: 'Nail Trim', match: ['nail_trim'] },
+    { key: 'microchip', label: 'Microchip', match: ['microchip'] },
+  ];
+  const filterTabs: { key: string; label: string }[] = [{ key: 'all', label: 'All' }];
+  POSSIBLE_TABS.forEach((tab) => {
+    if (tab.match.some((t) => allCareTypes.has(t))) {
+      filterTabs.push({ key: tab.key, label: tab.label });
+    }
+  });
+  if (hasNotes) filterTabs.push({ key: 'note', label: 'Notes' });
+
   const activityFeed = (
     <div id="activity">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-heading font-bold text-night">Recent Activity</h2>
-        <div className="flex gap-1 bg-sand/50 rounded-lg p-0.5">
-          {([['all', 'All'], ['care', 'Care'], ['note', 'Notes']] as const).map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => { setActivityFilter(key); setActivityExpanded(false); }}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                activityFilter === key ? 'bg-white text-night shadow-sm' : 'text-muted hover:text-night'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="text-lg font-heading font-bold text-night shrink-0">Recent Activity</h2>
+        {filterTabs.length > 1 && (
+          <div className="flex gap-1 bg-sand/50 rounded-lg p-0.5 overflow-x-auto">
+            {filterTabs.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => { setActivityFilter(key); setActivityExpanded(false); }}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                  activityFilter === key ? 'bg-white text-night shadow-sm' : 'text-muted hover:text-night'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {loading ? (
         <div className="space-y-3">
@@ -417,81 +454,74 @@ export default function DashboardPage() {
         )}
 
         {/* Action cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
           <button
             onClick={() => setShowSetup(true)}
-            className="flex flex-col items-center gap-2 p-4 bg-primary text-white rounded-2xl hover:bg-primary-hover transition-colors shadow-sm"
+            className="col-span-2 md:col-span-1 flex flex-col items-center gap-2 p-4 bg-primary text-white rounded-2xl hover:bg-primary-hover transition-colors shadow-sm"
           >
             <CalendarHeart className="w-6 h-6" strokeWidth={1.75} />
             <span className="text-sm font-semibold">Start Outreach</span>
           </button>
           <Link
             to="/animals"
-            className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
+            className="flex flex-col items-center justify-center gap-1 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
           >
-            <PawPrint className="w-6 h-6 text-primary" strokeWidth={1.75} />
-            <span className="text-sm font-semibold">Find Animal</span>
+            <PawPrint className="w-5 h-5 text-primary" strokeWidth={1.75} />
+            {stats.animals !== null ? (
+              <span className="text-xl font-bold font-heading text-night leading-none">{stats.animals.toLocaleString()}</span>
+            ) : (
+              <div className="skeleton h-6 w-8" />
+            )}
+            <span className="text-xs text-muted">Animals</span>
           </Link>
           <Link
             to="/people"
-            className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
+            className="flex flex-col items-center justify-center gap-1 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
           >
-            <Users className="w-6 h-6 text-muted" strokeWidth={1.75} />
-            <span className="text-sm font-semibold">Find Owner</span>
+            <Users className="w-5 h-5 text-muted" strokeWidth={1.75} />
+            {stats.people !== null ? (
+              <span className="text-xl font-bold font-heading text-night leading-none">{stats.people.toLocaleString()}</span>
+            ) : (
+              <div className="skeleton h-6 w-8" />
+            )}
+            <span className="text-xs text-muted">People</span>
+          </Link>
+          <Link
+            to="/locations"
+            className="flex flex-col items-center justify-center gap-1 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
+          >
+            <MapPin className="w-5 h-5 text-ember" strokeWidth={1.75} />
+            {stats.locations !== null ? (
+              <span className="text-xl font-bold font-heading text-night leading-none">{stats.locations.toLocaleString()}</span>
+            ) : (
+              <div className="skeleton h-6 w-8" />
+            )}
+            <span className="text-xs text-muted">Locations</span>
           </Link>
           <button
             onClick={() => navigate('/notes')}
             className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
           >
             <Pencil className="w-6 h-6 text-muted" strokeWidth={1.75} />
-            <span className="text-sm font-semibold">Add Field Note</span>
+            <span className="text-sm font-semibold">New Field Note</span>
           </button>
         </div>
 
-        {/* Outreach + Stats row */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* Outreach this year */}
-          <div className="bg-white rounded-2xl border border-night/5 p-4 flex items-center gap-4">
-            <div className="flex-1 text-center">
-              {stats.outreachThisYear !== null ? (
-                <p className="text-3xl font-bold font-heading text-primary leading-none">{stats.outreachThisYear}</p>
-              ) : (
-                <div className="skeleton h-8 w-10 mx-auto" />
-              )}
-              <p className="text-sm text-muted mt-1">Outreach events this year</p>
-            </div>
-            <div className="w-px h-10 bg-night/8" />
-            <div className="flex-1 text-center">
-              {stats.foodThisYear !== null ? (
-                <p className="text-3xl font-bold font-heading text-primary leading-none">{stats.foodThisYear}<span className="text-lg font-semibold text-muted"> lbs</span></p>
-              ) : (
-                <div className="skeleton h-8 w-16 mx-auto" />
-              )}
-              <p className="text-sm text-muted mt-1">Food distributed this year</p>
+        {/* Impact stats bar */}
+        {stats.outreachEvents !== null && (
+          <div className="mt-3 text-center">
+            {stats.sinceDate && (
+              <p className="text-xs text-muted mb-1">Since {formatDate(stats.sinceDate)}</p>
+            )}
+            <div className="flex items-center justify-center gap-4 md:gap-6 text-sm text-muted">
+              <span><strong className="text-night font-bold text-base">{stats.outreachEvents}</strong> outreach events</span>
+              <span className="text-night/10">|</span>
+              <span><strong className="text-night font-bold text-base">{stats.snCount?.toLocaleString()}</strong> spayed/neutered</span>
+              <span className="text-night/10">|</span>
+              <span><strong className="text-night font-bold text-base">{stats.foodLbs?.toLocaleString()}</strong> lbs food distributed</span>
             </div>
           </div>
-
-          {/* Stat Cards */}
-          <div className="grid grid-cols-4 gap-2">
-            {statCards.map((card) => (
-              <Link
-                key={card.label}
-                to={card.to}
-                className="bg-white rounded-xl p-3 card-hover border border-night/5 text-center"
-              >
-                <card.icon className={`w-5 h-5 mx-auto mb-1.5 ${card.iconColor}`} strokeWidth={1.75} />
-                {card.value === null ? (
-                  <div className="space-y-1.5"><div className="skeleton h-6 w-8 mx-auto" /><div className="skeleton h-3 w-12 mx-auto" /></div>
-                ) : (
-                  <>
-                    <p className="text-xl font-bold font-heading text-night leading-none">{card.value.toLocaleString()}</p>
-                    <p className="text-xs text-muted mt-1">{card.label}</p>
-                  </>
-                )}
-              </Link>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Active Event Card */}
@@ -564,19 +594,21 @@ export default function DashboardPage() {
       )}
 
       {/* Desktop: two-column layout | Mobile: stacked */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column — Map + Alerts (mobile) */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Left column — Map */}
+        <div className="lg:col-span-3">
           <DashboardMap />
-          {/* Alerts — show here on mobile, in right column on desktop */}
-          <div className="lg:hidden">{alertsSection}</div>
         </div>
 
-        {/* Right column — Alerts (desktop) + Activity */}
-        <div className="space-y-6">
-          <div className="hidden lg:block">{alertsSection}</div>
-          {activityFeed}
+        {/* Right column — Needs Attention */}
+        <div className="lg:col-span-2">
+          {alertsSection}
         </div>
+      </div>
+
+      {/* Activity — full width */}
+      <div className="mt-6">
+        {activityFeed}
       </div>
 
       {/* Quick links — mobile only */}
