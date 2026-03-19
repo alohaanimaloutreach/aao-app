@@ -12,6 +12,7 @@ import { HAVENT_SEEN_DAYS } from '../lib/constants';
 
 import EventSetup from '../components/outreach/EventSetup';
 import DashboardMap from '../components/dashboard/DashboardMap';
+import FieldNotesDrawer from '../components/layout/FieldNotesDrawer';
 
 const isTestEnv = import.meta.env.VITE_SUPABASE_URL?.includes('ybswvwbqweywhfjgdwro');
 
@@ -61,6 +62,7 @@ export default function DashboardPage() {
   const [activityFilter, setActivityFilter] = useState<string>('all');
   const [activityExpanded, setActivityExpanded] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('aao-welcome-dismissed'));
+  const [notesOpen, setNotesOpen] = useState(false);
 
   function dismissWelcome() {
     localStorage.setItem('aao-welcome-dismissed', '1');
@@ -499,7 +501,7 @@ export default function DashboardPage() {
             <span className="text-xs text-muted">Locations</span>
           </Link>
           <button
-            onClick={() => navigate('/notes')}
+            onClick={() => setNotesOpen(true)}
             className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-night/5 text-night hover:bg-sand/50 transition-colors"
           >
             <Pencil className="w-6 h-6 text-muted" strokeWidth={1.75} />
@@ -653,6 +655,8 @@ export default function DashboardPage() {
           onCancel={() => setShowSetup(false)}
         />
       )}
+
+      <FieldNotesDrawer open={notesOpen} onClose={() => setNotesOpen(false)} />
     </div>
   );
 }

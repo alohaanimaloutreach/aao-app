@@ -12,6 +12,7 @@ import {
   Scissors,
   Stethoscope,
   Heart,
+  ClipboardList,
   X,
   MapPin,
 } from 'lucide-react';
@@ -56,6 +57,7 @@ interface CheckedAnimal {
   needsMedical: boolean;
   medicalNotes: string;
   needsSN: boolean;
+  snList: boolean;
 }
 
 type Step = 'search' | 'add-owner' | 'animals' | 'add-animal';
@@ -99,15 +101,48 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
   const [newAnimalFixed, setNewAnimalFixed] = useState('unknown');
   const [newAnimalNotes, setNewAnimalNotes] = useState('');
 
-  // Load event location name
+  // Nearby owners (same location as event)
+  const [nearbyOwners, setNearbyOwners] = useState<(OwnerResult & { animal_count: number })[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(true);
+
+  // Load event location name + nearby owners
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const { data: locData } = await supabase
         .from('locations')
         .select('name')
         .eq('id', eventLocationId)
         .single();
-      if (data) setEventLocationName(data.name);
+      if (locData) setEventLocationName(locData.name);
+
+      // Load owners at this location with animal counts
+      const { data: nearby } = await supabase
+        .from('owners')
+        .select('id, name, phone_primary, primary_location:locations(name)')
+        .eq('archived', false)
+        .eq('primary_location_id', eventLocationId)
+        .order('name')
+        .limit(50);
+      if (nearby) {
+        // Get animal counts per owner
+        const ownerIds = nearby.map((o: any) => o.id);
+        const { data: animals } = await supabase
+          .from('animals')
+          .select('owner_id')
+          .eq('archived', false)
+          .eq('deceased', false)
+          .in('owner_id', ownerIds);
+        const animalCounts: Record<string, number> = {};
+        (animals ?? []).forEach((a: any) => {
+          animalCounts[a.owner_id] = (animalCounts[a.owner_id] ?? 0) + 1;
+        });
+        setNearbyOwners(nearby.map((o: any) => ({
+          ...o,
+          primary_location: Array.isArray(o.primary_location) ? o.primary_location[0] ?? null : o.primary_location,
+          animal_count: animalCounts[o.id] ?? 0,
+        })));
+      }
+      setNearbyLoading(false);
     })();
   }, [eventLocationId]);
 
@@ -132,7 +167,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
     return () => clearTimeout(timeout);
   }, [locationSearch, showLocationPicker]);
 
-  // Search owners
+  // Search owners (by name, phone, or animal name)
   async function searchOwners(q: string) {
     if (q.trim().length < 2) {
       setResults([]);
@@ -140,17 +175,50 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
     }
     setSearching(true);
     const term = `%${q.trim()}%`;
-    const { data } = await supabase
+
+    // Search owners by name/phone
+    const ownerQuery = supabase
       .from('owners')
       .select('id, name, phone_primary, primary_location:locations(name)')
       .eq('archived', false)
       .or(`name.ilike.${term},phone_primary.ilike.${term}`)
       .order('name')
       .limit(20);
-    setResults((data ?? []).map((o: any) => ({
+
+    // Search animals by name to find their owners
+    const animalQuery = supabase
+      .from('animals')
+      .select('owner_id')
+      .eq('archived', false)
+      .ilike('name', term)
+      .limit(20);
+
+    const [ownerRes, animalRes] = await Promise.all([ownerQuery, animalQuery]);
+
+    // Merge: get any owner IDs from animal matches that aren't already in owner results
+    const ownerIds = new Set((ownerRes.data ?? []).map((o: any) => o.id));
+    const animalOwnerIds = [...new Set((animalRes.data ?? []).filter((a: any) => a.owner_id && !ownerIds.has(a.owner_id)).map((a: any) => a.owner_id))];
+
+    let allOwners = (ownerRes.data ?? []).map((o: any) => ({
       ...o,
       primary_location: Array.isArray(o.primary_location) ? o.primary_location[0] ?? null : o.primary_location,
-    })));
+    }));
+
+    if (animalOwnerIds.length > 0) {
+      const { data: extraOwners } = await supabase
+        .from('owners')
+        .select('id, name, phone_primary, primary_location:locations(name)')
+        .eq('archived', false)
+        .in('id', animalOwnerIds);
+      if (extraOwners) {
+        allOwners = [...allOwners, ...extraOwners.map((o: any) => ({
+          ...o,
+          primary_location: Array.isArray(o.primary_location) ? o.primary_location[0] ?? null : o.primary_location,
+        }))];
+      }
+    }
+
+    setResults(allOwners);
     setSearching(false);
   }
 
@@ -186,6 +254,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
         needsMedical: false,
         medicalNotes: '',
         needsSN: false,
+        snList: false,
       }))
     );
     setStep('animals');
@@ -242,7 +311,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
       setOwnerAnimals((prev) => [...prev, data]);
       setChecked((prev) => [
         ...prev,
-        { id: data.id, aao_id: data.aao_id, name: data.name, food_bag_size: data.food_bag_size, food: true, vaccines: false, preventatives: false, nailTrim: false, needsMedical: false, medicalNotes: '', needsSN: false },
+        { id: data.id, aao_id: data.aao_id, name: data.name, food_bag_size: data.food_bag_size, food: true, vaccines: false, preventatives: false, nailTrim: false, needsMedical: false, medicalNotes: '', needsSN: false, snList: false },
       ]);
       setNewAnimalName('');
       setNewAnimalType('dog');
@@ -274,6 +343,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
           needsMedical: false,
           medicalNotes: '',
           needsSN: false,
+          snList: false,
         }]);
       }
     }
@@ -324,18 +394,31 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
       }
     }
 
+    // Update interested_in_fixing for animals marked for S/N list
+    const snListAnimals = checked.filter((a) => a.snList);
+    if (snListAnimals.length > 0) {
+      await Promise.all(snListAnimals.map((a) =>
+        supabase.from('animals').update({ interested_in_fixing: 'interested' }).eq('id', a.id)
+      ));
+    }
+
     // Add to queue as complete so it shows in the event log
     const { count } = await supabase
       .from('checkin_queue')
       .select('*', { count: 'exact', head: true })
       .eq('outreach_event_id', eventId);
 
-    const stagedCare = checked.map((a) => ({
+    const stagedCare = checked.map((a) => {
+      const services: string[] = [];
+      if (a.food) services.push('food');
+      if (a.snList) services.push('sn_list');
+      if (services.length === 0) services.push('seen');
+      return {
       animal_id: a.id,
       animal_name: a.name ?? 'Unnamed',
       aao_id: a.aao_id,
       food_bag_size: a.food_bag_size,
-      services: a.food ? ['food'] : ['seen'],
+      services,
       food_bags: a.food ? 1 : 0,
       vaccine_lot_dapp: '',
       vaccine_lot_parvo: '',
@@ -344,7 +427,8 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
       preventative_dosage: '',
       health_notes: '',
       other_notes: '',
-    }));
+    };
+    });
 
     await supabase.from('checkin_queue').insert({
       outreach_event_id: eventId,
@@ -368,6 +452,14 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
   async function sendToQueue() {
     if (!user || !owner || checked.length === 0) return;
     setSubmitting(true);
+
+    // Update interested_in_fixing for animals marked for S/N list
+    const snListAnimals = checked.filter((a) => a.snList);
+    if (snListAnimals.length > 0) {
+      await Promise.all(snListAnimals.map((a) =>
+        supabase.from('animals').update({ interested_in_fixing: 'interested' }).eq('id', a.id)
+      ));
+    }
 
     // Get next queue position
     const { count } = await supabase
@@ -729,7 +821,8 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
                           <ServiceTag active={c.preventatives} icon={Pill} label="Preventatives" onClick={() => updateAnimal(animal.id, { preventatives: !c.preventatives })} />
                           <ServiceTag active={c.nailTrim} icon={Scissors} label="Nail Trim" onClick={() => updateAnimal(animal.id, { nailTrim: !c.nailTrim })} />
                           <ServiceTag active={c.needsMedical} icon={Stethoscope} label="Medical" onClick={() => updateAnimal(animal.id, { needsMedical: !c.needsMedical })} color="amber" />
-                          <ServiceTag active={c.needsSN} icon={Heart} label="Spay/Neuter" onClick={() => updateAnimal(animal.id, { needsSN: !c.needsSN })} />
+                          <ServiceTag active={c.snList} icon={ClipboardList} label="S/N List" onClick={() => updateAnimal(animal.id, { snList: !c.snList, needsSN: false })} />
+                          <ServiceTag active={c.needsSN} icon={Heart} label="S/N Today" onClick={() => updateAnimal(animal.id, { needsSN: !c.needsSN, snList: false })} />
                         </div>
                         {c.needsMedical && (
                           <textarea
@@ -799,7 +892,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-heading font-bold text-night">Check In</h3>
-      <p className="text-sm text-muted">Search for an owner by name or phone number</p>
+      <p className="text-sm text-muted">Search by owner name, phone, or animal name</p>
 
       {/* Search input */}
       <div className="relative">
@@ -808,7 +901,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search owner name or phone..."
+          placeholder="Owner name, phone, or animal name..."
           className="w-full pl-10 pr-4 py-3 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
           autoFocus
         />
@@ -861,16 +954,56 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
       )}
 
       {query.trim().length < 2 && (
-        <div className="text-center py-8">
-          <Search className="w-10 h-10 text-muted/20 mx-auto mb-3" />
-          <p className="text-sm text-muted">Type at least 2 characters to search</p>
-          <button
-            onClick={() => setStep('add-owner')}
-            className="inline-flex items-center gap-1.5 mt-4 text-xs text-primary font-medium hover:underline"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Or add a new owner
-          </button>
+        <div>
+          {nearbyLoading ? (
+            <div className="text-center py-8">
+              <p className="text-xs text-muted">Loading nearby owners...</p>
+            </div>
+          ) : nearbyOwners.length > 0 ? (
+            <div>
+              <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
+                Nearby — {eventLocationName}
+              </p>
+              <div className="space-y-1.5">
+                {nearbyOwners.map((o) => (
+                  <button
+                    key={o.id}
+                    onClick={() => selectOwner(o)}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl border border-night/5 bg-white hover:bg-sand/50 text-left transition-all"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-primary">{o.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-night block truncate">{o.name}</span>
+                      <span className="text-xs text-muted">
+                        {o.phone_primary ?? 'No phone'}
+                      </span>
+                    </div>
+                    {o.animal_count > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs text-primary font-medium bg-primary/8 rounded-full px-2 py-0.5 shrink-0">
+                        <PawPrint className="w-3 h-3" /> {o.animal_count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Search className="w-10 h-10 text-muted/20 mx-auto mb-3" />
+              <p className="text-sm text-muted">Search by owner name, phone, or animal name</p>
+            </div>
+          )}
+          <div className="text-center mt-3">
+            <button
+              onClick={() => setStep('add-owner')}
+              className="inline-flex items-center gap-1.5 text-xs text-primary font-medium hover:underline"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              Or add a new owner
+            </button>
+          </div>
         </div>
       )}
     </div>
