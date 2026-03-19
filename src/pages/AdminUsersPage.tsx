@@ -45,7 +45,8 @@ async function adminFetch(action: string, body: Record<string, unknown>) {
 }
 
 export default function AdminUsersPage() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, profile } = useAuth();
+  const isSuperAdmin = profile?.email === 'shauna@alohaanimaloutreach.org';
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -373,8 +374,8 @@ export default function AdminUsersPage() {
         )}
       </div>
 
-      {/* Suggestions */}
-      <div className="mt-8">
+      {/* Suggestions — super admin only */}
+      {isSuperAdmin && <div className="mt-8">
         <button
           onClick={() => setShowSuggestions(!showSuggestions)}
           className="flex items-center gap-2 text-sm font-semibold text-night mb-3"
@@ -432,7 +433,7 @@ export default function AdminUsersPage() {
             </div>
           )
         )}
-      </div>
+      </div>}
 
       {/* Create User Modal */}
       {showCreate && (
