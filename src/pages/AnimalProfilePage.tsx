@@ -43,6 +43,7 @@ import DogLocationMap from '../components/animals/DogLocationMap';
 import LogCareDrawer from '../components/animals/LogCareDrawer';
 import FlagResolver from '../components/admin/FlagResolver';
 import ArchiveActions from '../components/admin/ArchiveActions';
+import FileAttachments from '../components/shared/FileAttachments';
 
 interface AnimalDetail {
   id: string;
@@ -639,6 +640,11 @@ export default function AnimalProfilePage() {
         {activeTab === 'photos' && (
           <PhotosTab photos={photos} onPhotoClick={setLightboxPhoto} />
         )}
+      </div>
+
+      {/* File Attachments */}
+      <div className="mt-4">
+        <FileAttachments animalId={animal.id} />
       </div>
 
       {/* Edit modal */}

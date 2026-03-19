@@ -20,6 +20,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDate } from '../lib/format';
+import FileAttachments from '../components/shared/FileAttachments';
 
 interface EventDetail {
   id: string;
@@ -311,6 +312,11 @@ export default function EventSummaryPage() {
           <p className="text-sm text-muted">{event.notes}</p>
         </div>
       )}
+
+      {/* Attachments */}
+      <div className="mb-4">
+        <FileAttachments outreachEventId={event.id} />
+      </div>
 
       {/* Email summary */}
       <button
