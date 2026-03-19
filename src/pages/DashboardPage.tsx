@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import {
   PawPrint, Users, MapPin, Flag, AlertTriangle, Clock, CalendarHeart,
   Pencil, ArrowRight, Eye, Stethoscope, ListOrdered,
-  CircleStop, Play, X, StickyNote, BarChart3, ChevronDown, Scissors, ChevronUp,
+  CircleStop, Play, X, StickyNote, BarChart3, ChevronDown, Scissors, ChevronUp, HelpCircle,
 } from 'lucide-react';
 import { formatRelative, daysSince, formatDate } from '../lib/format';
 import { HAVENT_SEEN_DAYS } from '../lib/constants';
@@ -453,6 +453,19 @@ export default function DashboardPage() {
           <p className="text-sm text-amber-600 font-medium mb-4">You are in the practice app. Tap around freely — nothing here is real.</p>
         ) : (
           <p className="text-sm text-muted mb-4">What do you want to do today?</p>
+        )}
+
+        {/* New user guide link */}
+        {showWelcome && (
+          <div className="flex items-center gap-3 bg-primary/6 border border-primary/15 rounded-xl px-4 py-3 mb-4">
+            <HelpCircle className="w-5 h-5 text-primary shrink-0" strokeWidth={1.75} />
+            <p className="flex-1 text-sm text-night">
+              New here? <Link to="/guide" className="text-primary font-semibold hover:underline">Read the quick start guide</Link> to learn how outreach events and check-ins work.
+            </p>
+            <button onClick={dismissWelcome} className="p-1 rounded-lg hover:bg-night/5 transition-colors shrink-0" aria-label="Dismiss">
+              <X className="w-4 h-4 text-muted" />
+            </button>
+          </div>
         )}
 
         {/* Action cards */}

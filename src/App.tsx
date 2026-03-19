@@ -18,6 +18,7 @@ import FlagsPage from './pages/FlagsPage';
 import ReportsPage from './pages/ReportsPage';
 import ActivityPage from './pages/ActivityPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import GuidePage from './pages/GuidePage';
 
 export default function App() {
   return (
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="/notes" element={<NotesPage />} />
             <Route path="/flags" element={<FlagsPage />} />
             <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/guide" element={<GuidePage />} />
             <Route
               path="/reports"
               element={
