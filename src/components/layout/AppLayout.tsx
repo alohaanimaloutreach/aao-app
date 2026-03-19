@@ -48,7 +48,7 @@ export default function AppLayout() {
         </main>
 
         <footer className="text-center pb-20 md:pb-4 pt-4 text-xs text-muted/50">
-          Made with <span className="inline-block animate-heartbeat">💗</span> by Shauna
+          Made with <span className="inline-block animate-heartbeat text-ember">♥</span> by Shauna
         </footer>
       </div>
 

@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import LocationCard, { type LocationCardData } from '../components/locations/LocationCard';
 import LocationFilters, { type LocationFilterState, DEFAULT_LOCATION_FILTERS } from '../components/locations/LocationFilters';
 import EmptyState from '../components/shared/EmptyState';
+import Pagination from '../components/shared/Pagination';
 
 const MapInner = lazy(() => import('../components/animals/DogLocationMapInner'));
 
@@ -29,6 +30,8 @@ export default function LocationsPage() {
   const [lastVisitedMap, setLastVisitedMap] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<LocationFilterState>(DEFAULT_LOCATION_FILTERS);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
   const [view, setView] = useState<'list' | 'map'>('list');
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [newLocName, setNewLocName] = useState('');
@@ -127,7 +130,7 @@ export default function LocationsPage() {
     });
   }, [archivedFiltered]);
 
-  const cardData: LocationCardData[] = activeFiltered.map((l) => ({
+  const allCardData: LocationCardData[] = activeFiltered.map((l) => ({
     id: l.id,
     name: l.name,
     address: l.address,
@@ -139,6 +142,8 @@ export default function LocationsPage() {
     owner_count: ownerCounts[l.id] ?? 0,
     last_visited: lastVisitedMap[l.id] ?? null,
   })).sort((a, b) => (b.animal_count + b.owner_count) - (a.animal_count + a.owner_count));
+
+  const cardData = allCardData.slice(page * pageSize, (page + 1) * pageSize);
 
   const mapPins = useMemo(() => {
     return filtered
@@ -181,7 +186,7 @@ export default function LocationsPage() {
 
       <LocationFilters
         filters={filters}
-        onChange={setFilters}
+        onChange={(f) => { setFilters(f); setPage(0); }}
         resultCount={filtered.length}
       />
 
@@ -245,6 +250,14 @@ export default function LocationsPage() {
               <LocationCard key={loc.id} location={loc} />
             ))}
           </div>
+
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={activeFiltered.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
 
           {/* Archived section */}
           {filters.showArchived && archivedByMonth.length > 0 && (

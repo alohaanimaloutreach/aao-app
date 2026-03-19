@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
+import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { PawPrint, List, Map, Loader2, Plus, X, Check, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -9,6 +9,7 @@ import { SITUATION_CONFIG, SIZE_LABELS, FIXED_STATUS_LABELS, ANIMAL_TYPE_CONFIG 
 import AnimalCard, { type AnimalCardData } from '../components/animals/AnimalCard';
 import AnimalFilters, { type AnimalFilterState, DEFAULT_FILTERS } from '../components/animals/AnimalFilters';
 import EmptyState from '../components/shared/EmptyState';
+import Pagination from '../components/shared/Pagination';
 
 const MapInner = lazy(() => import('../components/animals/DogLocationMapInner'));
 
@@ -34,7 +35,7 @@ interface RawAnimal {
   primary_location: { name: string } | null;
 }
 
-const BATCH_SIZE = 40;
+const DEFAULT_PAGE_SIZE = 25;
 
 export default function AnimalsPage() {
   const { isAdmin, session, user } = useAuth();
@@ -61,8 +62,8 @@ export default function AnimalsPage() {
     return initial;
   });
   const [loading, setLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   useEffect(() => {
     if (session) loadData();
@@ -197,32 +198,10 @@ export default function AnimalsPage() {
 
   // Reset visible count when filters change
   useEffect(() => {
-    setVisibleCount(BATCH_SIZE);
+    setPage(0);
   }, [filters]);
 
-  // Infinite scroll with IntersectionObserver
-  const loadMore = useCallback(() => {
-    setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filtered.length));
-  }, [filtered.length]);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMore();
-        }
-      },
-      { rootMargin: '200px' }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [loadMore]);
-
-  const visible = filtered.slice(0, visibleCount);
+  const visible = filtered;
 
   // Build location coordinate lookup
   const locCoords = useMemo(() => {
@@ -304,7 +283,7 @@ export default function AnimalsPage() {
   }, [archivedFiltered]);
 
   // Use active for visible/pagination, archived shown separately
-  const activeVisible = activeFiltered.slice(0, visibleCount);
+  const activeVisible = activeFiltered.slice(page * pageSize, (page + 1) * pageSize);
 
   // Map to card data
   const cardData: AnimalCardData[] = activeVisible.map((a) => ({
@@ -413,21 +392,13 @@ export default function AnimalsPage() {
             ))}
           </div>
 
-          {/* Infinite scroll sentinel */}
-          {visibleCount < activeFiltered.length && (
-            <div ref={sentinelRef} className="flex justify-center py-6">
-              <div className="flex items-center gap-2 text-sm text-muted">
-                <div className="w-4 h-4 border-2 border-muted/30 border-t-primary rounded-full animate-spin" />
-                Loading more...
-              </div>
-            </div>
-          )}
-
-          {visibleCount >= activeFiltered.length && activeFiltered.length > BATCH_SIZE && (
-            <p className="text-center text-xs text-muted py-4">
-              Showing all {activeFiltered.length} animals
-            </p>
-          )}
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={activeFiltered.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
 
           {/* Archived section */}
           {filters.showArchived && archivedByMonth.length > 0 && (

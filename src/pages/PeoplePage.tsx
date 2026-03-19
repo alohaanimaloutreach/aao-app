@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import PersonCard, { type PersonCardData } from '../components/people/PersonCard';
 import PeopleFilters, { type PeopleFilterState, DEFAULT_PEOPLE_FILTERS } from '../components/people/PeopleFilters';
 import EmptyState from '../components/shared/EmptyState';
+import Pagination from '../components/shared/Pagination';
 
 const MapInner = lazy(() => import('../components/animals/DogLocationMapInner'));
 
@@ -22,7 +23,7 @@ interface RawOwner {
   primary_location: { name: string } | null;
 }
 
-const PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 25;
 
 export default function PeoplePage() {
   const { isAdmin, session, user } = useAuth();
@@ -34,6 +35,7 @@ export default function PeoplePage() {
   const [filters, setFilters] = useState<PeopleFilterState>(DEFAULT_PEOPLE_FILTERS);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [view, setView] = useState<'list' | 'map'>('list');
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [newPersonName, setNewPersonName] = useState('');
@@ -136,8 +138,7 @@ export default function PeoplePage() {
     });
   }, [archivedFiltered]);
 
-  const totalPages = Math.ceil(activeFiltered.length / PAGE_SIZE);
-  const paginated = activeFiltered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const paginated = activeFiltered.slice(page * pageSize, (page + 1) * pageSize);
 
   const cardData: PersonCardData[] = paginated.map((o) => ({
     id: o.id,
@@ -281,25 +282,13 @@ export default function PeoplePage() {
             ))}
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6">
-              <button
-                onClick={() => setPage(Math.max(0, page - 1))}
-                disabled={page === 0}
-                className="px-3 py-1.5 text-sm rounded-lg bg-white border border-night/8 text-muted hover:text-night disabled:opacity-30 transition-all"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-muted px-2">{page + 1} of {totalPages}</span>
-              <button
-                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                disabled={page >= totalPages - 1}
-                className="px-3 py-1.5 text-sm rounded-lg bg-white border border-night/8 text-muted hover:text-night disabled:opacity-30 transition-all"
-              >
-                Next
-              </button>
-            </div>
-          )}
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={activeFiltered.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
 
           {/* Archived section */}
           {filters.showArchived && archivedByMonth.length > 0 && (
