@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,13 +15,17 @@ import {
   Check,
   X,
   Loader2,
+  Search,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatDate, formatRelative } from '../lib/format';
 import { LOCATION_STATUS_CONFIG } from '../lib/constants';
+import { useAuth } from '../contexts/AuthContext';
 import StatusBadge from '../components/shared/StatusBadge';
 import FlagResolver from '../components/admin/FlagResolver';
 import ArchiveActions from '../components/admin/ArchiveActions';
+import Pagination from '../components/shared/Pagination';
+import MapIframe from '../components/shared/MapIframe';
 
 interface LocationDetail {
   id: string;
@@ -75,6 +79,7 @@ interface LocNote {
 export default function LocationProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
   const [location, setLocation] = useState<LocationDetail | null>(null);
   const [animals, setAnimals] = useState<LinkedAnimal[]>([]);
   const [owners, setOwners] = useState<LinkedOwner[]>([]);
@@ -253,13 +258,10 @@ export default function LocationProfilePage() {
         {/* GPS map */}
         {location.latitude && location.longitude && (
           <div className="mt-3 rounded-xl overflow-hidden border border-night/5">
-            <iframe
+            <MapIframe
               title="Location map"
-              width="100%"
-              height="150"
-              style={{ border: 0, display: 'block' }}
+              height={150}
               src={`https://www.openstreetmap.org/export/embed.html?bbox=${location.longitude - 0.005},${location.latitude - 0.003},${location.longitude + 0.005},${location.latitude + 0.003}&layer=mapnik&marker=${location.latitude},${location.longitude}`}
-              loading="lazy"
             />
             <div className="flex items-center justify-end px-3 py-1.5 bg-sand/50">
               <a
@@ -383,6 +385,40 @@ export default function LocationProfilePage() {
 }
 
 function AnimalsTab({ animals }: { animals: LinkedAnimal[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
+
+  // Type breakdown for summary
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    animals.forEach((a) => { counts[a.animal_type] = (counts[a.animal_type] ?? 0) + 1; });
+    return counts;
+  }, [animals]);
+
+  const types = useMemo(() => Object.keys(typeCounts).sort(), [typeCounts]);
+
+  const urgentCount = animals.filter((a) => a.urgent_medical).length;
+
+  const filtered = useMemo(() => {
+    return animals.filter((a) => {
+      if (typeFilter !== 'all' && a.animal_type !== typeFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (
+          !(a.name?.toLowerCase().includes(q)) &&
+          !a.aao_id.toLowerCase().includes(q) &&
+          !(a.food_bag_size?.toLowerCase().includes(q))
+        ) return false;
+      }
+      return true;
+    });
+  }, [animals, search, typeFilter]);
+
+  const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
+
   if (animals.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-night/5 p-12 text-center">
@@ -392,37 +428,134 @@ function AnimalsTab({ animals }: { animals: LinkedAnimal[] }) {
     );
   }
 
+  // Summary strip
+  const summaryParts = Object.entries(typeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([type, count]) => `${count} ${type}${count !== 1 ? 's' : ''}`);
+
   return (
-    <div className="space-y-2">
-      {animals.map((a) => (
-        <Link
-          key={a.id}
-          to={`/animals/${a.id}`}
-          className="bg-white rounded-2xl border border-night/5 p-4 flex items-center gap-3 card-hover block"
-        >
-          <div className="w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center shrink-0">
-            <PawPrint className="w-5 h-5 text-primary" strokeWidth={1.5} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-heading font-bold text-sm text-night truncate">{a.name ?? 'Unnamed'}</span>
-              <span className="text-xs text-muted font-mono">{a.aao_id}</span>
-              {a.urgent_medical && (
-                <span className="text-xs font-bold text-ember bg-ember/10 px-1.5 py-0.5 rounded-full">Urgent</span>
+    <div>
+      {/* Summary strip */}
+      <div className="bg-white rounded-2xl border border-night/5 p-4 mb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <PawPrint className="w-4 h-4 text-primary" strokeWidth={1.75} />
+              <span className="text-sm font-bold text-night">{animals.length} Animals</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {summaryParts.map((part) => (
+                <span key={part} className="text-xs bg-sand text-muted rounded-full px-2.5 py-0.5 font-medium capitalize">{part}</span>
+              ))}
+              {urgentCount > 0 && (
+                <span className="text-xs font-bold text-ember bg-ember/10 rounded-full px-2.5 py-0.5">{urgentCount} urgent</span>
               )}
             </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              {a.current_status && <StatusBadge status={a.current_status} />}
-              {a.food_bag_size && <span className="text-xs text-muted">{a.food_bag_size} bag</span>}
-            </div>
           </div>
-        </Link>
-      ))}
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all shrink-0"
+          >
+            {expanded ? 'Hide' : 'Show All'}
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded list */}
+      {expanded && (
+        <>
+          {/* Search + filter bar */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                placeholder="Search by name or ID..."
+                className="w-full pl-9 pr-3 py-2.5 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+              />
+            </div>
+            {types.length > 1 && (
+              <select
+                value={typeFilter}
+                onChange={(e) => { setTypeFilter(e.target.value); setPage(0); }}
+                className="px-3 py-2.5 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 capitalize"
+              >
+                <option value="all">All types</option>
+                {types.map((t) => (
+                  <option key={t} value={t} className="capitalize">{t}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-night/5 p-12 text-center">
+              <PawPrint className="w-8 h-8 text-muted/20 mx-auto mb-2" />
+              <p className="text-sm text-muted">No animals match your search</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {paginated.map((a) => (
+                  <Link
+                    key={a.id}
+                    to={`/animals/${a.id}`}
+                    className="bg-white rounded-2xl border border-night/5 p-4 flex items-center gap-3 card-hover block"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center shrink-0">
+                      <PawPrint className="w-5 h-5 text-primary" strokeWidth={1.5} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-heading font-bold text-sm text-night truncate">{a.name ?? 'Unnamed'}</span>
+                        <span className="text-xs text-muted font-mono">{a.aao_id}</span>
+                        {a.urgent_medical && (
+                          <span className="text-xs font-bold text-ember bg-ember/10 px-1.5 py-0.5 rounded-full">Urgent</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {a.current_status && <StatusBadge status={a.current_status} />}
+                        {a.food_bag_size && <span className="text-xs text-muted">{a.food_bag_size} bag</span>}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {filtered.length > pageSize && (
+                <Pagination
+                  page={page}
+                  pageSize={pageSize}
+                  totalItems={filtered.length}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                />
+              )}
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }
 
 function PeopleTab({ owners }: { owners: LinkedOwner[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const totalAnimals = owners.reduce((sum, o) => sum + o.animal_count, 0);
+
+  const filtered = useMemo(() => {
+    if (!search) return owners;
+    const q = search.toLowerCase();
+    return owners.filter((o) =>
+      o.name.toLowerCase().includes(q) ||
+      o.phone_primary?.toLowerCase().includes(q)
+    );
+  }, [owners, search]);
+
   if (owners.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-night/5 p-12 text-center">
@@ -433,25 +566,69 @@ function PeopleTab({ owners }: { owners: LinkedOwner[] }) {
   }
 
   return (
-    <div className="space-y-2">
-      {owners.map((o) => (
-        <Link
-          key={o.id}
-          to={`/people/${o.id}`}
-          className="bg-white rounded-2xl border border-night/5 p-4 flex items-center gap-3 card-hover block"
-        >
-          <div className="w-10 h-10 rounded-xl bg-gold/15 flex items-center justify-center shrink-0">
-            <Users className="w-5 h-5 text-night/50" strokeWidth={1.5} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <span className="font-heading font-bold text-sm text-night truncate block">{o.name}</span>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-primary font-medium">{o.animal_count} animal{o.animal_count !== 1 ? 's' : ''}</span>
-              {o.phone_primary && <span className="text-sm text-muted">{o.phone_primary}</span>}
+    <div>
+      {/* Summary strip */}
+      <div className="bg-white rounded-2xl border border-night/5 p-4 mb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="w-4 h-4 text-night/50" strokeWidth={1.75} />
+              <span className="text-sm font-bold text-night">{owners.length} People</span>
             </div>
+            <span className="text-xs bg-sand text-muted rounded-full px-2.5 py-0.5 font-medium">
+              {totalAnimals} total animal{totalAnimals !== 1 ? 's' : ''}
+            </span>
           </div>
-        </Link>
-      ))}
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all shrink-0"
+          >
+            {expanded ? 'Hide' : 'Show All'}
+          </button>
+        </div>
+      </div>
+
+      {expanded && (
+        <>
+          {owners.length > 10 && (
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name or phone..."
+                className="w-full pl-9 pr-3 py-2.5 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+              />
+            </div>
+          )}
+          <div className="space-y-2">
+            {filtered.map((o) => (
+              <Link
+                key={o.id}
+                to={`/people/${o.id}`}
+                className="bg-white rounded-2xl border border-night/5 p-4 flex items-center gap-3 card-hover block"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gold/15 flex items-center justify-center shrink-0">
+                  <Users className="w-5 h-5 text-night/50" strokeWidth={1.5} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="font-heading font-bold text-sm text-night truncate block">{o.name}</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-primary font-medium">{o.animal_count} animal{o.animal_count !== 1 ? 's' : ''}</span>
+                    {o.phone_primary && <span className="text-sm text-muted">{o.phone_primary}</span>}
+                  </div>
+                </div>
+              </Link>
+            ))}
+            {filtered.length === 0 && (
+              <div className="bg-white rounded-2xl border border-night/5 p-8 text-center">
+                <p className="text-sm text-muted">No people match your search</p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

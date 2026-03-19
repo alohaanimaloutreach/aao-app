@@ -14,7 +14,6 @@ import {
   Sparkles,
   Mail,
   Loader2,
-  UserCircle,
   ExternalLink,
   ChevronDown,
   ChevronUp,
@@ -23,6 +22,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDate } from '../lib/format';
 import FileAttachments from '../components/shared/FileAttachments';
+import MapIframe from '../components/shared/MapIframe';
 
 interface EventDetail {
   id: string;
@@ -65,6 +65,13 @@ const CARE_LABELS: Record<string, string> = {
   nail_trim: 'Nail Trim',
   microchip: 'Microchip',
   seen: 'Seen',
+};
+
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  monthly_outreach: 'Monthly Outreach',
+  spay_neuter_clinic: 'Spay/Neuter Clinic',
+  vaccination_clinic: 'Vaccination Clinic',
+  emergency: 'Emergency',
 };
 
 export default function EventSummaryPage() {
@@ -157,6 +164,8 @@ export default function EventSummaryPage() {
 
   const volunteerNames = volunteers.map((v) => v.user?.name ?? 'Unknown');
 
+  const eventTypeLabel = EVENT_TYPE_LABELS[event.event_type] || event.event_type.replace(/_/g, ' ');
+
   function buildEmailBody(): string {
     let body = `Event Summary\n\n`;
     body += `Date: ${formatDate(event!.event_date)}\n`;
@@ -183,7 +192,6 @@ export default function EventSummaryPage() {
 
   async function sendEmailSummary() {
     setEmailing(true);
-    // Build summary text and send via mailto
     const body = buildEmailBody();
     const subject = `AAO Event Summary: ${formatDate(event!.event_date)} at ${event!.location?.name ?? 'Unknown'}`;
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
@@ -191,39 +199,84 @@ export default function EventSummaryPage() {
     setEmailSent(true);
   }
 
+  // Build stats items array
+  const statItems: { icon: any; label: string; value: number; sub?: string }[] = [
+    { icon: Users, label: 'Owners', value: uniqueOwners.size },
+    { icon: PawPrint, label: 'Animals', value: uniqueAnimals.size },
+  ];
+  if (totalFoodBags > 0) statItems.push({ icon: Package, label: 'Food bags', value: totalFoodBags, sub: totalFoodLbs > 0 ? `${totalFoodLbs} lbs` : undefined });
+  const vaccineCount = (typeCounts.vaccine_dapp ?? 0) + (typeCounts.vaccine_parvo ?? 0);
+  if (vaccineCount > 0) statItems.push({ icon: Syringe, label: 'Vaccines', value: vaccineCount });
+  const prevCount = (typeCounts.preventative_oral ?? 0) + (typeCounts.preventative_topical ?? 0);
+  if (prevCount > 0) statItems.push({ icon: Pill, label: 'Preventatives', value: prevCount });
+  if ((typeCounts.spay_neuter ?? 0) > 0) statItems.push({ icon: Scissors, label: 'Spay/Neuter', value: typeCounts.spay_neuter });
+  if ((typeCounts.medical ?? 0) > 0) statItems.push({ icon: Stethoscope, label: 'Medical', value: typeCounts.medical });
+  const groomCount = (typeCounts.grooming ?? 0) + (typeCounts.nail_trim ?? 0);
+  if (groomCount > 0) statItems.push({ icon: Sparkles, label: 'Grooming', value: groomCount });
+
   return (
-    <div>
-      <Link to="/outreach" className="flex items-center gap-1 text-sm text-muted hover:text-night mb-4">
+    <div className="max-w-2xl mx-auto">
+      <Link to="/outreach" className="inline-flex items-center gap-1 text-sm text-muted hover:text-night mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to Outreach
       </Link>
 
-      {/* Header */}
-      <div className="mb-5">
-        <h1 className="text-2xl font-heading font-bold text-night">Event Summary</h1>
-        <div className="flex flex-wrap items-center gap-2 mt-1.5">
-          <span className="inline-flex items-center gap-1 text-sm text-muted">
-            <CalendarHeart className="w-3.5 h-3.5" /> {formatDate(event.event_date)}
-          </span>
-          {event.location?.name && (
-            <span className="inline-flex items-center gap-1 text-sm text-muted">
-              <MapPin className="w-3.5 h-3.5" /> {event.location.name}
+      {/* Hero header card */}
+      <div className="bg-gradient-to-br from-night to-night/90 rounded-2xl p-5 mb-4 text-white shadow-[0_4px_20px_rgba(28,23,8,0.15)]">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <span className="inline-flex items-center gap-1 text-xs font-medium bg-white/15 backdrop-blur-sm rounded-full px-2.5 py-1 mb-2 capitalize">
+              <CalendarHeart className="w-3 h-3" /> {eventTypeLabel}
+            </span>
+            <h1 className="text-xl font-heading font-bold">
+              {event.location?.name ?? 'Event Summary'}
+            </h1>
+            <p className="text-white/60 text-sm mt-0.5">{formatDate(event.event_date)}</p>
+          </div>
+          {event.status === 'completed' && (
+            <span className="text-xs font-medium bg-primary/20 text-primary-foreground border border-primary/30 rounded-full px-2.5 py-1">
+              Complete
             </span>
           )}
         </div>
+
+        {/* Inline stats row */}
+        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/10">
+          <div className="flex items-center gap-1.5">
+            <Users className="w-4 h-4 text-white/50" />
+            <span className="text-lg font-bold">{uniqueOwners.size}</span>
+            <span className="text-xs text-white/50">owners</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <PawPrint className="w-4 h-4 text-white/50" />
+            <span className="text-lg font-bold">{uniqueAnimals.size}</span>
+            <span className="text-xs text-white/50">animals</span>
+          </div>
+          {totalFoodBags > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Package className="w-4 h-4 text-white/50" />
+              <span className="text-lg font-bold">{totalFoodBags}</span>
+              <span className="text-xs text-white/50">bags</span>
+            </div>
+          )}
+        </div>
+
+        {volunteerNames.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-white/10">
+            <p className="text-xs text-white/40 mb-1">Volunteers</p>
+            <p className="text-sm text-white/80">{volunteerNames.join(', ')}</p>
+          </div>
+        )}
       </div>
 
       {/* Location map */}
       {event.location?.latitude && event.location?.longitude && (
-        <div className="bg-white rounded-xl border border-night/5 overflow-hidden mb-3">
-          <iframe
+        <div className="bg-white rounded-2xl border border-night/5 overflow-hidden mb-3 shadow-sm">
+          <MapIframe
             title="Event location"
-            width="100%"
-            height="180"
-            style={{ border: 0, display: 'block' }}
+            height={160}
             src={`https://www.openstreetmap.org/export/embed.html?bbox=${event.location.longitude - 0.005},${event.location.latitude - 0.003},${event.location.longitude + 0.005},${event.location.latitude + 0.003}&layer=mapnik&marker=${event.location.latitude},${event.location.longitude}`}
-            loading="lazy"
           />
-          <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center justify-between px-4 py-2.5">
             <div className="flex items-center gap-1.5 text-sm text-night">
               <MapPin className="w-3.5 h-3.5 text-primary" />
               <span className="font-medium">{event.location.name}</span>
@@ -240,51 +293,36 @@ export default function EventSummaryPage() {
         </div>
       )}
 
-      {/* Volunteers */}
-      {volunteerNames.length > 0 && (
-        <div className="bg-white rounded-xl border border-night/5 p-3 mb-3">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Users className="w-4 h-4 text-muted" />
-            <span className="text-sm font-semibold text-night">Volunteers</span>
+      {/* Service breakdown pills */}
+      {statItems.length > 2 && (
+        <div className="bg-white rounded-2xl border border-night/5 p-4 mb-3 shadow-sm">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Services Provided</p>
+          <div className="flex flex-wrap gap-2">
+            {statItems.slice(2).map((s) => (
+              <div key={s.label} className="inline-flex items-center gap-2 bg-sand/60 rounded-xl px-3 py-2">
+                <s.icon className="w-4 h-4 text-primary" strokeWidth={1.75} />
+                <span className="text-sm font-semibold text-night">{s.value}</span>
+                <span className="text-xs text-muted">{s.label}</span>
+                {s.sub && <span className="text-xs text-muted">({s.sub})</span>}
+              </div>
+            ))}
           </div>
-          <p className="text-sm text-night">{volunteerNames.join(', ')}</p>
         </div>
       )}
-
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <StatCard icon={UserCircle} label="Owners seen" value={uniqueOwners.size} />
-        <StatCard icon={PawPrint} label="Animals seen" value={uniqueAnimals.size} />
-        <StatCard icon={Package} label="Food bags" value={totalFoodBags} sub={totalFoodLbs > 0 ? `${totalFoodLbs} lbs` : undefined} />
-        {(typeCounts.vaccine_dapp ?? 0) + (typeCounts.vaccine_parvo ?? 0) > 0 && (
-          <StatCard icon={Syringe} label="Vaccines" value={(typeCounts.vaccine_dapp ?? 0) + (typeCounts.vaccine_parvo ?? 0)} />
-        )}
-        {(typeCounts.preventative_oral ?? 0) + (typeCounts.preventative_topical ?? 0) > 0 && (
-          <StatCard icon={Pill} label="Preventatives" value={(typeCounts.preventative_oral ?? 0) + (typeCounts.preventative_topical ?? 0)} />
-        )}
-        {(typeCounts.spay_neuter ?? 0) > 0 && (
-          <StatCard icon={Scissors} label="Spay/Neuter" value={typeCounts.spay_neuter} />
-        )}
-        {(typeCounts.medical ?? 0) > 0 && (
-          <StatCard icon={Stethoscope} label="Medical/Vet" value={typeCounts.medical} />
-        )}
-        {((typeCounts.grooming ?? 0) + (typeCounts.nail_trim ?? 0)) > 0 && (
-          <StatCard icon={Sparkles} label="Grooming" value={(typeCounts.grooming ?? 0) + (typeCounts.nail_trim ?? 0)} />
-        )}
-      </div>
 
       {/* Owner details — collapsible */}
       <OwnerDetails byOwner={byOwner} />
 
+      {/* Notes */}
       {event.notes && (
-        <div className="bg-white rounded-xl border border-night/5 p-3 mb-4">
-          <p className="text-sm font-semibold text-night mb-1">Notes</p>
-          <p className="text-sm text-muted">{event.notes}</p>
+        <div className="bg-white rounded-2xl border border-night/5 p-4 mb-3 shadow-sm">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Notes</p>
+          <p className="text-sm text-night leading-relaxed">{event.notes}</p>
         </div>
       )}
 
       {/* Attachments */}
-      <div className="mb-4">
+      <div className="mb-3">
         <FileAttachments outreachEventId={event.id} />
       </div>
 
@@ -292,7 +330,7 @@ export default function EventSummaryPage() {
       <button
         onClick={sendEmailSummary}
         disabled={emailing || emailSent}
-        className="w-full py-3 bg-white border border-night/8 rounded-xl text-sm font-medium text-night hover:bg-sand flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+        className="w-full py-3 bg-white border border-night/8 rounded-xl text-sm font-medium text-night hover:bg-sand flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-sm mb-4"
       >
         <Mail className="w-4 h-4" />
         {emailSent ? 'Email opened' : 'Email Summary'}
@@ -305,15 +343,18 @@ function OwnerDetails({ byOwner }: { byOwner: Record<string, { ownerName: string
   const [expanded, setExpanded] = useState(false);
   const entries = Object.entries(byOwner);
 
+  if (entries.length === 0) return null;
+
   return (
-    <div className="bg-white rounded-xl border border-night/5 mb-4 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-night/5 mb-3 overflow-hidden shadow-sm">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center justify-between w-full px-4 py-3 text-left"
+        className="flex items-center justify-between w-full px-4 py-3.5 text-left"
       >
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-muted" strokeWidth={1.75} />
-          <span className="text-sm font-semibold text-night">Details by Owner ({entries.length})</span>
+          <Users className="w-4 h-4 text-primary" strokeWidth={1.75} />
+          <span className="text-sm font-semibold text-night">Details by Owner</span>
+          <span className="text-xs bg-sand text-muted rounded-full px-2 py-0.5 font-medium">{entries.length}</span>
         </div>
         {expanded ? <ChevronUp className="w-4 h-4 text-muted" /> : <ChevronDown className="w-4 h-4 text-muted" />}
       </button>
@@ -321,29 +362,31 @@ function OwnerDetails({ byOwner }: { byOwner: Record<string, { ownerName: string
       {expanded && (
         <div className="border-t border-night/5 divide-y divide-night/5">
           {entries.map(([ownerId, { ownerName, animals }]) => (
-            <div key={ownerId} className="px-4 py-2.5">
-              <div className="flex items-center justify-between">
+            <div key={ownerId} className="px-4 py-3">
+              <div className="flex items-center justify-between mb-1">
                 {ownerId ? (
-                  <Link to={`/people/${ownerId}`} className="text-sm font-medium text-primary hover:underline">{ownerName}</Link>
+                  <Link to={`/people/${ownerId}`} className="text-sm font-semibold text-primary hover:underline">{ownerName}</Link>
                 ) : (
                   <span className="text-sm font-medium text-muted italic">No owner linked</span>
                 )}
-                <span className="text-xs text-muted">{animals.length} {animals.length === 1 ? 'animal' : 'animals'}</span>
+                <span className="text-xs text-muted bg-sand rounded-full px-2 py-0.5">{animals.length} {animals.length === 1 ? 'animal' : 'animals'}</span>
               </div>
-              <div className="mt-1 space-y-0.5">
+              <div className="space-y-1">
                 {animals.map((c) => (
-                  <div key={c.id} className="flex items-baseline gap-1.5 text-xs text-muted">
-                    <PawPrint className="w-3 h-3 shrink-0 relative top-0.5" />
-                    {c.animal_id ? (
-                      <Link to={`/animals/${c.animal_id}`} className="font-medium text-night hover:text-primary">
-                        {c.animal?.name || c.animal?.aao_id || 'Unnamed'}
-                      </Link>
-                    ) : (
-                      <span className="italic">No animal linked</span>
-                    )}
-                    <span className="text-muted">
-                      — {c.care_types.map((t) => CARE_LABELS[t] ?? t).join(', ')}
-                    </span>
+                  <div key={c.id} className="flex items-start gap-2 text-sm">
+                    <PawPrint className="w-3 h-3 text-muted shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      {c.animal_id ? (
+                        <Link to={`/animals/${c.animal_id}`} className="font-medium text-night hover:text-primary">
+                          {c.animal?.name || c.animal?.aao_id || 'Unnamed'}
+                        </Link>
+                      ) : (
+                        <span className="text-muted italic">No animal linked</span>
+                      )}
+                      <span className="text-muted text-xs ml-1.5">
+                        {c.care_types.map((t) => CARE_LABELS[t] ?? t).join(', ')}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -351,19 +394,6 @@ function OwnerDetails({ byOwner }: { byOwner: Record<string, { ownerName: string
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function StatCard({ icon: Icon, label, value, sub }: { icon: any; label: string; value: number; sub?: string }) {
-  return (
-    <div className="bg-white rounded-xl border border-night/5 p-3">
-      <div className="flex items-center gap-2 mb-1">
-        <Icon className="w-4 h-4 text-primary" strokeWidth={1.5} />
-        <span className="text-sm text-muted">{label}</span>
-      </div>
-      <p className="text-xl font-bold text-night">{value}</p>
-      {sub && <p className="text-sm text-muted">{sub}</p>}
     </div>
   );
 }

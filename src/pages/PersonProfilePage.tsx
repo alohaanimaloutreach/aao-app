@@ -25,6 +25,7 @@ import { formatDate } from '../lib/format';
 import StatusBadge from '../components/shared/StatusBadge';
 import FlagResolver from '../components/admin/FlagResolver';
 import ArchiveActions from '../components/admin/ArchiveActions';
+import MapIframe from '../components/shared/MapIframe';
 import OwnerLocationMap from '../components/people/OwnerLocationMap';
 
 interface OwnerDetail {
@@ -656,13 +657,10 @@ function DetailsTab({ owner }: { owner: OwnerDetail }) {
         <h3 className="font-heading font-bold text-night text-sm mb-3">Location</h3>
         {owner.precise_lat && owner.precise_lng ? (
           <div className="rounded-xl overflow-hidden border border-night/5">
-            <iframe
+            <MapIframe
               title="Person location"
-              width="100%"
-              height="180"
-              style={{ border: 0, display: 'block' }}
+              height={180}
               src={`https://www.openstreetmap.org/export/embed.html?bbox=${owner.precise_lng - 0.005},${owner.precise_lat - 0.003},${owner.precise_lng + 0.005},${owner.precise_lat + 0.003}&layer=mapnik&marker=${owner.precise_lat},${owner.precise_lng}`}
-              loading="lazy"
             />
             <div className="flex items-center justify-between px-3 py-1.5 bg-sand/50">
               <span className="text-sm text-muted">

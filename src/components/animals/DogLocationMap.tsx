@@ -165,6 +165,7 @@ export default function DogLocationMap({ animalId, primaryLocationId, ownerId }:
       <div className="bg-white rounded-2xl border border-night/5 p-8 text-center">
         <MapPin className="w-8 h-8 text-muted/40 mx-auto mb-2" />
         <p className="text-sm text-muted">No location data available</p>
+        <p className="text-xs text-muted/60 mt-1">GPS coordinates are needed on the animal's location, owner, or outreach events to show the map.</p>
       </div>
     );
   }

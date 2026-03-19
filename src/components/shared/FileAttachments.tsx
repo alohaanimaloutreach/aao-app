@@ -33,6 +33,7 @@ export default function FileAttachments({ outreachEventId, animalId }: FileAttac
   const { user, isAdmin } = useAuth();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const [expanded, setExpanded] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -57,15 +58,18 @@ export default function FileAttachments({ outreachEventId, animalId }: FileAttac
     const file = e.target.files?.[0];
     if (!file || !user) return;
     setUploading(true);
+    setUploadError('');
 
     const folder = outreachEventId ? `events/${outreachEventId}` : `animals/${animalId}`;
-    const path = `${folder}/${Date.now()}_${file.name}`;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${folder}/${Date.now()}_${safeName}`;
 
     const { error: uploadErr } = await supabase.storage
       .from('attachments')
       .upload(path, file, { upsert: false });
 
     if (uploadErr) {
+      setUploadError(`Upload failed: ${uploadErr.message}`);
       setUploading(false);
       e.target.value = '';
       return;
@@ -73,7 +77,7 @@ export default function FileAttachments({ outreachEventId, animalId }: FileAttac
 
     const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(path);
 
-    await supabase.from('attachments').insert({
+    const { error: insertErr } = await supabase.from('attachments').insert({
       file_name: file.name,
       storage_path: urlData.publicUrl,
       file_type: file.type || null,
@@ -82,6 +86,13 @@ export default function FileAttachments({ outreachEventId, animalId }: FileAttac
       animal_id: animalId || null,
       created_by: user.id,
     });
+
+    if (insertErr) {
+      setUploadError(`Save failed: ${insertErr.message}`);
+      setUploading(false);
+      e.target.value = '';
+      return;
+    }
 
     setUploading(false);
     e.target.value = '';
@@ -155,6 +166,10 @@ export default function FileAttachments({ outreachEventId, animalId }: FileAttac
               </div>
             );
           })}
+
+          {uploadError && (
+            <div className="bg-ember/10 border border-ember/20 text-ember text-xs rounded-xl px-3 py-2" role="alert">{uploadError}</div>
+          )}
 
           <button
             onClick={() => fileRef.current?.click()}
