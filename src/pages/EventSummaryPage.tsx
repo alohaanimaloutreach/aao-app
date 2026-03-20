@@ -293,105 +293,188 @@ export default function EventSummaryPage() {
         </div>
       )}
 
-      {/* Service breakdown pills */}
-      {statItems.length > 2 && (
-        <div className="bg-white rounded-2xl border border-night/5 p-4 mb-3 shadow-sm">
-          <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Services Provided</p>
-          <div className="flex flex-wrap gap-2">
-            {statItems.slice(2).map((s) => (
-              <div key={s.label} className="inline-flex items-center gap-2 bg-sand/60 rounded-xl px-3 py-2">
-                <s.icon className="w-4 h-4 text-primary" strokeWidth={1.75} />
-                <span className="text-sm font-semibold text-night">{s.value}</span>
-                <span className="text-xs text-muted">{s.label}</span>
-                {s.sub && <span className="text-xs text-muted">({s.sub})</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Owner details — collapsible */}
-      <OwnerDetails byOwner={byOwner} />
-
-      {/* Notes */}
-      {event.notes && (
-        <div className="bg-white rounded-2xl border border-night/5 p-4 mb-3 shadow-sm">
-          <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Notes</p>
-          <p className="text-sm text-night leading-relaxed">{event.notes}</p>
-        </div>
-      )}
-
-      {/* Attachments */}
-      <div className="mb-3">
-        <FileAttachments outreachEventId={event.id} />
-      </div>
-
-      {/* Email summary */}
-      <button
-        onClick={sendEmailSummary}
-        disabled={emailing || emailSent}
-        className="w-full py-3 bg-white border border-night/8 rounded-xl text-sm font-medium text-night hover:bg-sand flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-sm mb-4"
-      >
-        <Mail className="w-4 h-4" />
-        {emailSent ? 'Email opened' : 'Email Summary'}
-      </button>
+      {/* Tabbed content area */}
+      <EventTabs
+        statItems={statItems}
+        byOwner={byOwner}
+        notes={event.notes}
+        eventId={event.id}
+        sendEmailSummary={sendEmailSummary}
+        emailing={emailing}
+        emailSent={emailSent}
+      />
     </div>
   );
 }
 
-function OwnerDetails({ byOwner }: { byOwner: Record<string, { ownerName: string; animals: CareEvent[] }> }) {
-  const [expanded, setExpanded] = useState(false);
-  const entries = Object.entries(byOwner);
+type TabId = 'overview' | 'owners' | 'files';
 
-  if (entries.length === 0) return null;
+function EventTabs({
+  statItems,
+  byOwner,
+  notes,
+  eventId,
+  sendEmailSummary,
+  emailing,
+  emailSent,
+}: {
+  statItems: { icon: any; label: string; value: number; sub?: string }[];
+  byOwner: Record<string, { ownerName: string; animals: CareEvent[] }>;
+  notes: string | null;
+  eventId: string;
+  sendEmailSummary: () => void;
+  emailing: boolean;
+  emailSent: boolean;
+}) {
+  const [tab, setTab] = useState<TabId>('overview');
+  const entries = Object.entries(byOwner);
+  const serviceItems = statItems.slice(2);
+
+  const tabs: { id: TabId; label: string; count?: number }[] = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'owners', label: 'By Owner', count: entries.length },
+    { id: 'files', label: 'Files' },
+  ];
 
   return (
-    <div className="bg-white rounded-2xl border border-night/5 mb-3 overflow-hidden shadow-sm">
+    <div className="bg-white rounded-2xl border border-night/5 overflow-hidden shadow-sm mb-4">
+      {/* Tab bar */}
+      <div className="flex border-b border-night/5">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex-1 py-3 text-sm font-medium text-center transition-colors relative ${
+              tab === t.id
+                ? 'text-primary'
+                : 'text-muted hover:text-night'
+            }`}
+          >
+            {t.label}
+            {t.count != null && (
+              <span className={`ml-1 text-xs rounded-full px-1.5 py-0.5 ${
+                tab === t.id ? 'bg-primary/10 text-primary' : 'bg-sand text-muted'
+              }`}>{t.count}</span>
+            )}
+            {tab === t.id && (
+              <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div className="p-4">
+        {tab === 'overview' && (
+          <div className="space-y-4">
+            {/* Services grid */}
+            {serviceItems.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">Services Provided</p>
+                <div className="flex flex-wrap gap-2">
+                  {serviceItems.map((s) => (
+                    <div key={s.label} className="inline-flex items-center gap-2 bg-sand/60 rounded-xl px-3 py-2">
+                      <s.icon className="w-4 h-4 text-primary" strokeWidth={1.75} />
+                      <span className="text-sm font-semibold text-night">{s.value}</span>
+                      <span className="text-xs text-muted">{s.label}</span>
+                      {s.sub && <span className="text-xs text-muted">({s.sub})</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            {notes && (
+              <div>
+                <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Notes</p>
+                <p className="text-sm text-night leading-relaxed">{notes}</p>
+              </div>
+            )}
+
+            {/* Email action */}
+            <button
+              onClick={sendEmailSummary}
+              disabled={emailing || emailSent}
+              className="w-full py-2.5 bg-sand/50 border border-night/5 rounded-xl text-sm font-medium text-night hover:bg-sand flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            >
+              <Mail className="w-4 h-4" />
+              {emailSent ? 'Email opened' : 'Email Summary'}
+            </button>
+          </div>
+        )}
+
+        {tab === 'owners' && (
+          <div>
+            {entries.length === 0 ? (
+              <p className="text-sm text-muted text-center py-4">No care records for this event.</p>
+            ) : (
+              <div className="space-y-0.5">
+                {entries.map(([ownerId, { ownerName, animals }]) => (
+                  <OwnerRow key={ownerId} ownerId={ownerId} ownerName={ownerName} animals={animals} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'files' && (
+          <FileAttachments outreachEventId={eventId} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OwnerRow({ ownerId, ownerName, animals }: { ownerId: string; ownerName: string; animals: CareEvent[] }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-xl border border-night/5 overflow-hidden">
       <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex items-center justify-between w-full px-4 py-3.5 text-left"
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between w-full px-3.5 py-2.5 text-left hover:bg-sand/30 transition-colors"
       >
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-primary" strokeWidth={1.75} />
-          <span className="text-sm font-semibold text-night">Details by Owner</span>
-          <span className="text-xs bg-sand text-muted rounded-full px-2 py-0.5 font-medium">{entries.length}</span>
+        <div className="flex items-center gap-2 min-w-0">
+          {ownerId ? (
+            <span className="text-sm font-semibold text-night truncate">{ownerName}</span>
+          ) : (
+            <span className="text-sm font-medium text-muted italic">No owner linked</span>
+          )}
+          <span className="text-xs text-muted bg-sand rounded-full px-2 py-0.5 shrink-0">{animals.length}</span>
         </div>
-        {expanded ? <ChevronUp className="w-4 h-4 text-muted" /> : <ChevronDown className="w-4 h-4 text-muted" />}
+        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+          <span className="text-xs text-muted hidden sm:inline">
+            {[...new Set(animals.flatMap((a) => a.care_types))].slice(0, 3).map((t) => CARE_LABELS[t] ?? t).join(', ')}
+          </span>
+          {open ? <ChevronUp className="w-3.5 h-3.5 text-muted" /> : <ChevronDown className="w-3.5 h-3.5 text-muted" />}
+        </div>
       </button>
 
-      {expanded && (
-        <div className="border-t border-night/5 divide-y divide-night/5">
-          {entries.map(([ownerId, { ownerName, animals }]) => (
-            <div key={ownerId} className="px-4 py-3">
-              <div className="flex items-center justify-between mb-1">
-                {ownerId ? (
-                  <Link to={`/people/${ownerId}`} className="text-sm font-semibold text-primary hover:underline">{ownerName}</Link>
+      {open && (
+        <div className="border-t border-night/5 px-3.5 py-2.5 bg-sand/20 space-y-1.5">
+          {animals.map((c) => (
+            <div key={c.id} className="flex items-start gap-2 text-sm">
+              <PawPrint className="w-3 h-3 text-muted shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                {c.animal_id ? (
+                  <Link to={`/animals/${c.animal_id}`} className="font-medium text-night hover:text-primary">
+                    {c.animal?.name || c.animal?.aao_id || 'Unnamed'}
+                  </Link>
                 ) : (
-                  <span className="text-sm font-medium text-muted italic">No owner linked</span>
+                  <span className="text-muted italic">No animal linked</span>
                 )}
-                <span className="text-xs text-muted bg-sand rounded-full px-2 py-0.5">{animals.length} {animals.length === 1 ? 'animal' : 'animals'}</span>
-              </div>
-              <div className="space-y-1">
-                {animals.map((c) => (
-                  <div key={c.id} className="flex items-start gap-2 text-sm">
-                    <PawPrint className="w-3 h-3 text-muted shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      {c.animal_id ? (
-                        <Link to={`/animals/${c.animal_id}`} className="font-medium text-night hover:text-primary">
-                          {c.animal?.name || c.animal?.aao_id || 'Unnamed'}
-                        </Link>
-                      ) : (
-                        <span className="text-muted italic">No animal linked</span>
-                      )}
-                      <span className="text-muted text-xs ml-1.5">
-                        {c.care_types.map((t) => CARE_LABELS[t] ?? t).join(', ')}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                <span className="text-muted text-xs ml-1.5">
+                  {c.care_types.map((t) => CARE_LABELS[t] ?? t).join(', ')}
+                </span>
               </div>
             </div>
           ))}
+          {ownerId && (
+            <Link to={`/people/${ownerId}`} className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1">
+              View owner profile <ExternalLink className="w-3 h-3" />
+            </Link>
+          )}
         </div>
       )}
     </div>
