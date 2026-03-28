@@ -25,11 +25,12 @@ export default function ReportsPage() {
     async function loadStats() {
       const [eventsRes, snRes, foodRes] = await Promise.all([
         supabase.from('outreach_events').select('id', { count: 'exact', head: true }),
-        supabase.from('care_events').select('id', { count: 'exact', head: true }).contains('care_types', ['spay_neuter']),
+        supabase.from('outreach_events').select('spay_neuter_count'),
         supabase.from('outreach_events').select('total_food_lbs'),
       ]);
       const totalFood = (foodRes.data ?? []).reduce((sum: number, e: any) => sum + (e.total_food_lbs ?? 0), 0);
-      setImpactStats({ events: eventsRes.count ?? 0, sn: snRes.count ?? 0, food: Math.round(totalFood) });
+      const totalSN = (snRes.data ?? []).reduce((sum: number, e: any) => sum + (e.spay_neuter_count ?? 0), 0);
+      setImpactStats({ events: eventsRes.count ?? 0, sn: totalSN, food: Math.round(totalFood) });
     }
     loadStats();
   }, []);

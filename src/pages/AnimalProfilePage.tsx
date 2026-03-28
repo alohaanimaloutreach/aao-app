@@ -26,6 +26,7 @@ import {
   Upload,
   Search,
   Plus,
+  Trash2,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatDate, daysSince } from '../lib/format';
@@ -42,7 +43,6 @@ import DogTimeline from '../components/animals/DogTimeline';
 import DogLocationMap from '../components/animals/DogLocationMap';
 import LogCareDrawer from '../components/animals/LogCareDrawer';
 import FlagResolver from '../components/admin/FlagResolver';
-import ArchiveActions from '../components/admin/ArchiveActions';
 import FileAttachments from '../components/shared/FileAttachments';
 
 interface AnimalDetail {
@@ -119,6 +119,10 @@ export default function AnimalProfilePage() {
   const [activeTab, setActiveTab] = useState<'timeline' | 'map' | 'details' | 'photos'>('timeline');
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteText, setDeleteText] = useState('');
+  const [deleteProcessing, setDeleteProcessing] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [fosterPrompt, setFosterPrompt] = useState(false);
   const [fosterName, setFosterName] = useState('');
   const [editing, setEditing] = useState(false);
@@ -568,19 +572,67 @@ export default function AnimalProfilePage() {
               Ready for S/N
               {animal.interested_in_fixing === 'interested' ? ' ON' : ''}
             </button>
+            {isAdmin && (
+              <button
+                onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-night/10 text-muted hover:border-ember/30 hover:text-ember bg-white transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </button>
+            )}
           </div>
 
         </div>
       </div>
 
-      {/* Archive actions (admin only) */}
-      <ArchiveActions
-        tableName="animals"
-        recordId={animal.id}
-        isArchived={animal.archived}
-        recordLabel={animal.name ?? animal.aao_id}
-        onUpdate={() => navigate('/animals')}
-      />
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true">
+          <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-5 shadow-xl">
+            <h3 className="font-heading font-bold text-ember text-base mb-2">Permanently delete {animal.name ?? animal.aao_id}?</h3>
+            <p className="text-sm text-muted mb-4">This cannot be undone. All linked records (care events, field notes, situations, photos) will also be deleted.</p>
+            <div className="mb-4">
+              <label className="block text-xs text-muted font-medium mb-1">Type DELETE to confirm</label>
+              <input
+                type="text"
+                value={deleteText}
+                onChange={(e) => setDeleteText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full px-3 py-2.5 bg-sand/50 border border-ember/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ember/30"
+                autoFocus
+              />
+            </div>
+            {deleteError && (
+              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{deleteError}</p>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-sm font-medium text-muted bg-sand rounded-xl hover:bg-muted/15 transition-all">Cancel</button>
+              <button
+                disabled={deleteText !== 'DELETE' || deleteProcessing}
+                onClick={async () => {
+                  setDeleteProcessing(true);
+                  setDeleteError(null);
+                  const { error } = await supabase.from('animals').delete().eq('id', animal.id);
+                  setDeleteProcessing(false);
+                  if (error) {
+                    console.error('Delete animal error:', error);
+                    setDeleteError(error.message);
+                    return;
+                  }
+                  setShowDeleteConfirm(false);
+                  navigate('/animals');
+                }}
+                className="flex-1 py-2.5 text-sm font-semibold text-white bg-ember hover:bg-ember/90 rounded-xl transition-all disabled:opacity-30"
+              >
+                {deleteProcessing ? 'Deleting...' : 'Delete Forever'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Tab navigation */}
       <div className="flex gap-1 bg-white rounded-xl border border-night/5 p-1 mb-4">

@@ -31,6 +31,15 @@ interface EventDetail {
   status: string;
   notes: string | null;
   location: { id: string; name: string; latitude: number | null; longitude: number | null } | null;
+  animals_seen: number | null;
+  vaccinations_given: number | null;
+  microchips_given: number | null;
+  preventatives_given: number | null;
+  spay_neuter_count: number | null;
+  grooming_count: number | null;
+  nail_trim_count: number | null;
+  total_food_lbs: number | null;
+  total_bags: number | null;
 }
 
 interface CareEvent {
@@ -72,6 +81,8 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   spay_neuter_clinic: 'Spay/Neuter Clinic',
   vaccination_clinic: 'Vaccination Clinic',
   emergency: 'Emergency',
+  other: 'Outreach',
+  vet_visit: 'Vet Visit',
 };
 
 export default function EventSummaryPage() {
@@ -93,7 +104,7 @@ export default function EventSummaryPage() {
     const [eventRes, careRes, volRes] = await Promise.all([
       supabase
         .from('outreach_events')
-        .select('id, event_type, event_date, status, notes, location:locations(id, name, latitude, longitude)')
+        .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, animals_seen, vaccinations_given, microchips_given, preventatives_given, spay_neuter_count, grooming_count, nail_trim_count, location:locations(id, name, latitude, longitude)')
         .eq('id', id!)
         .single(),
       supabase
@@ -138,19 +149,34 @@ export default function EventSummaryPage() {
     );
   }
 
+  // Determine if this is a historical event (no care_events, uses aggregate columns)
+  const isHistorical = careEvents.length === 0 && (
+    event.animals_seen != null || event.vaccinations_given != null || event.spay_neuter_count != null ||
+    event.microchips_given != null || event.preventatives_given != null || event.total_food_lbs != null
+  );
+
   // Compute stats
   const uniqueOwners = new Set(careEvents.map((c) => c.owner_id));
   const uniqueAnimals = new Set(careEvents.map((c) => c.animal_id));
-  const totalFoodBags = careEvents.reduce((sum, c) => sum + (c.food_bags ?? 0), 0);
-  const totalFoodLbs = careEvents.reduce((sum, c) => sum + (c.food_lbs ?? 0), 0);
+  const totalFoodBags = isHistorical ? (event.total_bags ?? 0) : careEvents.reduce((sum, c) => sum + (c.food_bags ?? 0), 0);
+  const totalFoodLbs = isHistorical ? (event.total_food_lbs ?? 0) : careEvents.reduce((sum, c) => sum + (c.food_lbs ?? 0), 0);
 
   // Count by care type
   const typeCounts: Record<string, number> = {};
-  careEvents.forEach((c) => {
-    c.care_types.forEach((t) => {
-      typeCounts[t] = (typeCounts[t] ?? 0) + 1;
+  if (isHistorical) {
+    if (event.vaccinations_given) typeCounts.vaccine_dapp = event.vaccinations_given;
+    if (event.preventatives_given) typeCounts.preventative_oral = event.preventatives_given;
+    if (event.spay_neuter_count) typeCounts.spay_neuter = event.spay_neuter_count;
+    if (event.microchips_given) typeCounts.microchip = event.microchips_given;
+    if (event.grooming_count) typeCounts.grooming = event.grooming_count;
+    if (event.nail_trim_count) typeCounts.nail_trim = event.nail_trim_count;
+  } else {
+    careEvents.forEach((c) => {
+      c.care_types.forEach((t) => {
+        typeCounts[t] = (typeCounts[t] ?? 0) + 1;
+      });
     });
-  });
+  }
 
   // Group care events by owner
   const byOwner: Record<string, { ownerName: string; animals: CareEvent[] }> = {};
@@ -200,19 +226,24 @@ export default function EventSummaryPage() {
   }
 
   // Build stats items array
-  const statItems: { icon: any; label: string; value: number; sub?: string }[] = [
-    { icon: Users, label: 'Owners', value: uniqueOwners.size },
-    { icon: PawPrint, label: 'Animals', value: uniqueAnimals.size },
-  ];
-  if (totalFoodBags > 0) statItems.push({ icon: Package, label: 'Food bags', value: totalFoodBags, sub: totalFoodLbs > 0 ? `${totalFoodLbs} lbs` : undefined });
-  const vaccineCount = (typeCounts.vaccine_dapp ?? 0) + (typeCounts.vaccine_parvo ?? 0);
+  const statItems: { icon: any; label: string; value: number; sub?: string }[] = [];
+  if (!isHistorical) statItems.push({ icon: Users, label: 'Owners', value: uniqueOwners.size });
+  statItems.push({ icon: PawPrint, label: 'Animals', value: isHistorical ? (event.animals_seen ?? 0) : uniqueAnimals.size });
+  if (totalFoodBags > 0) {
+    statItems.push({ icon: Package, label: 'Food bags', value: totalFoodBags, sub: totalFoodLbs > 0 ? `${totalFoodLbs} lbs` : undefined });
+  } else if (isHistorical && totalFoodLbs > 0) {
+    statItems.push({ icon: Package, label: 'Food (lbs)', value: totalFoodLbs });
+  }
+  const vaccineCount = (typeCounts.vaccine_dapp ?? 0) + (typeCounts.vaccine_dapp_l ?? 0) + (typeCounts.vaccine_parvo ?? 0);
   if (vaccineCount > 0) statItems.push({ icon: Syringe, label: 'Vaccines', value: vaccineCount });
   const prevCount = (typeCounts.preventative_oral ?? 0) + (typeCounts.preventative_topical ?? 0);
   if (prevCount > 0) statItems.push({ icon: Pill, label: 'Preventatives', value: prevCount });
   if ((typeCounts.spay_neuter ?? 0) > 0) statItems.push({ icon: Scissors, label: 'Spay/Neuter', value: typeCounts.spay_neuter });
   if ((typeCounts.medical ?? 0) > 0) statItems.push({ icon: Stethoscope, label: 'Medical', value: typeCounts.medical });
-  const groomCount = (typeCounts.grooming ?? 0) + (typeCounts.nail_trim ?? 0);
+  if ((typeCounts.microchip ?? 0) > 0) statItems.push({ icon: Syringe, label: 'Microchips', value: typeCounts.microchip });
+  const groomCount = (typeCounts.grooming ?? 0);
   if (groomCount > 0) statItems.push({ icon: Sparkles, label: 'Grooming', value: groomCount });
+  if ((typeCounts.nail_trim ?? 0) > 0) statItems.push({ icon: Sparkles, label: 'Nail Trims', value: typeCounts.nail_trim });
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -241,14 +272,16 @@ export default function EventSummaryPage() {
 
         {/* Inline stats row */}
         <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/10">
-          <div className="flex items-center gap-1.5">
-            <Users className="w-4 h-4 text-white/50" />
-            <span className="text-lg font-bold">{uniqueOwners.size}</span>
-            <span className="text-xs text-white/50">owners</span>
-          </div>
+          {!isHistorical && (
+            <div className="flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-white/50" />
+              <span className="text-lg font-bold">{uniqueOwners.size}</span>
+              <span className="text-xs text-white/50">owners</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
             <PawPrint className="w-4 h-4 text-white/50" />
-            <span className="text-lg font-bold">{uniqueAnimals.size}</span>
+            <span className="text-lg font-bold">{isHistorical ? (event.animals_seen ?? 0) : uniqueAnimals.size}</span>
             <span className="text-xs text-white/50">animals</span>
           </div>
           {totalFoodBags > 0 && (
@@ -256,6 +289,13 @@ export default function EventSummaryPage() {
               <Package className="w-4 h-4 text-white/50" />
               <span className="text-lg font-bold">{totalFoodBags}</span>
               <span className="text-xs text-white/50">bags</span>
+            </div>
+          )}
+          {isHistorical && totalFoodLbs > 0 && !totalFoodBags && (
+            <div className="flex items-center gap-1.5">
+              <Package className="w-4 h-4 text-white/50" />
+              <span className="text-lg font-bold">{totalFoodLbs}</span>
+              <span className="text-xs text-white/50">lbs</span>
             </div>
           )}
         </div>
@@ -302,6 +342,7 @@ export default function EventSummaryPage() {
         sendEmailSummary={sendEmailSummary}
         emailing={emailing}
         emailSent={emailSent}
+        isHistorical={isHistorical}
       />
     </div>
   );
@@ -317,6 +358,7 @@ function EventTabs({
   sendEmailSummary,
   emailing,
   emailSent,
+  isHistorical,
 }: {
   statItems: { icon: any; label: string; value: number; sub?: string }[];
   byOwner: Record<string, { ownerName: string; animals: CareEvent[] }>;
@@ -325,6 +367,7 @@ function EventTabs({
   sendEmailSummary: () => void;
   emailing: boolean;
   emailSent: boolean;
+  isHistorical: boolean;
 }) {
   const [tab, setTab] = useState<TabId>('overview');
   const entries = Object.entries(byOwner);
@@ -406,7 +449,9 @@ function EventTabs({
 
         {tab === 'owners' && (
           <div>
-            {entries.length === 0 ? (
+            {isHistorical ? (
+              <p className="text-sm text-muted text-center py-4">Historical event — individual care records not available</p>
+            ) : entries.length === 0 ? (
               <p className="text-sm text-muted text-center py-4">No care records for this event.</p>
             ) : (
               <div className="space-y-0.5">

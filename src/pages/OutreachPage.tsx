@@ -17,6 +17,7 @@ interface OutreachEventRow {
   total_food_lbs: number | null;
   total_bags: number | null;
   location_id: string | null;
+  animals_seen: number | null;
   location: { name: string } | null;
   volunteer_count: number;
   animal_count: number;
@@ -44,7 +45,8 @@ export default function OutreachPage() {
 
     let eventsQuery = supabase
       .from('outreach_events')
-      .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, location_id, location:locations(name)')
+      .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, location_id, animals_seen, location:locations(name)')
+      .neq('status', 'planned')
       .order('event_date', { ascending: false });
 
 
@@ -73,7 +75,7 @@ export default function OutreachPage() {
     const rows: OutreachEventRow[] = (eventRes.data ?? []).map((e: any) => ({
       ...e,
       volunteer_count: volCounts[e.id] ?? 0,
-      animal_count: animalSets[e.id]?.size ?? 0,
+      animal_count: e.animals_seen ?? animalSets[e.id]?.size ?? 0,
     }));
 
     setEvents(rows);
@@ -292,9 +294,11 @@ export default function OutreachPage() {
                         <CalendarHeart className="w-5 h-5 text-primary" strokeWidth={1.5} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-heading font-bold text-sm text-night capitalize">
-                          {e.event_type.replace(/_/g, ' ')}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-heading font-bold text-sm text-night capitalize">
+                            {e.event_type.replace(/_/g, ' ')}
+                          </h3>
+                        </div>
                         <p className="text-xs text-muted mt-0.5">{formatDate(e.event_date)}</p>
                         <div className="flex flex-wrap items-center gap-2 mt-2">
                           {e.location?.name && (

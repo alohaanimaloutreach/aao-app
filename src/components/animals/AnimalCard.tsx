@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { PawPrint, AlertTriangle, Ruler, MapPin, User, Clock } from 'lucide-react';
+import { PawPrint, AlertTriangle, Scissors, Ruler, MapPin, User, Clock } from 'lucide-react';
 import StatusBadge from '../shared/StatusBadge';
 import { ANIMAL_TYPE_CONFIG, HAVENT_SEEN_DAYS } from '../../lib/constants';
 import { formatRelative, daysSince } from '../../lib/format';
@@ -14,6 +14,7 @@ export interface AnimalCardData {
   size_category: string;
   food_bag_size: string | null;
   urgent_medical: boolean;
+  interested_in_fixing: string | null;
   deceased: boolean;
   owner: { name: string } | null;
   primary_location: { name: string } | null;
@@ -24,9 +25,10 @@ export interface AnimalCardData {
 
 interface Props {
   animal: AnimalCardData;
+  onToggle?: (id: string, field: 'urgent_medical' | 'interested_in_fixing', value: any) => void;
 }
 
-export default function AnimalCard({ animal }: Props) {
+export default function AnimalCard({ animal, onToggle }: Props) {
   const typeConfig = ANIMAL_TYPE_CONFIG[animal.animal_type] ?? ANIMAL_TYPE_CONFIG.other;
   const lastSeenDays = daysSince(animal.last_seen);
   const haventSeen = lastSeenDays > HAVENT_SEEN_DAYS && lastSeenDays !== Infinity && !animal.deceased;
@@ -132,6 +134,34 @@ export default function AnimalCard({ animal }: Props) {
             </div>
           )}
         </div>
+
+        {/* Quick toggles */}
+        {onToggle && (
+          <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-night/5">
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(animal.id, 'urgent_medical', !animal.urgent_medical); }}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                animal.urgent_medical
+                  ? 'bg-ember/10 text-ember'
+                  : 'bg-sand/50 text-muted hover:text-night'
+              }`}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              Urgent
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(animal.id, 'interested_in_fixing', animal.interested_in_fixing === 'interested' ? null : 'interested'); }}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                animal.interested_in_fixing === 'interested'
+                  ? 'bg-primary/10 text-primary'
+                  : 'bg-sand/50 text-muted hover:text-night'
+              }`}
+            >
+              <Scissors className="w-3 h-3" />
+              S/N Ready
+            </button>
+          </div>
+        )}
       </div>
     </Link>
   );

@@ -9,6 +9,7 @@ export interface AnimalFilterState {
   fixedStatus: string;
   photoFilter: string;
   urgentOnly: boolean;
+  readyForSN: boolean;
   notSeenDays: number;
   showArchived: boolean;
 }
@@ -21,6 +22,7 @@ export const DEFAULT_FILTERS: AnimalFilterState = {
   fixedStatus: '',
   photoFilter: '',
   urgentOnly: false,
+  readyForSN: false,
   notSeenDays: 0,
   showArchived: false,
 };
@@ -42,8 +44,8 @@ export default function AnimalFilters({ filters, onChange, locations, resultCoun
     filters.fixedStatus,
     filters.photoFilter,
     filters.urgentOnly,
+    filters.readyForSN,
     filters.notSeenDays,
-    filters.showArchived,
   ].filter(Boolean).length;
 
   function update(partial: Partial<AnimalFilterState>) {
@@ -160,7 +162,16 @@ export default function AnimalFilters({ filters, onChange, locations, resultCoun
                   onChange={(e) => update({ urgentOnly: e.target.checked })}
                   className="w-4 h-4 rounded border-night/20 text-ember focus:ring-ember/30 accent-ember"
                 />
-                Urgent medical only
+                Urgent Medical
+              </label>
+              <label className="flex items-center gap-2 text-sm text-night cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.readyForSN}
+                  onChange={(e) => update({ readyForSN: e.target.checked })}
+                  className="w-4 h-4 rounded border-night/20 text-primary focus:ring-primary/30 accent-primary"
+                />
+                Ready for S/N
               </label>
               <label className="flex items-center gap-2 text-sm text-night cursor-pointer">
                 <input
@@ -170,15 +181,6 @@ export default function AnimalFilters({ filters, onChange, locations, resultCoun
                   className="w-4 h-4 rounded border-night/20 text-gold focus:ring-gold/30 accent-amber-500"
                 />
                 Not seen 60+ days
-              </label>
-              <label className="flex items-center gap-2 text-sm text-night cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filters.showArchived}
-                  onChange={(e) => update({ showArchived: e.target.checked })}
-                  className="w-4 h-4 rounded border-night/20 text-muted focus:ring-muted/30 accent-muted"
-                />
-                Show archived
               </label>
             </div>
             {activeFilterCount > 0 && (

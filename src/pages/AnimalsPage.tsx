@@ -25,6 +25,7 @@ interface RawAnimal {
   urgent_medical: boolean;
   deceased: boolean;
   fixed_status: string;
+  interested_in_fixing: string | null;
   archived: boolean;
   archived_at: string | null;
   owner_id: string | null;
@@ -53,6 +54,7 @@ export default function AnimalsPage() {
   const [newAnimalSex, setNewAnimalSex] = useState('unknown');
   const [newAnimalSize, setNewAnimalSize] = useState('unknown');
   const [addSubmitting, setAddSubmitting] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const navigate = useNavigate();
   const [filters, setFilters] = useState<AnimalFilterState>(() => {
     const initial = { ...DEFAULT_FILTERS };
@@ -74,7 +76,7 @@ export default function AnimalsPage() {
 
     let animalsQuery = supabase
       .from('animals')
-      .select('id, aao_id, name, animal_type, breed, sex, size_category, food_bag_size, urgent_medical, deceased, fixed_status, archived, archived_at, owner_id, primary_location_id, microchip_primary, updated_at, owner:owners(name), primary_location:locations(name)')
+      .select('id, aao_id, name, animal_type, breed, sex, size_category, food_bag_size, urgent_medical, deceased, fixed_status, interested_in_fixing, archived, archived_at, owner_id, primary_location_id, microchip_primary, updated_at, owner:owners(name), primary_location:locations(name)')
       .order('updated_at', { ascending: false });
 
 
@@ -167,6 +169,9 @@ export default function AnimalsPage() {
       // Urgent
       if (filters.urgentOnly && !a.urgent_medical) return false;
 
+      // Ready for S/N
+      if (filters.readyForSN && a.interested_in_fixing !== 'interested') return false;
+
       // Not seen in X days
       if (filters.notSeenDays > 0) {
         const days = daysSince(lastSeenMap[a.id]);
@@ -230,6 +235,7 @@ export default function AnimalsPage() {
   async function handleAddAnimal() {
     if (!newAnimalName.trim() || !user) return;
     setAddSubmitting(true);
+    setAddError(null);
     const { data, error } = await supabase
       .from('animals')
       .insert({
@@ -238,16 +244,22 @@ export default function AnimalsPage() {
         sex: newAnimalSex,
         size_category: newAnimalSize,
         fixed_status: 'unknown',
+        created_by: user.id,
       })
       .select('id')
       .single();
     setAddSubmitting(false);
-    if (error) return;
+    if (error) {
+      console.error('Add animal error:', error);
+      setAddError(error.message);
+      return;
+    }
     setShowAddAnimal(false);
     setNewAnimalName('');
     setNewAnimalType('dog');
     setNewAnimalSex('unknown');
     setNewAnimalSize('unknown');
+    setAddError(null);
     if (data) navigate(`/animals/${data.id}`);
   }
 
@@ -296,6 +308,7 @@ export default function AnimalsPage() {
     size_category: a.size_category,
     food_bag_size: a.food_bag_size,
     urgent_medical: a.urgent_medical,
+    interested_in_fixing: a.interested_in_fixing,
     deceased: a.deceased,
     owner: a.owner,
     primary_location: a.primary_location,
@@ -303,6 +316,11 @@ export default function AnimalsPage() {
     last_seen: lastSeenMap[a.id] ?? null,
     profile_photo_url: profilePhotos[a.id] ?? null,
   }));
+
+  async function handleCardToggle(id: string, field: 'urgent_medical' | 'interested_in_fixing', value: any) {
+    await supabase.from('animals').update({ [field]: value }).eq('id', id);
+    setAnimals((prev) => prev.map((a) => a.id === id ? { ...a, [field]: value } : a));
+  }
 
   return (
     <div>
@@ -388,7 +406,7 @@ export default function AnimalsPage() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-4">
             {cardData.map((animal) => (
-              <AnimalCard key={animal.id} animal={animal} />
+              <AnimalCard key={animal.id} animal={animal} onToggle={handleCardToggle} />
             ))}
           </div>
 
@@ -423,6 +441,7 @@ export default function AnimalsPage() {
                         size_category: a.size_category,
                         food_bag_size: a.food_bag_size,
                         urgent_medical: a.urgent_medical,
+                        interested_in_fixing: a.interested_in_fixing,
                         deceased: a.deceased,
                         owner: a.owner,
                         primary_location: a.primary_location,
@@ -441,7 +460,7 @@ export default function AnimalsPage() {
 
       {/* Add Animal FAB */}
       <button
-        onClick={() => setShowAddAnimal(true)}
+        onClick={() => { setShowAddAnimal(true); setAddError(null); }}
         className="fixed bottom-20 md:bottom-6 right-4 md:right-6 h-12 bg-primary hover:bg-primary-hover text-white rounded-2xl shadow-[0_4px_16px_rgba(110,168,50,0.35)] hover:shadow-[0_6px_20px_rgba(110,168,50,0.45)] flex items-center justify-center gap-2 px-5 transition-all duration-200 z-30 hover:scale-105 active:scale-95"
         aria-label="Add new animal"
       >
@@ -500,7 +519,10 @@ export default function AnimalsPage() {
                 </select>
               </div>
             </div>
-            <div className="p-5 border-t border-night/5 shrink-0">
+            <div className="p-5 border-t border-night/5 shrink-0 space-y-3">
+              {addError && (
+                <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{addError}</p>
+              )}
               <button
                 onClick={handleAddAnimal}
                 disabled={!newAnimalName.trim() || addSubmitting}

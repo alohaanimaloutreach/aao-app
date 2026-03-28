@@ -73,16 +73,35 @@ export default function ActiveEventPage() {
 
     const { data: care } = await supabase
       .from('care_events')
-      .select('food_bags, food_lbs')
+      .select('food_bags, food_lbs, care_types, animal_id')
       .eq('outreach_event_id', id!);
 
-    const totalBags = (care ?? []).reduce((sum, c) => sum + (c.food_bags ?? 0), 0);
-    const totalLbs = (care ?? []).reduce((sum, c) => sum + (c.food_lbs ?? 0), 0);
+    const rows = care ?? [];
+    const totalBags = rows.reduce((sum, c) => sum + ((c as any).food_bags ?? 0), 0);
+    const totalLbs = rows.reduce((sum, c) => sum + ((c as any).food_lbs ?? 0), 0);
+    const uniqueAnimals = new Set(rows.map((c: any) => c.animal_id).filter(Boolean));
+    let vaxCount = 0, mcCount = 0, prevCount = 0, snCount = 0, groomCount = 0, nailCount = 0;
+    rows.forEach((c: any) => {
+      const types: string[] = c.care_types ?? [];
+      if (types.some(t => ['vaccine_dapp', 'vaccine_dapp_l', 'vaccine_parvo'].includes(t))) vaxCount++;
+      if (types.includes('microchip')) mcCount++;
+      if (types.some(t => ['preventative_oral', 'preventative_topical'].includes(t))) prevCount++;
+      if (types.includes('spay_neuter')) snCount++;
+      if (types.includes('grooming')) groomCount++;
+      if (types.includes('nail_trim')) nailCount++;
+    });
 
     await supabase.from('outreach_events').update({
       status: 'completed',
       total_bags: totalBags || null,
       total_food_lbs: totalLbs || null,
+      animals_seen: uniqueAnimals.size || null,
+      vaccinations_given: vaxCount || null,
+      microchips_given: mcCount || null,
+      preventatives_given: prevCount || null,
+      spay_neuter_count: snCount || null,
+      grooming_count: groomCount || null,
+      nail_trim_count: nailCount || null,
     }).eq('id', id!);
 
     setEndingEvent(false);
