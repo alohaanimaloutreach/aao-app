@@ -42,3 +42,18 @@ export function daysSince(date: string | Date | null | undefined): number {
   const now = new Date();
   return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
 }
+
+/** Auto-format a phone string as user types: (808) 555-1234 */
+export function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+}
+
+/** Check if a phone number has exactly 10 digits */
+export function isValidPhone(value: string): boolean {
+  if (!value.trim()) return true; // empty is ok (optional field)
+  const digits = value.replace(/\D/g, '');
+  return digits.length === 10;
+}

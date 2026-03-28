@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   CalendarHeart,
@@ -17,6 +17,7 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  Trash2,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -87,13 +88,18 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 
 export default function EventSummaryPage() {
   const { id } = useParams<{ id: string }>();
-  const { session, user } = useAuth();
+  const { session, user, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [careEvents, setCareEvents] = useState<CareEvent[]>([]);
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailing, setEmailing] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteText, setDeleteText] = useState('');
+  const [deleteProcessing, setDeleteProcessing] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (session && id) loadData();
@@ -263,11 +269,22 @@ export default function EventSummaryPage() {
             </h1>
             <p className="text-white/60 text-sm mt-0.5">{formatDate(event.event_date)}</p>
           </div>
-          {event.status === 'completed' && (
-            <span className="text-xs font-medium bg-primary/20 text-primary-foreground border border-primary/30 rounded-full px-2.5 py-1">
-              Complete
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {event.status === 'completed' && (
+              <span className="text-xs font-medium bg-primary/20 text-primary-foreground border border-primary/30 rounded-full px-2.5 py-1">
+                Complete
+              </span>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); }}
+                className="inline-flex items-center gap-1 text-xs font-medium bg-white/10 hover:bg-ember/30 text-white/60 hover:text-white border border-white/10 hover:border-ember/40 rounded-full px-2.5 py-1 transition-all"
+              >
+                <Trash2 className="w-3 h-3" />
+                Delete
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Inline stats row */}
@@ -344,6 +361,52 @@ export default function EventSummaryPage() {
         emailSent={emailSent}
         isHistorical={isHistorical}
       />
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true">
+          <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-5 shadow-xl">
+            <h3 className="font-heading font-bold text-ember text-base mb-2">Permanently delete this event?</h3>
+            <p className="text-sm text-muted mb-4">This cannot be undone. All linked care events and check-in records will also be removed.</p>
+            <div className="mb-4">
+              <label className="block text-xs text-muted font-medium mb-1">Type DELETE to confirm</label>
+              <input
+                type="text"
+                value={deleteText}
+                onChange={(e) => setDeleteText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full px-3 py-2.5 bg-sand/50 border border-ember/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ember/30"
+                autoFocus
+              />
+            </div>
+            {deleteError && (
+              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{deleteError}</p>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-sm font-medium text-muted bg-sand rounded-xl hover:bg-muted/15 transition-all">Cancel</button>
+              <button
+                disabled={deleteText !== 'DELETE' || deleteProcessing}
+                onClick={async () => {
+                  setDeleteProcessing(true);
+                  setDeleteError(null);
+                  const { error } = await supabase.from('outreach_events').delete().eq('id', event!.id);
+                  setDeleteProcessing(false);
+                  if (error) {
+                    console.error('Delete event error:', error);
+                    setDeleteError(error.message);
+                    return;
+                  }
+                  setShowDeleteConfirm(false);
+                  navigate('/outreach');
+                }}
+                className="flex-1 py-2.5 text-sm font-semibold text-white bg-ember hover:bg-ember/90 rounded-xl transition-all disabled:opacity-30"
+              >
+                {deleteProcessing ? 'Deleting...' : 'Delete Forever'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -522,6 +585,7 @@ function OwnerRow({ ownerId, ownerName, animals }: { ownerId: string; ownerName:
           )}
         </div>
       )}
+
     </div>
   );
 }

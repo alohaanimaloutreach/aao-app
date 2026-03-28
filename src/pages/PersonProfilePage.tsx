@@ -21,10 +21,10 @@ import {
   Plus,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { formatDate } from '../lib/format';
+import { useAuth } from '../contexts/AuthContext';
+import { formatDate, formatPhone, isValidPhone } from '../lib/format';
 import StatusBadge from '../components/shared/StatusBadge';
 import FlagResolver from '../components/admin/FlagResolver';
-import ArchiveActions from '../components/admin/ArchiveActions';
 import MapIframe from '../components/shared/MapIframe';
 import OwnerLocationMap from '../components/people/OwnerLocationMap';
 
@@ -72,6 +72,7 @@ interface OwnerNote {
 export default function PersonProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [owner, setOwner] = useState<OwnerDetail | null>(null);
   const [animals, setAnimals] = useState<LinkedAnimal[]>([]);
   const [flags, setFlags] = useState<OwnerFlag[]>([]);
@@ -89,6 +90,10 @@ export default function PersonProfilePage() {
   const [newLocName, setNewLocName] = useState('');
   const [newLocAddress, setNewLocAddress] = useState('');
   const [creatingLocation, setCreatingLocation] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteText, setDeleteText] = useState('');
+  const [deleteProcessing, setDeleteProcessing] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) loadOwner(id);
@@ -307,20 +312,20 @@ export default function PersonProfilePage() {
         <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-night/5">
           {owner.phone_primary && (
             <a
-              href={`tel:${owner.phone_primary}`}
+              href={`tel:${owner.phone_primary.replace(/\D/g, '')}`}
               className="inline-flex items-center gap-1.5 text-sm text-night hover:text-primary transition-colors bg-sand rounded-xl px-3 py-2"
             >
               <Phone className="w-3.5 h-3.5 text-muted" strokeWidth={1.75} />
-              {owner.phone_primary}
+              {formatPhone(owner.phone_primary)}
             </a>
           )}
           {owner.phone_secondary && (
             <a
-              href={`tel:${owner.phone_secondary}`}
+              href={`tel:${owner.phone_secondary.replace(/\D/g, '')}`}
               className="inline-flex items-center gap-1.5 text-sm text-night hover:text-primary transition-colors bg-sand rounded-xl px-3 py-2"
             >
               <Phone className="w-3.5 h-3.5 text-muted" strokeWidth={1.75} />
-              {owner.phone_secondary}
+              {formatPhone(owner.phone_secondary)}
             </a>
           )}
           {owner.address && (
@@ -355,14 +360,64 @@ export default function PersonProfilePage() {
         )}
       </div>
 
-      {/* Archive actions (admin only) */}
-      <ArchiveActions
-        tableName="owners"
-        recordId={owner.id}
-        isArchived={owner.archived}
-        recordLabel={owner.name}
-        onUpdate={() => navigate('/people')}
-      />
+      {/* Delete (admin only) */}
+      {isAdmin && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-night/10 hover:border-ember/30 text-muted hover:text-ember text-xs font-medium rounded-xl transition-all"
+          >
+            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
+            Delete
+          </button>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true">
+          <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-5 shadow-xl">
+            <h3 className="font-heading font-bold text-ember text-base mb-2">Permanently delete {owner.name}?</h3>
+            <p className="text-sm text-muted mb-4">This cannot be undone. All linked records will also be removed.</p>
+            <div className="mb-4">
+              <label className="block text-xs text-muted font-medium mb-1">Type DELETE to confirm</label>
+              <input
+                type="text"
+                value={deleteText}
+                onChange={(e) => setDeleteText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full px-3 py-2.5 bg-sand/50 border border-ember/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ember/30"
+                autoFocus
+              />
+            </div>
+            {deleteError && (
+              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{deleteError}</p>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-sm font-medium text-muted bg-sand rounded-xl hover:bg-muted/15 transition-all">Cancel</button>
+              <button
+                disabled={deleteText !== 'DELETE' || deleteProcessing}
+                onClick={async () => {
+                  setDeleteProcessing(true);
+                  setDeleteError(null);
+                  const { error } = await supabase.from('owners').delete().eq('id', owner.id);
+                  setDeleteProcessing(false);
+                  if (error) {
+                    console.error('Delete person error:', error);
+                    setDeleteError(error.message);
+                    return;
+                  }
+                  setShowDeleteConfirm(false);
+                  navigate('/people');
+                }}
+                className="flex-1 py-2.5 text-sm font-semibold text-white bg-ember hover:bg-ember/90 rounded-xl transition-all disabled:opacity-30"
+              >
+                {deleteProcessing ? 'Deleting...' : 'Delete Forever'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit modal */}
       {editing && (
@@ -381,11 +436,17 @@ export default function PersonProfilePage() {
               </div>
               <div>
                 <label className="block text-sm text-muted font-medium mb-1">Phone (primary)</label>
-                <input type="tel" value={editData.phone_primary} onChange={(e) => setEditData({ ...editData, phone_primary: e.target.value })} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                <input type="tel" value={editData.phone_primary} onChange={(e) => setEditData({ ...editData, phone_primary: formatPhone(e.target.value) })} placeholder="(808) 555-1234" className={`w-full px-3 py-2.5 bg-sand/50 border rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 ${editData.phone_primary && !isValidPhone(editData.phone_primary) ? 'border-ember/40' : 'border-night/8'}`} />
+                {editData.phone_primary && !isValidPhone(editData.phone_primary) && (
+                  <p className="text-xs text-ember mt-1">Enter a 10-digit phone number</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm text-muted font-medium mb-1">Phone (secondary)</label>
-                <input type="tel" value={editData.phone_secondary} onChange={(e) => setEditData({ ...editData, phone_secondary: e.target.value })} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                <input type="tel" value={editData.phone_secondary} onChange={(e) => setEditData({ ...editData, phone_secondary: formatPhone(e.target.value) })} placeholder="(808) 555-1234" className={`w-full px-3 py-2.5 bg-sand/50 border rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 ${editData.phone_secondary && !isValidPhone(editData.phone_secondary) ? 'border-ember/40' : 'border-night/8'}`} />
+                {editData.phone_secondary && !isValidPhone(editData.phone_secondary) && (
+                  <p className="text-xs text-ember mt-1">Enter a 10-digit phone number</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm text-muted font-medium mb-1">Address</label>
@@ -551,7 +612,7 @@ export default function PersonProfilePage() {
               {editError && (
                 <div className="bg-ember/10 border border-ember/20 text-ember text-xs rounded-xl px-3 py-2" role="alert">{editError}</div>
               )}
-              <button onClick={saveEdit} disabled={editSaving} className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold text-sm rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.25)] disabled:opacity-30 transition-all flex items-center justify-center gap-2">
+              <button onClick={saveEdit} disabled={editSaving || !isValidPhone(editData.phone_primary || '') || !isValidPhone(editData.phone_secondary || '')} className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold text-sm rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.25)] disabled:opacity-30 transition-all flex items-center justify-center gap-2">
                 {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 {editSaving ? 'Saving...' : 'Save Changes'}
               </button>
