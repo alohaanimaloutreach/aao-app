@@ -494,6 +494,16 @@ export default function AnimalProfilePage() {
                 <Edit3 className="w-4 h-4" strokeWidth={2} />
                 <span>Edit</span>
               </button>
+              {isAdmin && (
+                <button
+                  onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ember/8 hover:bg-ember/15 text-ember font-medium transition-all text-sm"
+                  aria-label="Delete animal"
+                >
+                  <Trash2 className="w-4 h-4" strokeWidth={2} />
+                  <span>Delete</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -572,15 +582,6 @@ export default function AnimalProfilePage() {
               Ready for S/N
               {animal.interested_in_fixing === 'interested' ? ' ON' : ''}
             </button>
-            {isAdmin && (
-              <button
-                onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); }}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-night/10 text-muted hover:border-ember/30 hover:text-ember bg-white transition-all"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Delete
-              </button>
-            )}
           </div>
 
         </div>

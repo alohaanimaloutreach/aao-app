@@ -94,6 +94,9 @@ export default function PersonProfilePage() {
   const [deleteText, setDeleteText] = useState('');
   const [deleteProcessing, setDeleteProcessing] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [transferSearch, setTransferSearch] = useState('');
+  const [transferResults, setTransferResults] = useState<{ id: string; name: string }[]>([]);
+  const [transferTo, setTransferTo] = useState<{ id: string; name: string } | 'unlink' | null>(null);
 
   useEffect(() => {
     if (id) loadOwner(id);
@@ -302,10 +305,22 @@ export default function PersonProfilePage() {
             </div>
           </div>
 
-          <button onClick={openEdit} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-all text-sm" aria-label="Edit person">
-            <Edit3 className="w-4 h-4" strokeWidth={2} />
-            <span>Edit</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={openEdit} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-all text-sm" aria-label="Edit person">
+              <Edit3 className="w-4 h-4" strokeWidth={2} />
+              <span>Edit</span>
+            </button>
+            {isAdmin && (
+              <button
+                onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ember/8 hover:bg-ember/15 text-ember font-medium transition-all text-sm"
+                aria-label="Delete person"
+              >
+                <Trash2 className="w-4 h-4" strokeWidth={2} />
+                <span>Delete</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Contact info */}
@@ -360,60 +375,107 @@ export default function PersonProfilePage() {
         )}
       </div>
 
-      {/* Delete (admin only) */}
-      {isAdmin && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-night/10 hover:border-ember/30 text-muted hover:text-ember text-xs font-medium rounded-xl transition-all"
-          >
-            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
-            Delete
-          </button>
-        </div>
-      )}
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true">
-          <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-5 shadow-xl">
-            <h3 className="font-heading font-bold text-ember text-base mb-2">Permanently delete {owner.name}?</h3>
-            <p className="text-sm text-muted mb-4">This cannot be undone. All linked records will also be removed.</p>
-            <div className="mb-4">
-              <label className="block text-xs text-muted font-medium mb-1">Type DELETE to confirm</label>
-              <input
-                type="text"
-                value={deleteText}
-                onChange={(e) => setDeleteText(e.target.value)}
-                placeholder="DELETE"
-                className="w-full px-3 py-2.5 bg-sand/50 border border-ember/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ember/30"
-                autoFocus
-              />
-            </div>
-            {deleteError && (
-              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{deleteError}</p>
-            )}
-            <div className="flex gap-2">
-              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-sm font-medium text-muted bg-sand rounded-xl hover:bg-muted/15 transition-all">Cancel</button>
-              <button
-                disabled={deleteText !== 'DELETE' || deleteProcessing}
-                onClick={async () => {
-                  setDeleteProcessing(true);
-                  setDeleteError(null);
-                  const { error } = await supabase.from('owners').delete().eq('id', owner.id);
-                  setDeleteProcessing(false);
-                  if (error) {
-                    console.error('Delete person error:', error);
-                    setDeleteError(error.message);
-                    return;
-                  }
-                  setShowDeleteConfirm(false);
-                  navigate('/people');
-                }}
-                className="flex-1 py-2.5 text-sm font-semibold text-white bg-ember hover:bg-ember/90 rounded-xl transition-all disabled:opacity-30"
-              >
-                {deleteProcessing ? 'Deleting...' : 'Delete Forever'}
-              </button>
+          <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-xl">
+            <div className="p-5 space-y-4 overflow-y-auto">
+              <h3 className="font-heading font-bold text-ember text-base">Permanently delete {owner.name}?</h3>
+
+              {/* Animal transfer section */}
+              {animals.length > 0 && (
+                <div className="bg-sand/50 rounded-xl p-4 space-y-3">
+                  <p className="text-sm font-medium text-night">This person has {animals.length} animal{animals.length !== 1 ? 's' : ''}. What should happen to them?</p>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setTransferTo('unlink')}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-all border ${transferTo === 'unlink' ? 'border-primary bg-primary/8 text-night font-medium' : 'border-night/8 bg-white text-muted hover:border-night/20'}`}
+                    >
+                      Remove owner from animals (leave unlinked)
+                    </button>
+                    <div>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" />
+                        <input
+                          type="text"
+                          value={transferSearch}
+                          onChange={async (e) => {
+                            setTransferSearch(e.target.value);
+                            if (e.target.value.length >= 2) {
+                              const { data } = await supabase.from('owners').select('id, name').neq('id', owner.id).ilike('name', `%${e.target.value}%`).limit(5);
+                              setTransferResults(data ?? []);
+                            } else {
+                              setTransferResults([]);
+                            }
+                          }}
+                          placeholder="Search for another person to transfer to..."
+                          className="w-full pl-9 pr-4 py-2.5 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                        />
+                      </div>
+                      {transferResults.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => { setTransferTo(p); setTransferSearch(p.name); setTransferResults([]); }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-primary/5 rounded-lg transition-colors ${transferTo && transferTo !== 'unlink' && (transferTo as any).id === p.id ? 'bg-primary/8 font-medium text-night' : 'text-muted'}`}
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                      {transferTo && transferTo !== 'unlink' && (
+                        <p className="text-xs text-primary mt-1 px-1">Animals will be transferred to {(transferTo as { name: string }).name}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-sm text-muted">This action cannot be undone.</p>
+              <div>
+                <label className="block text-xs text-muted font-medium mb-1">Type DELETE to confirm</label>
+                <input
+                  type="text"
+                  value={deleteText}
+                  onChange={(e) => setDeleteText(e.target.value)}
+                  placeholder="DELETE"
+                  className="w-full px-3 py-2.5 bg-sand/50 border border-ember/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ember/30"
+                />
+              </div>
+              {deleteError && (
+                <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{deleteError}</p>
+              )}
+              <div className="flex gap-2">
+                <button onClick={() => { setShowDeleteConfirm(false); setTransferTo(null); setTransferSearch(''); }} className="flex-1 py-2.5 text-sm font-medium text-muted bg-sand rounded-xl hover:bg-muted/15 transition-all">Cancel</button>
+                <button
+                  disabled={deleteText !== 'DELETE' || deleteProcessing || (animals.length > 0 && !transferTo)}
+                  onClick={async () => {
+                    setDeleteProcessing(true);
+                    setDeleteError(null);
+                    // Transfer or unlink animals first
+                    if (animals.length > 0 && transferTo) {
+                      const newOwnerId = transferTo === 'unlink' ? null : (transferTo as { id: string }).id;
+                      const { error: transferErr } = await supabase.from('animals').update({ owner_id: newOwnerId }).eq('owner_id', owner.id);
+                      if (transferErr) {
+                        setDeleteProcessing(false);
+                        setDeleteError(transferErr.message);
+                        return;
+                      }
+                    }
+                    const { error } = await supabase.from('owners').delete().eq('id', owner.id);
+                    setDeleteProcessing(false);
+                    if (error) {
+                      console.error('Delete person error:', error);
+                      setDeleteError(error.message);
+                      return;
+                    }
+                    setShowDeleteConfirm(false);
+                    navigate('/people');
+                  }}
+                  className="flex-1 py-2.5 text-sm font-semibold text-white bg-ember hover:bg-ember/90 rounded-xl transition-all disabled:opacity-30"
+                >
+                  {deleteProcessing ? 'Deleting...' : 'Delete Forever'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

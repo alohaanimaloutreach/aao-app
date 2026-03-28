@@ -16,7 +16,6 @@ import {
   X,
   Loader2,
   Search,
-  Trash2,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatDate, formatRelative } from '../lib/format';
@@ -92,10 +91,6 @@ export default function LocationProfilePage() {
   const [editData, setEditData] = useState<Record<string, any>>({});
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteText, setDeleteText] = useState('');
-  const [deleteProcessing, setDeleteProcessing] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) loadLocation(id);
@@ -293,64 +288,6 @@ export default function LocationProfilePage() {
         )}
       </div>
 
-      {/* Delete (admin only) */}
-      {isAdmin && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-night/10 hover:border-ember/30 text-muted hover:text-ember text-xs font-medium rounded-xl transition-all"
-          >
-            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
-            Delete
-          </button>
-        </div>
-      )}
-
-      {/* Delete confirmation modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true">
-          <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-5 shadow-xl">
-            <h3 className="font-heading font-bold text-ember text-base mb-2">Permanently delete {location.name}?</h3>
-            <p className="text-sm text-muted mb-4">This cannot be undone. All linked records will also be removed.</p>
-            <div className="mb-4">
-              <label className="block text-xs text-muted font-medium mb-1">Type DELETE to confirm</label>
-              <input
-                type="text"
-                value={deleteText}
-                onChange={(e) => setDeleteText(e.target.value)}
-                placeholder="DELETE"
-                className="w-full px-3 py-2.5 bg-sand/50 border border-ember/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ember/30"
-                autoFocus
-              />
-            </div>
-            {deleteError && (
-              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{deleteError}</p>
-            )}
-            <div className="flex gap-2">
-              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-sm font-medium text-muted bg-sand rounded-xl hover:bg-muted/15 transition-all">Cancel</button>
-              <button
-                disabled={deleteText !== 'DELETE' || deleteProcessing}
-                onClick={async () => {
-                  setDeleteProcessing(true);
-                  setDeleteError(null);
-                  const { error } = await supabase.from('locations').delete().eq('id', location.id);
-                  setDeleteProcessing(false);
-                  if (error) {
-                    console.error('Delete location error:', error);
-                    setDeleteError(error.message);
-                    return;
-                  }
-                  setShowDeleteConfirm(false);
-                  navigate('/locations');
-                }}
-                className="flex-1 py-2.5 text-sm font-semibold text-white bg-ember hover:bg-ember/90 rounded-xl transition-all disabled:opacity-30"
-              >
-                {deleteProcessing ? 'Deleting...' : 'Delete Forever'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Edit modal */}
       {editing && (
