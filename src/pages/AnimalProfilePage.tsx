@@ -151,6 +151,8 @@ export default function AnimalProfilePage() {
   const [showLogCare, setShowLogCare] = useState(false);
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
+  const [showDesktopOverflow, setShowDesktopOverflow] = useState(false);
+  const desktopOverflowRef = useRef<HTMLDivElement>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoResult, setGeoResult] = useState('');
   const [geoError, setGeoError] = useState('');
@@ -168,6 +170,18 @@ export default function AnimalProfilePage() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showOverflowMenu]);
+
+  // Close desktop overflow menu on outside click
+  useEffect(() => {
+    if (!showDesktopOverflow) return;
+    function handleClick(e: MouseEvent) {
+      if (desktopOverflowRef.current && !desktopOverflowRef.current.contains(e.target as Node)) {
+        setShowDesktopOverflow(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showDesktopOverflow]);
 
   useEffect(() => {
     if (id) loadAnimal(id);
@@ -554,7 +568,7 @@ export default function AnimalProfilePage() {
               <p className="text-sm text-muted font-mono">{animal.aao_id}</p>
             </div>
 
-            {/* Action buttons — desktop */}
+            {/* Action buttons — desktop: main row + three-dot overflow */}
             <div className="hidden md:flex gap-2">
               <button
                 onClick={() => setShowLogCare(true)}
@@ -564,20 +578,6 @@ export default function AnimalProfilePage() {
                 <Stethoscope className="w-4 h-4" strokeWidth={2} />
                 <span>Log Care</span>
               </button>
-              {navigator.geolocation && (
-                <button
-                  onClick={handleImWithAnimal}
-                  disabled={geoLoading}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sand border border-night/10 text-night font-medium hover:bg-night/5 transition-all text-sm disabled:opacity-50"
-                  aria-label="I'm with this animal"
-                >
-                  {geoLoading ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /><span>Getting location...</span></>
-                  ) : (
-                    <><MapPin className="w-4 h-4" strokeWidth={2} /><span>I'm With This Animal</span></>
-                  )}
-                </button>
-              )}
               <button
                 onClick={() => quickPhotoRef.current?.click()}
                 disabled={uploadingPhoto}
@@ -595,26 +595,48 @@ export default function AnimalProfilePage() {
                 <Edit3 className="w-4 h-4" strokeWidth={2} />
                 <span>Edit</span>
               </button>
-              {isAdmin && (
+              {/* Desktop three-dot overflow */}
+              <div className="relative" ref={desktopOverflowRef}>
                 <button
-                  onClick={() => setShowMerge(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium transition-all text-sm"
-                  aria-label="Merge duplicate"
+                  onClick={() => setShowDesktopOverflow(!showDesktopOverflow)}
+                  className="p-2 rounded-xl bg-sand hover:bg-night/8 transition-colors"
+                  aria-label="More actions"
                 >
-                  <GitMerge className="w-4 h-4" strokeWidth={2} />
-                  <span>Merge Duplicate</span>
+                  <MoreVertical className="w-5 h-5 text-night" />
                 </button>
-              )}
-              {isAdmin && (
-                <button
-                  onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); }}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ember/8 hover:bg-ember/15 text-ember font-medium transition-all text-sm"
-                  aria-label="Delete animal"
-                >
-                  <Trash2 className="w-4 h-4" strokeWidth={2} />
-                  <span>Delete</span>
-                </button>
-              )}
+                {showDesktopOverflow && (
+                  <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-night/10 py-1 z-50">
+                    {navigator.geolocation && (
+                      <button
+                        onClick={() => { handleImWithAnimal(); setShowDesktopOverflow(false); }}
+                        disabled={geoLoading}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-night hover:bg-sand/50 transition-colors disabled:opacity-50"
+                      >
+                        {geoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" strokeWidth={1.75} />}
+                        {geoLoading ? 'Getting location...' : "I'm With This Animal"}
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() => { setShowMerge(true); setShowDesktopOverflow(false); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors"
+                      >
+                        <GitMerge className="w-4 h-4" strokeWidth={1.75} />
+                        Merge Duplicate
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); setShowDesktopOverflow(false); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ember hover:bg-ember/5 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" strokeWidth={1.75} />
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Action buttons — mobile: three-dot overflow */}
@@ -627,17 +649,7 @@ export default function AnimalProfilePage() {
                 <MoreVertical className="w-5 h-5 text-night" />
               </button>
               {showOverflowMenu && (
-                <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-night/10 py-1 z-50">
-                  {navigator.geolocation && (
-                    <button
-                      onClick={() => { handleImWithAnimal(); setShowOverflowMenu(false); }}
-                      disabled={geoLoading}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-night hover:bg-sand/50 transition-colors disabled:opacity-50"
-                    >
-                      {geoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" strokeWidth={1.75} />}
-                      {geoLoading ? 'Getting location...' : "I'm With This Animal"}
-                    </button>
-                  )}
+                <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-night/10 py-1 z-50">
                   <button
                     onClick={() => { quickPhotoRef.current?.click(); setShowOverflowMenu(false); }}
                     disabled={uploadingPhoto}
@@ -671,14 +683,24 @@ export default function AnimalProfilePage() {
                       Delete
                     </button>
                   )}
+                  {navigator.geolocation && (
+                    <button
+                      onClick={() => { handleImWithAnimal(); setShowOverflowMenu(false); }}
+                      disabled={geoLoading}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-night hover:bg-sand/50 transition-colors disabled:opacity-50"
+                    >
+                      {geoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" strokeWidth={1.75} />}
+                      {geoLoading ? 'Getting location...' : "I'm With This Animal"}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Desktop GPS feedback */}
+          {/* GPS feedback — all screen sizes */}
           {(geoResult || geoError) && (
-            <div className="hidden md:block mt-2">
+            <div className="mt-2">
               {geoResult && (
                 <p className="text-xs text-primary flex items-center gap-1">
                   <Check className="w-3 h-3" />{geoResult}
