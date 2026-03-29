@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Search, Loader2, AlertTriangle, ArrowRight, Check, PawPrint, Stethoscope, StickyNote, Camera } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -36,7 +36,7 @@ type Step = 'search' | 'compare' | 'confirm';
 export default function MergeDuplicateModal({ animal, onClose, onMerged, preselectedId }: Props) {
   const { user } = useAuth();
   const [step, setStep] = useState<Step>('search');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(animal.name ?? '');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<(MergeAnimal & { aao_id: string })[]>([]);
   const [duplicate, setDuplicate] = useState<(MergeAnimal & MergeAnimalCounts) | null>(null);
@@ -44,6 +44,8 @@ export default function MergeDuplicateModal({ animal, onClose, onMerged, presele
   const [error, setError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [survivingCounts, setSurvivingCounts] = useState({ care_events: animal.care_events, field_notes: animal.field_notes, photos: animal.photos });
+  const [hasSearched, setHasSearched] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Load surviving animal's counts on mount
   useEffect(() => {
@@ -69,29 +71,31 @@ export default function MergeDuplicateModal({ animal, onClose, onMerged, presele
     }
   }, [preselectedId]);
 
-  async function handleSearch() {
-    const q = query.trim();
-    if (!q) return;
+  const runSearch = useCallback(async (q: string) => {
+    const trimmed = q.trim();
+    if (!trimmed) {
+      setResults([]);
+      return;
+    }
     setSearching(true);
     setError(null);
 
-    // Search by name or AAO ID
     const { data, error: err } = await supabase
       .from('animals')
       .select('id, aao_id, name, breed, sex, size_category, fixed_status, owner:owners(name), primary_location:locations(name)')
       .neq('id', animal.id)
       .eq('archived', false)
-      .or(`name.ilike.%${q}%,aao_id.ilike.%${q}%`)
+      .or(`name.ilike.%${trimmed}%,aao_id.ilike.%${trimmed}%`)
       .order('name')
       .limit(20);
 
     setSearching(false);
+    setHasSearched(true);
     if (err) {
       setError(err.message);
       return;
     }
 
-    // Get profile photos for results
     const ids = (data ?? []).map((a: any) => a.id);
     let photoMap: Record<string, string> = {};
     if (ids.length > 0) {
@@ -111,7 +115,25 @@ export default function MergeDuplicateModal({ animal, onClose, onMerged, presele
       primary_location: a.primary_location ?? null,
       profile_photo_url: photoMap[a.id] ?? null,
     })));
-  }
+  }, [animal.id]);
+
+  // Run search immediately on mount if animal has a name, then debounce on changes
+  useEffect(() => {
+    if (preselectedId) return; // skip search if pre-selecting
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setResults([]);
+      return;
+    }
+    clearTimeout(debounceRef.current);
+    // Immediate on first mount, debounced after
+    if (!hasSearched) {
+      runSearch(trimmed);
+    } else {
+      debounceRef.current = setTimeout(() => runSearch(trimmed), 300);
+    }
+    return () => clearTimeout(debounceRef.current);
+  }, [query, preselectedId]);
 
   async function selectDuplicate(id: string) {
     setError(null);
@@ -270,27 +292,19 @@ export default function MergeDuplicateModal({ animal, onClose, onMerged, presele
               <p className="text-sm text-muted">
                 Search for the duplicate record to merge into <strong>{animal.name ?? 'Unnamed'}</strong> ({animal.aao_id}).
               </p>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/50" />
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder="Name or AAO ID..."
-                    className="w-full pl-9 pr-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
-                    autoFocus
-                  />
-                </div>
-                <button
-                  onClick={handleSearch}
-                  disabled={!query.trim() || searching}
-                  className="px-4 py-2.5 bg-primary hover:bg-primary-hover text-white font-medium text-sm rounded-xl disabled:opacity-30 transition-all flex items-center gap-2"
-                >
-                  {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                  Search
-                </button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/50" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Name or AAO ID..."
+                  className="w-full pl-9 pr-9 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                  autoFocus
+                />
+                {searching && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted animate-spin" />
+                )}
               </div>
 
               {/* Results */}
@@ -324,7 +338,7 @@ export default function MergeDuplicateModal({ animal, onClose, onMerged, presele
                 </div>
               )}
 
-              {results.length === 0 && query && !searching && (
+              {results.length === 0 && hasSearched && !searching && (
                 <p className="text-sm text-muted text-center py-4">No matching animals found</p>
               )}
             </div>
