@@ -22,6 +22,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDate } from '../lib/format';
+import { EVENT_TYPE_CONFIG } from '../lib/constants';
 import FileAttachments from '../components/shared/FileAttachments';
 import MapIframe from '../components/shared/MapIframe';
 
@@ -77,14 +78,6 @@ const CARE_LABELS: Record<string, string> = {
   seen: 'Seen',
 };
 
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  monthly_outreach: 'Monthly Outreach',
-  spay_neuter_clinic: 'Spay/Neuter Clinic',
-  vaccination_clinic: 'Vaccination Clinic',
-  emergency: 'Emergency',
-  other: 'Outreach',
-  vet_visit: 'Vet Visit',
-};
 
 export default function EventSummaryPage() {
   const { id } = useParams<{ id: string }>();
@@ -104,6 +97,14 @@ export default function EventSummaryPage() {
   useEffect(() => {
     if (session && id) loadData();
   }, [session, id]);
+
+  useEffect(() => {
+    if (event) {
+      const loc = (Array.isArray(event.location) ? event.location[0] : event.location)?.name ?? 'Event';
+      document.title = `${loc} — ${formatDate(event.event_date)} | AAO Command Center`;
+    }
+    return () => { document.title = 'AAO Command Center'; };
+  }, [event]);
 
   async function loadData() {
     setLoading(true);
@@ -196,7 +197,8 @@ export default function EventSummaryPage() {
 
   const volunteerNames = volunteers.map((v) => v.user?.name ?? 'Unknown');
 
-  const eventTypeLabel = EVENT_TYPE_LABELS[event.event_type] || event.event_type.replace(/_/g, ' ');
+  const eventTypeConfig = EVENT_TYPE_CONFIG[event.event_type] ?? EVENT_TYPE_CONFIG.other;
+  const eventTypeLabel = eventTypeConfig.label;
 
   function buildEmailBody(): string {
     let body = `Event Summary\n\n`;
@@ -261,7 +263,7 @@ export default function EventSummaryPage() {
       <div className="bg-gradient-to-br from-night to-night/90 rounded-2xl p-5 mb-4 text-white shadow-[0_4px_20px_rgba(28,23,8,0.15)]">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <span className="inline-flex items-center gap-1 text-xs font-medium bg-white/15 backdrop-blur-sm rounded-full px-2.5 py-1 mb-2 capitalize">
+            <span className={`inline-flex items-center gap-1 text-xs font-semibold rounded-full px-2 py-0.5 mb-2 ${eventTypeConfig.bg} ${eventTypeConfig.text}`}>
               <CalendarHeart className="w-3 h-3" /> {eventTypeLabel}
             </span>
             <h1 className="text-xl font-heading font-bold">
@@ -354,7 +356,7 @@ export default function EventSummaryPage() {
       <EventTabs
         statItems={statItems}
         byOwner={byOwner}
-        notes={event.notes}
+        notes={event.notes?.replace(/^Historical:\s*/i, '') ?? null}
         eventId={event.id}
         sendEmailSummary={sendEmailSummary}
         emailing={emailing}

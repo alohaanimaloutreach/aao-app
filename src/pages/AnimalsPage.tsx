@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
+import { useEffect, useState, useMemo, useRef, lazy, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { PawPrint, List, Map, Loader2, Plus, X, Check, MapPin } from 'lucide-react';
+import { PawPrint, List, Map, Loader2, Plus, X, Check, MapPin, ArrowUpDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -31,6 +31,7 @@ interface RawAnimal {
   owner_id: string | null;
   primary_location_id: string | null;
   microchip_primary: string | null;
+  precise_lat: number | null;
   updated_at: string;
   owner: { name: string } | null;
   primary_location: { name: string } | null;
@@ -66,6 +67,26 @@ export default function AnimalsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  type SortOption = 'updated' | 'seen' | 'name' | 'not_seen';
+  const [sortBy, setSortBy] = useState<SortOption>(() =>
+    (localStorage.getItem('aao_animals_sort') as SortOption) || 'updated'
+  );
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showSortMenu) return;
+    function handleClick(e: MouseEvent) {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setShowSortMenu(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showSortMenu]);
+
+  useEffect(() => {
+    document.title = 'Animals | AAO Command Center';
+    return () => { document.title = 'AAO Command Center'; };
+  }, []);
 
   useEffect(() => {
     if (session) loadData();
@@ -76,7 +97,7 @@ export default function AnimalsPage() {
 
     let animalsQuery = supabase
       .from('animals')
-      .select('id, aao_id, name, animal_type, breed, sex, size_category, food_bag_size, urgent_medical, deceased, fixed_status, interested_in_fixing, archived, archived_at, owner_id, primary_location_id, microchip_primary, updated_at, owner:owners(name), primary_location:locations(name)')
+      .select('id, aao_id, name, animal_type, breed, sex, size_category, food_bag_size, urgent_medical, deceased, fixed_status, interested_in_fixing, archived, archived_at, owner_id, primary_location_id, microchip_primary, precise_lat, updated_at, owner:owners(name), primary_location:locations(name)')
       .order('updated_at', { ascending: false });
 
 
@@ -201,12 +222,42 @@ export default function AnimalsPage() {
     });
   }, [animals, situations, profilePhotos, filters, isAdmin]);
 
-  // Reset visible count when filters change
+  // Sort filtered results
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    switch (sortBy) {
+      case 'name':
+        arr.sort((a, b) => (a.name ?? 'zzz').localeCompare(b.name ?? 'zzz'));
+        break;
+      case 'seen':
+        arr.sort((a, b) => {
+          const da = lastSeenMap[a.id] ?? '';
+          const db = lastSeenMap[b.id] ?? '';
+          return db.localeCompare(da);
+        });
+        break;
+      case 'not_seen':
+        arr.sort((a, b) => {
+          const da = lastSeenMap[a.id] ?? '';
+          const db = lastSeenMap[b.id] ?? '';
+          // Empty (never seen) sorts first, then oldest first
+          if (!da && !db) return 0;
+          if (!da) return -1;
+          if (!db) return 1;
+          return da.localeCompare(db);
+        });
+        break;
+      // 'updated' is default from DB order — no re-sort needed
+    }
+    return arr;
+  }, [filtered, sortBy, lastSeenMap]);
+
+  // Reset visible count when filters or sort change
   useEffect(() => {
     setPage(0);
-  }, [filters]);
+  }, [filters, sortBy]);
 
-  const visible = filtered;
+  const visible = sorted;
 
   // Build location coordinate lookup
   const locCoords = useMemo(() => {
@@ -264,8 +315,8 @@ export default function AnimalsPage() {
   }
 
   // Split active vs archived
-  const activeFiltered = filtered.filter((a) => !a.archived);
-  const archivedFiltered = filtered.filter((a) => a.archived);
+  const activeFiltered = sorted.filter((a) => !a.archived);
+  const archivedFiltered = sorted.filter((a) => a.archived);
 
   // Group archived by month
   const archivedByMonth = useMemo(() => {
@@ -315,6 +366,7 @@ export default function AnimalsPage() {
     current_situation: situations[a.id] ?? null,
     last_seen: lastSeenMap[a.id] ?? null,
     profile_photo_url: profilePhotos[a.id] ?? null,
+    has_precise_location: !!a.precise_lat,
   }));
 
   async function handleCardToggle(id: string, field: 'urgent_medical' | 'interested_in_fixing', value: any) {
@@ -351,8 +403,40 @@ export default function AnimalsPage() {
         filters={filters}
         onChange={(f) => setFilters(f)}
         locations={locations}
-        resultCount={filtered.length}
+        resultCount={sorted.length}
       />
+
+      {/* Sort control */}
+      <div className="flex items-center justify-between mt-3 mb-2">
+        <p className="text-sm text-muted">{sorted.length} animal{sorted.length !== 1 ? 's' : ''}</p>
+        <div className="relative" ref={sortRef}>
+          <button
+            onClick={() => setShowSortMenu(!showSortMenu)}
+            className="flex items-center gap-1.5 text-sm text-muted hover:text-night bg-white border border-night/10 rounded-lg px-2.5 py-1.5 transition-colors"
+          >
+            <ArrowUpDown className="w-3.5 h-3.5" />
+            {{ updated: 'Recently Updated', seen: 'Recently Seen', name: 'Name A\u2013Z', not_seen: 'Not Seen Longest' }[sortBy]}
+          </button>
+          {showSortMenu && (
+            <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-night/10 py-1 z-50">
+              {([
+                ['updated', 'Recently Updated'],
+                ['seen', 'Recently Seen'],
+                ['name', 'Name A\u2013Z'],
+                ['not_seen', 'Not Seen Longest'],
+              ] as [SortOption, string][]).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => { setSortBy(key); localStorage.setItem('aao_animals_sort', key); setShowSortMenu(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm transition-colors ${sortBy === key ? 'text-primary font-medium bg-primary/5' : 'text-night hover:bg-sand/50'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-4">
@@ -398,8 +482,10 @@ export default function AnimalsPage() {
           <EmptyState
             icon={PawPrint}
             title="No animals found"
-            description={filters.search ? 'Try a different search or adjust your filters' : 'No animals match the current filters'}
+            description={filters.search ? `No results for "${filters.search}" — try a different name, AAO ID, or owner` : 'No animals match the current filters — try adjusting your filters'}
             iconColor="text-primary"
+            actionLabel={filters.search ? 'Clear search' : 'Clear filters'}
+            onAction={() => setFilters({ ...DEFAULT_FILTERS })}
           />
         </div>
       ) : (
@@ -448,6 +534,7 @@ export default function AnimalsPage() {
                         current_situation: situations[a.id] ?? null,
                         last_seen: lastSeenMap[a.id] ?? null,
                         profile_photo_url: profilePhotos[a.id] ?? null,
+                        has_precise_location: !!a.precise_lat,
                       }} />
                     ))}
                   </div>

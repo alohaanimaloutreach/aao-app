@@ -52,6 +52,11 @@ export default function FlagsPage() {
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
+    document.title = 'Flagged Records | AAO Command Center';
+    return () => { document.title = 'AAO Command Center'; };
+  }, []);
+
+  useEffect(() => {
     if (session) loadFlags();
   }, [session]);
 

@@ -51,11 +51,11 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="group hidden md:flex flex-col w-16 hover:w-56 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] text-white h-screen fixed left-0 top-0 z-40 overflow-hidden bg-night shadow-[4px_0_24px_rgba(28,23,8,0.15)]" role="navigation" aria-label="Sidebar navigation">
+    <aside className="group hidden md:flex flex-col w-16 hover:w-56 transition-all duration-150 ease-out text-white h-screen fixed left-0 top-0 z-40 overflow-hidden bg-night shadow-[4px_0_24px_rgba(28,23,8,0.15)]" role="navigation" aria-label="Sidebar navigation">
       {/* Logo */}
       <div className="flex items-center h-16 px-4 border-b border-white/8 shrink-0">
         <img src="/logo-white.png" alt="AAO" className="w-8 h-8 rounded-lg shrink-0" />
-        <span className="ml-3 font-heading font-bold text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <span className="ml-3 font-heading font-bold text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
           AAO
         </span>
       </div>
@@ -76,7 +76,7 @@ export default function Sidebar() {
             }
           >
             <item.icon className="w-5 h-5 shrink-0" strokeWidth={1.75} />
-            <span className="ml-3 text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <span className="ml-3 text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
               {item.label}
             </span>
           </NavLink>
@@ -94,7 +94,7 @@ export default function Sidebar() {
             }
           >
             <BarChart3 className="w-5 h-5 shrink-0" strokeWidth={1.75} />
-            <span className="ml-3 text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <span className="ml-3 text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
               Reports
             </span>
           </NavLink>
@@ -112,7 +112,7 @@ export default function Sidebar() {
             }
           >
             <UserCog className="w-5 h-5 shrink-0" strokeWidth={1.75} />
-            <span className="ml-3 text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <span className="ml-3 text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
               Users
             </span>
           </NavLink>
@@ -127,7 +127,7 @@ export default function Sidebar() {
             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-[11px] font-bold shrink-0 shadow-sm">
               {profile.name.charAt(0)}
             </div>
-            <div className="ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
+            <div className="ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150 overflow-hidden">
               <p className="text-xs font-medium text-white/70 whitespace-nowrap truncate">{profile.name}</p>
               <p className="text-xs text-white/30 whitespace-nowrap truncate capitalize">{profile.role}</p>
             </div>
@@ -138,7 +138,7 @@ export default function Sidebar() {
           className="flex items-center h-11 px-3 rounded-lg text-white/40 hover:text-white hover:bg-white/8 transition-all duration-150 w-full"
         >
           <KeyRound className="w-5 h-5 shrink-0" strokeWidth={1.75} />
-          <span className="ml-3 text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span className="ml-3 text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
             Change Password
           </span>
         </button>
@@ -147,7 +147,7 @@ export default function Sidebar() {
           className="flex items-center h-11 px-3 rounded-lg text-white/40 hover:text-white hover:bg-white/8 transition-all duration-150 w-full"
         >
           <LogOut className="w-5 h-5 shrink-0" strokeWidth={1.75} />
-          <span className="ml-3 text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span className="ml-3 text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
             Sign out
           </span>
         </button>

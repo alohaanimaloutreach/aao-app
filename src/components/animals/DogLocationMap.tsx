@@ -17,25 +17,40 @@ interface Props {
   animalId: string;
   primaryLocationId: string | null;
   ownerId: string | null;
+  preciseLat?: number | null;
+  preciseLng?: number | null;
 }
 
 // Lazy-loaded inner map to avoid Leaflet SSR/bundler issues
 const MapInner = lazy(() => import('./DogLocationMapInner'));
 
-export default function DogLocationMap({ animalId, primaryLocationId, ownerId }: Props) {
+export default function DogLocationMap({ animalId, primaryLocationId, ownerId, preciseLat, preciseLng }: Props) {
   const [pins, setPins] = useState<LocationPin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadLocations();
-  }, [animalId]);
+  }, [animalId, preciseLat, preciseLng]);
 
   async function loadLocations() {
     setLoading(true);
     setError(null);
     try {
       const allPins: LocationPin[] = [];
+
+      // 0. Precise GPS pin (from "I'm With This Animal")
+      if (preciseLat && preciseLng) {
+        allPins.push({
+          id: 'precise-animal',
+          type: 'home',
+          label: 'Precise Location',
+          detail: `${Number(preciseLat).toFixed(5)}, ${Number(preciseLng).toFixed(5)}`,
+          date: null,
+          lat: Number(preciseLat),
+          lng: Number(preciseLng),
+        });
+      }
 
       // 1. Primary location
       if (primaryLocationId) {

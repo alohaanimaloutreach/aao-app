@@ -58,3 +58,7 @@ export function isValidPhone(value: string): boolean {
   const digits = value.replace(/\D/g, '');
   return digits.length === 10;
 }
+
+export function looksLikeCoordinates(str: string): boolean {
+  return /^-?\d{1,3}\.\d+,\s*-?\d{1,3}\.\d+$/.test(str.trim());
+}

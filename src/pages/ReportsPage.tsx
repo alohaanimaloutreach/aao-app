@@ -22,6 +22,11 @@ export default function ReportsPage() {
   const [impactStats, setImpactStats] = useState<{ events: number; sn: number; food: number } | null>(null);
 
   useEffect(() => {
+    document.title = 'Reports | AAO Command Center';
+    return () => { document.title = 'AAO Command Center'; };
+  }, []);
+
+  useEffect(() => {
     async function loadStats() {
       const [eventsRes, snRes, foodRes] = await Promise.all([
         supabase.from('outreach_events').select('id', { count: 'exact', head: true }),

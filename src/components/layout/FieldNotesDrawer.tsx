@@ -22,6 +22,8 @@ export default function FieldNotesDrawer({ open, onClose }: Props) {
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef<number | null>(null);
 
   // Linked records
   const [animalId, setAnimalId] = useState<string | null>(null);
@@ -63,6 +65,27 @@ export default function FieldNotesDrawer({ open, onClose }: Props) {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [open, onClose, linking]);
+
+  // Swipe down to close
+  useEffect(() => {
+    const el = drawerRef.current;
+    if (!open || !el) return;
+    function onTouchStart(e: TouchEvent) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+    function onTouchEnd(e: TouchEvent) {
+      if (touchStartY.current === null) return;
+      const delta = e.changedTouches[0].clientY - touchStartY.current;
+      touchStartY.current = null;
+      if (delta > 80) onClose();
+    }
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [open, onClose]);
 
   // Search for linkable records
   useEffect(() => {
@@ -124,12 +147,19 @@ export default function FieldNotesDrawer({ open, onClose }: Props) {
       {open && <div className="fixed inset-0 drawer-backdrop z-50" onClick={onClose} />}
 
       <div
+        ref={drawerRef}
         role="dialog"
         aria-label="Field notes"
         aria-modal="true"
         className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-[-8px_0_30px_rgba(28,23,8,0.12)] z-50 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${open ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
+          {/* Mobile handle bar */}
+          <div className="md:hidden pt-2.5 pb-1 flex flex-col items-center shrink-0">
+            <div className="w-10 h-1 bg-night/20 rounded-full" />
+            <span className="text-xs text-muted mt-1">Swipe down to close</span>
+          </div>
+
           {/* Header */}
           <div className="flex items-center justify-between px-5 h-14 border-b border-night/5 shrink-0">
             <div className="flex items-center gap-2.5">
@@ -138,7 +168,7 @@ export default function FieldNotesDrawer({ open, onClose }: Props) {
               </div>
               <h2 className="font-heading font-bold text-night text-base">New Note</h2>
             </div>
-            <button onClick={onClose} className="p-2.5 rounded-lg text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close field notes">
+            <button onClick={onClose} className="p-3 -mr-1 rounded-xl text-muted hover:text-night hover:bg-sand transition-all" aria-label="Close field notes">
               <X className="w-5 h-5" strokeWidth={1.75} />
             </button>
           </div>

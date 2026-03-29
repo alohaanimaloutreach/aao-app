@@ -27,6 +27,10 @@ import {
   Search,
   Plus,
   Trash2,
+  MoreVertical,
+  Navigation,
+  ExternalLink,
+  Crosshair,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatDate, daysSince } from '../lib/format';
@@ -72,6 +76,8 @@ interface AnimalDetail {
   archived: boolean;
   created_at: string;
   updated_at: string;
+  precise_lat: number | null;
+  precise_lng: number | null;
   owner: { id: string; name: string; phone_primary: string | null } | null;
   primary_location: { id: string; name: string } | null;
   transfer_rescue: { name: string } | null;
@@ -141,10 +147,35 @@ export default function AnimalProfilePage() {
   const [newLocAddress, setNewLocAddress] = useState('');
   const [creatingLocation, setCreatingLocation] = useState(false);
   const [showLogCare, setShowLogCare] = useState(false);
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
+  const overflowRef = useRef<HTMLDivElement>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoResult, setGeoResult] = useState('');
+  const [geoError, setGeoError] = useState('');
+
+  // Close overflow menu on outside click
+  useEffect(() => {
+    if (!showOverflowMenu) return;
+    function handleClick(e: MouseEvent) {
+      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
+        setShowOverflowMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showOverflowMenu]);
 
   useEffect(() => {
     if (id) loadAnimal(id);
   }, [id]);
+
+  useEffect(() => {
+    if (animal) {
+      const typeLabel = animal.animal_type === 'cat' ? 'Cat' : animal.animal_type === 'dog' ? 'Dog' : 'Animal';
+      document.title = `${animal.name ?? 'Unnamed'} (${typeLabel}) | AAO`;
+    }
+    return () => { document.title = 'AAO Command Center'; };
+  }, [animal]);
 
   async function loadAnimal(animalId: string) {
     setLoading(true);
@@ -218,6 +249,8 @@ export default function AnimalProfilePage() {
       medical_notes: animal.medical_notes ?? '',
       primary_location_id: animal.primary_location?.id ?? '',
       primary_location_name: animal.primary_location?.name ?? '',
+      precise_lat: animal.precise_lat ?? '',
+      precise_lng: animal.precise_lng ?? '',
     });
     setEditError('');
     setPhotoFile(null);
@@ -262,6 +295,62 @@ export default function AnimalProfilePage() {
     setEditLocationSearch('');
     setNewLocName('');
     setNewLocAddress('');
+  }
+
+  function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371000;
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  async function handleImWithAnimal() {
+    if (!animal) return;
+    setGeoLoading(true);
+    setGeoError('');
+    setGeoResult('');
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+
+        const update: Record<string, any> = { precise_lat: lat, precise_lng: lng };
+
+        // Also tag nearest named location if within 300m
+        const { data: locs } = await supabase
+          .from('locations')
+          .select('id, name, latitude, longitude')
+          .eq('archived', false)
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null);
+
+        if (locs && locs.length > 0) {
+          let nearest: { id: string; name: string; distance: number } | null = null;
+          for (const loc of locs) {
+            const dist = haversineMeters(lat, lng, Number(loc.latitude), Number(loc.longitude));
+            if (!nearest || dist < nearest.distance) {
+              nearest = { id: loc.id, name: loc.name, distance: dist };
+            }
+          }
+          if (nearest && nearest.distance <= 300) {
+            update.primary_location_id = nearest.id;
+          }
+        }
+
+        await supabase.from('animals').update(update).eq('id', animal.id);
+        setGeoResult(`Location saved — ${lat}, ${lng}`);
+        setGeoLoading(false);
+        loadAnimal(animal.id);
+      },
+      () => {
+        setGeoError('Could not get location — check browser permissions');
+        setGeoLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   }
 
   function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -349,6 +438,8 @@ export default function AnimalProfilePage() {
       general_notes: editData.general_notes || null,
       medical_notes: editData.medical_notes || null,
       primary_location_id: editData.primary_location_id || null,
+      precise_lat: editData.precise_lat ? Number(editData.precise_lat) : null,
+      precise_lng: editData.precise_lng ? Number(editData.precise_lng) : null,
     }).eq('id', animal.id);
     setEditSaving(false);
     if (error) {
@@ -459,8 +550,8 @@ export default function AnimalProfilePage() {
               <p className="text-sm text-muted font-mono">{animal.aao_id}</p>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-2">
+            {/* Action buttons — desktop */}
+            <div className="hidden md:flex gap-2">
               <button
                 onClick={() => setShowLogCare(true)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-semibold shadow-[0_2px_8px_rgba(110,168,50,0.25)] transition-all text-sm"
@@ -482,14 +573,6 @@ export default function AnimalProfilePage() {
                 )}
                 <span>{uploadingPhoto ? 'Uploading...' : 'Add Photo'}</span>
               </button>
-              <input
-                ref={quickPhotoRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleQuickPhoto}
-                className="hidden"
-              />
               <button onClick={openEdit} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-all text-sm" aria-label="Edit animal">
                 <Edit3 className="w-4 h-4" strokeWidth={2} />
                 <span>Edit</span>
@@ -505,14 +588,98 @@ export default function AnimalProfilePage() {
                 </button>
               )}
             </div>
+
+            {/* Action buttons — mobile: three-dot overflow */}
+            <div className="flex md:hidden relative" ref={overflowRef}>
+              <button
+                onClick={() => setShowOverflowMenu(!showOverflowMenu)}
+                className="p-2 rounded-xl bg-sand hover:bg-night/8 transition-colors"
+                aria-label="More actions"
+              >
+                <MoreVertical className="w-5 h-5 text-night" />
+              </button>
+              {showOverflowMenu && (
+                <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-night/10 py-1 z-50">
+                  <button
+                    onClick={() => { quickPhotoRef.current?.click(); setShowOverflowMenu(false); }}
+                    disabled={uploadingPhoto}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-night hover:bg-sand/50 transition-colors"
+                  >
+                    {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" strokeWidth={1.75} />}
+                    {uploadingPhoto ? 'Uploading...' : 'Add Photo'}
+                  </button>
+                  <button
+                    onClick={() => { openEdit(); setShowOverflowMenu(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-night hover:bg-sand/50 transition-colors"
+                  >
+                    <Edit3 className="w-4 h-4" strokeWidth={1.75} />
+                    Edit
+                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); setShowOverflowMenu(false); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ember hover:bg-ember/5 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" strokeWidth={1.75} />
+                      Delete
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Mobile full-width Log Care button */}
+          <button
+            onClick={() => setShowLogCare(true)}
+            className="md:hidden w-full flex items-center justify-center gap-2 px-4 py-3 mt-3 rounded-xl bg-primary hover:bg-primary-hover text-white font-semibold shadow-[0_2px_8px_rgba(110,168,50,0.25)] transition-all text-sm"
+            aria-label="Log care"
+          >
+            <Stethoscope className="w-4 h-4" strokeWidth={2} />
+            Log Care
+          </button>
+
+          {/* Mobile "I'm With This Animal" GPS button */}
+          {navigator.geolocation && (
+            <div className="md:hidden mt-2">
+              <button
+                onClick={handleImWithAnimal}
+                disabled={geoLoading}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-sand border border-night/10 text-night text-sm font-medium hover:bg-night/5 transition-all disabled:opacity-50"
+              >
+                {geoLoading ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />Getting location...</>
+                ) : (
+                  <><MapPin className="w-4 h-4" strokeWidth={2} />I'm With This Animal</>
+                )}
+              </button>
+              {geoResult && (
+                <p className="text-xs text-primary mt-1.5 flex items-center gap-1">
+                  <Check className="w-3 h-3" />{geoResult}
+                </p>
+              )}
+              {geoError && (
+                <p className="text-xs text-ember mt-1.5">{geoError}</p>
+              )}
+            </div>
+          )}
+
+          {/* Hidden file input for photo upload */}
+          <input
+            ref={quickPhotoRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleQuickPhoto}
+            className="hidden"
+          />
 
           {/* Key info */}
           <div className="flex flex-wrap items-center gap-2 mt-3">
             {/* Status — tappable to change */}
             <button
               onClick={() => setShowStatusPicker(true)}
-              className="inline-flex items-center gap-1.5 text-xs bg-sand hover:bg-night/8 rounded-full px-2.5 py-1 transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm bg-sand border border-night/10 hover:bg-night/8 rounded-full px-3 py-1.5 transition-colors"
             >
               {activeSituation ? (
                 <StatusBadge status={activeSituation.status} size="sm" />
@@ -557,15 +724,17 @@ export default function AnimalProfilePage() {
                   await supabase.from('animals').update({ urgent_medical: newVal }).eq('id', animal.id);
                   if (id) loadAnimal(id);
                 }}
-                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+                className={`inline-flex items-center gap-2 text-sm font-semibold pl-3 pr-2 py-1.5 rounded-full border transition-all cursor-pointer ${
                   animal.urgent_medical
-                    ? 'bg-ember/10 border-ember/30 text-ember'
-                    : 'bg-white border-night/10 text-muted hover:border-ember/30 hover:text-ember'
+                    ? 'bg-ember/10 border-ember/30 text-ember shadow-[0_1px_4px_rgba(200,80,40,0.15)] hover:ring-2 hover:ring-ember/20 hover:ring-offset-1'
+                    : 'bg-white border-night/10 text-muted hover:border-ember/30 hover:text-ember hover:ring-2 hover:ring-ember/10 hover:ring-offset-1'
                 }`}
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Urgent Medical
-                {animal.urgent_medical ? ' ON' : ''}
+                <span className={`relative inline-flex items-center w-7 h-4 rounded-full transition-colors ${animal.urgent_medical ? 'bg-ember' : 'bg-night/15'}`}>
+                  <span className={`absolute w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${animal.urgent_medical ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                </span>
               </button>
               <button
                 onClick={async () => {
@@ -573,15 +742,17 @@ export default function AnimalProfilePage() {
                   await supabase.from('animals').update({ interested_in_fixing: newVal }).eq('id', animal.id);
                   if (id) loadAnimal(id);
                 }}
-                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+                className={`inline-flex items-center gap-2 text-sm font-semibold pl-3 pr-2 py-1.5 rounded-full border transition-all cursor-pointer ${
                   animal.interested_in_fixing === 'interested'
-                    ? 'bg-primary/10 border-primary/30 text-primary'
-                    : 'bg-white border-night/10 text-muted hover:border-primary/30 hover:text-primary'
+                    ? 'bg-primary/10 border-primary/30 text-primary shadow-[0_1px_4px_rgba(110,168,50,0.15)] hover:ring-2 hover:ring-primary/20 hover:ring-offset-1'
+                    : 'bg-white border-night/10 text-muted hover:border-primary/30 hover:text-primary hover:ring-2 hover:ring-primary/10 hover:ring-offset-1'
                 }`}
               >
                 <Scissors className="w-3.5 h-3.5" />
-                Ready for S/N
-                {animal.interested_in_fixing === 'interested' ? ' ON' : ''}
+                S/N Ready
+                <span className={`relative inline-flex items-center w-7 h-4 rounded-full transition-colors ${animal.interested_in_fixing === 'interested' ? 'bg-primary' : 'bg-night/15'}`}>
+                  <span className={`absolute w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${animal.interested_in_fixing === 'interested' ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                </span>
               </button>
             </div>
           )}
@@ -685,6 +856,8 @@ export default function AnimalProfilePage() {
             animalId={animal.id}
             primaryLocationId={animal.primary_location?.id ?? null}
             ownerId={animal.owner?.id ?? null}
+            preciseLat={animal.precise_lat}
+            preciseLng={animal.precise_lng}
           />
         )}
 
@@ -841,6 +1014,84 @@ export default function AnimalProfilePage() {
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* Precise Pin Location */}
+              <div>
+                <label className="block text-sm font-medium text-muted mb-1">Precise Pin Location</label>
+                {editData.precise_lat && editData.precise_lng ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night">
+                      <div className="flex items-center gap-1.5">
+                        <Crosshair className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span>{Number(editData.precise_lat).toFixed(5)}, {Number(editData.precise_lng).toFixed(5)}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditData({ ...editData, precise_lat: '', precise_lng: '' })}
+                      className="px-3 py-2.5 text-xs font-medium text-ember bg-ember/10 hover:bg-ember/15 rounded-xl transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {navigator.geolocation && (
+                      <div className="mb-2">
+                        <button
+                          type="button"
+                          disabled={geoLoading}
+                          onClick={() => {
+                            setGeoLoading(true);
+                            setGeoError('');
+                            navigator.geolocation.getCurrentPosition(
+                              (pos) => {
+                                setEditData((prev: any) => ({
+                                  ...prev,
+                                  precise_lat: pos.coords.latitude.toFixed(6),
+                                  precise_lng: pos.coords.longitude.toFixed(6),
+                                }));
+                                setGeoLoading(false);
+                              },
+                              () => {
+                                setGeoError('Could not get location — check browser permissions');
+                                setGeoLoading(false);
+                              },
+                              { enableHighAccuracy: true, timeout: 10000 }
+                            );
+                          }}
+                          className="inline-flex items-center gap-1.5 bg-primary/10 text-primary rounded-xl px-3 py-2 text-sm font-medium hover:bg-primary/15 transition-colors disabled:opacity-50"
+                        >
+                          <Navigation className="w-3.5 h-3.5" strokeWidth={2} />
+                          {geoLoading ? 'Getting location...' : 'Use My Location'}
+                        </button>
+                        {geoError && (
+                          <p className="text-xs text-ember mt-1">{geoError}</p>
+                        )}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        step="any"
+                        value={editData.precise_lat}
+                        onChange={(e) => setEditData({ ...editData, precise_lat: e.target.value })}
+                        placeholder="Latitude"
+                        className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                      />
+                      <input
+                        type="number"
+                        step="any"
+                        value={editData.precise_lng}
+                        onChange={(e) => setEditData({ ...editData, precise_lng: e.target.value })}
+                        placeholder="Longitude"
+                        className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                      />
+                    </div>
+                  </>
+                )}
+                <p className="text-xs text-muted mt-1">Tap 'Use My Location' while with the animal to set their precise spot.</p>
               </div>
 
               {/* Photo upload */}
@@ -1108,6 +1359,26 @@ function DetailsTab({ animal, situations }: { animal: AnimalDetail; situations: 
             <Link to={`/locations/${animal.primary_location.id}`} className="text-sm font-medium text-night hover:text-primary transition-colors">
               {animal.primary_location.name}
             </Link>
+          </div>
+        )}
+        {animal.precise_lat && animal.precise_lng && (
+          <div className="flex items-center gap-3 py-2">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Navigation className="w-4 h-4 text-primary" strokeWidth={1.5} />
+            </div>
+            <div>
+              <p className="text-sm text-night">
+                Last seen at: {animal.precise_lat.toFixed(5)}, {animal.precise_lng.toFixed(5)}
+              </p>
+              <a
+                href={`https://maps.google.com/?q=${animal.precise_lat},${animal.precise_lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-0.5"
+              >
+                Open in Maps <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           </div>
         )}
         {animal.transfer_rescue && (

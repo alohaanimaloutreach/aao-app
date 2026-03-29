@@ -47,3 +47,12 @@ export const TIMELINE_ICON_CONFIG: Record<string, { bg: string; text: string }> 
 
 // How many days before "haven't seen" alert
 export const HAVENT_SEEN_DAYS = 60;
+
+export const EVENT_TYPE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
+  monthly_outreach:    { label: 'Monthly Outreach',    bg: 'bg-primary/10',  text: 'text-primary' },
+  spay_neuter_clinic:  { label: 'Spay/Neuter Clinic',  bg: 'bg-sky-100',     text: 'text-sky-700' },
+  vaccination_clinic:  { label: 'Vaccination Clinic',   bg: 'bg-gold/20',     text: 'text-night' },
+  emergency:           { label: 'Emergency',            bg: 'bg-ember/12',    text: 'text-ember' },
+  vet_visit:           { label: 'Vet Visit',            bg: 'bg-indigo-50',   text: 'text-indigo-700' },
+  other:               { label: 'Other',                bg: 'bg-night/8',     text: 'text-muted' },
+};

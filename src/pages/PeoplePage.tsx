@@ -14,6 +14,7 @@ const MapInner = lazy(() => import('../components/animals/DogLocationMapInner'))
 interface RawOwner {
   id: string;
   name: string;
+  nickname: string | null;
   phone_primary: string | null;
   phone_secondary: string | null;
   address: string | null;
@@ -44,6 +45,11 @@ export default function PeoplePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    document.title = 'People | AAO Command Center';
+    return () => { document.title = 'AAO Command Center'; };
+  }, []);
+
+  useEffect(() => {
     if (session) loadData();
   }, [session]);
 
@@ -52,7 +58,7 @@ export default function PeoplePage() {
 
     let ownersQuery = supabase
       .from('owners')
-      .select('id, name, phone_primary, phone_secondary, address, primary_location_id, archived, archived_at, primary_location:locations(name)')
+      .select('id, name, nickname, phone_primary, phone_secondary, address, primary_location_id, archived, archived_at, primary_location:locations(name)')
       .order('name');
 
 
@@ -109,7 +115,7 @@ export default function PeoplePage() {
 
       if (filters.search) {
         const q = filters.search.toLowerCase();
-        const fields = [o.name, o.phone_primary, o.phone_secondary, o.address, o.primary_location?.name];
+        const fields = [o.name, o.nickname, o.phone_primary, o.phone_secondary, o.address, o.primary_location?.name];
         if (!fields.some((f) => f?.toLowerCase().includes(q))) return false;
       }
 
@@ -143,6 +149,7 @@ export default function PeoplePage() {
   const cardData: PersonCardData[] = paginated.map((o) => ({
     id: o.id,
     name: o.name,
+    nickname: o.nickname,
     phone_primary: o.phone_primary,
     primary_location: o.primary_location,
     animal_count: animalCounts[o.id] ?? 0,
@@ -270,8 +277,10 @@ export default function PeoplePage() {
           <EmptyState
             icon={Users}
             title="No people found"
-            description={filters.search ? 'Try a different search or adjust your filters' : 'No people match the current filters'}
+            description={filters.search ? `No results for "${filters.search}" — try a different name, phone number, or location` : 'No people match the current filters — try adjusting your filters'}
             iconColor="text-night"
+            actionLabel={filters.search ? 'Clear search' : 'Clear filters'}
+            onAction={() => setFilters({ ...DEFAULT_PEOPLE_FILTERS })}
           />
         </div>
       ) : (
@@ -306,6 +315,7 @@ export default function PeoplePage() {
                       <PersonCard key={o.id} person={{
                         id: o.id,
                         name: o.name,
+                        nickname: o.nickname,
                         phone_primary: o.phone_primary,
                         primary_location: o.primary_location,
                         animal_count: animalCounts[o.id] ?? 0,

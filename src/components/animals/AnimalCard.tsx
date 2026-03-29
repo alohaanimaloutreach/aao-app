@@ -21,6 +21,7 @@ export interface AnimalCardData {
   current_situation: { status: string } | null;
   last_seen: string | null;
   profile_photo_url: string | null;
+  has_precise_location?: boolean;
 }
 
 interface Props {
@@ -125,6 +126,12 @@ export default function AnimalCard({ animal, onToggle }: Props) {
             <div className="flex items-center gap-1.5 text-sm text-muted">
               <MapPin className="w-3 h-3 shrink-0" />
               <span className="truncate">{animal.primary_location.name}</span>
+            </div>
+          )}
+          {animal.has_precise_location && (
+            <div className="flex items-center gap-1.5 text-xs text-primary">
+              <MapPin className="w-3 h-3 shrink-0" />
+              <span>Precise location recorded</span>
             </div>
           )}
           {animal.last_seen && (

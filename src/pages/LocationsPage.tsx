@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, List, Map, Loader2, Plus, X, Check } from 'lucide-react';
+import { MapPin, List, Map, Loader2, Plus, X, Check, ChevronDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import LocationCard, { type LocationCardData } from '../components/locations/LocationCard';
@@ -13,6 +13,7 @@ const MapInner = lazy(() => import('../components/animals/DogLocationMapInner'))
 interface RawLocation {
   id: string;
   name: string;
+  alternate_name: string | null;
   address: string | null;
   precise_location: string | null;
   status: string;
@@ -37,7 +38,13 @@ export default function LocationsPage() {
   const [newLocName, setNewLocName] = useState('');
   const [newLocAddress, setNewLocAddress] = useState('');
   const [addSubmitting, setAddSubmitting] = useState(false);
+  const [showOtherLocations, setShowOtherLocations] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = 'Locations | AAO Command Center';
+    return () => { document.title = 'AAO Command Center'; };
+  }, []);
 
   useEffect(() => {
     if (session) loadData();
@@ -49,7 +56,7 @@ export default function LocationsPage() {
     const [locRes, animalRes, ownerRes, outreachRes] = await Promise.all([
       supabase
         .from('locations')
-        .select('id, name, address, precise_location, status, latitude, longitude, archived, archived_at')
+        .select('id, name, alternate_name, address, precise_location, status, latitude, longitude, archived, archived_at')
         .order('name'),
       supabase
         .from('animals')
@@ -103,7 +110,7 @@ export default function LocationsPage() {
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const statusLabel = l.status === 'active' ? 'Active' : l.status === 'cleared' ? 'Cleared' : l.status === 'unknown' ? 'Unknown' : l.status;
-        const fields = [l.name, l.address, l.precise_location, statusLabel];
+        const fields = [l.name, l.alternate_name, l.address, l.precise_location, statusLabel];
         if (!fields.some((f) => f?.toLowerCase().includes(q))) return false;
       }
       return true;
@@ -134,6 +141,7 @@ export default function LocationsPage() {
   const allCardData: LocationCardData[] = activeFiltered.map((l) => ({
     id: l.id,
     name: l.name,
+    alternate_name: l.alternate_name,
     address: l.address,
     precise_location: l.precise_location,
     status: l.status,
@@ -144,7 +152,10 @@ export default function LocationsPage() {
     last_visited: lastVisitedMap[l.id] ?? null,
   })).sort((a, b) => (b.animal_count + b.owner_count) - (a.animal_count + a.owner_count));
 
-  const cardData = allCardData.slice(page * pageSize, (page + 1) * pageSize);
+  const activeCards = allCardData.filter((l) => l.animal_count > 0 || l.owner_count > 0);
+  const otherCards = allCardData.filter((l) => l.animal_count === 0 && l.owner_count === 0);
+
+  const cardData = activeCards.slice(page * pageSize, (page + 1) * pageSize);
 
   const mapPins = useMemo(() => {
     return filtered
@@ -255,10 +266,41 @@ export default function LocationsPage() {
           <Pagination
             page={page}
             pageSize={pageSize}
-            totalItems={activeFiltered.length}
+            totalItems={activeCards.length}
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
           />
+
+          {/* Other locations — 0 animals, 0 owners */}
+          {otherCards.length > 0 && (
+            <div className="mt-6">
+              {/* Mobile: collapsible toggle */}
+              <button
+                onClick={() => setShowOtherLocations(!showOtherLocations)}
+                className="md:hidden flex items-center gap-2 text-sm text-muted hover:text-night transition-colors mb-3"
+              >
+                <span className="h-px flex-1 bg-night/10" />
+                <span className="flex items-center gap-1 shrink-0">
+                  Show {otherCards.length} other location{otherCards.length !== 1 ? 's' : ''}
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showOtherLocations ? 'rotate-180' : ''}`} />
+                </span>
+                <span className="h-px flex-1 bg-night/10" />
+              </button>
+
+              {/* Desktop: always visible label */}
+              <div className="hidden md:flex items-center gap-3 mb-3">
+                <span className="h-px flex-1 bg-night/10" />
+                <span className="text-xs font-semibold text-muted uppercase tracking-wide shrink-0">Other Locations</span>
+                <span className="h-px flex-1 bg-night/10" />
+              </div>
+
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 opacity-60 ${showOtherLocations ? '' : 'hidden md:grid'}`}>
+                {otherCards.map((loc) => (
+                  <LocationCard key={loc.id} location={loc} />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Archived section */}
           {filters.showArchived && archivedByMonth.length > 0 && (
@@ -276,6 +318,7 @@ export default function LocationsPage() {
                       <LocationCard key={l.id} location={{
                         id: l.id,
                         name: l.name,
+                        alternate_name: l.alternate_name,
                         address: l.address,
                         precise_location: l.precise_location,
                         status: l.status,

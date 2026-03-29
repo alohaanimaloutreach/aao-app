@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
-import { MapPin, PawPrint, Users, Calendar, Navigation } from 'lucide-react';
+import { MapPin, PawPrint, Users, Calendar } from 'lucide-react';
 import { LOCATION_STATUS_CONFIG } from '../../lib/constants';
-import { formatRelative } from '../../lib/format';
+import { formatRelative, looksLikeCoordinates } from '../../lib/format';
 
 export interface LocationCardData {
   id: string;
   name: string;
+  alternate_name?: string | null;
   address: string | null;
   precise_location: string | null;
   status: string;
@@ -46,12 +47,16 @@ export default function LocationCard({ location }: Props) {
             </span>
           </div>
 
-          {/* Address / description */}
-          {(location.address || location.precise_location) && (
-            <p className="text-sm text-muted mt-0.5 truncate">
-              {location.address || location.precise_location}
-            </p>
+          {location.alternate_name && (
+            <p className="text-xs text-muted mt-0.5 truncate">aka {location.alternate_name}</p>
           )}
+
+          {(() => {
+            const display = location.address || location.precise_location;
+            return display && !looksLikeCoordinates(display) ? (
+              <p className="text-sm text-muted mt-0.5 truncate">{display}</p>
+            ) : null;
+          })()}
 
           {/* Stats row */}
           <div className="flex items-center gap-3 mt-2">
@@ -71,13 +76,7 @@ export default function LocationCard({ location }: Props) {
             )}
           </div>
 
-          {/* Coordinates */}
-          {location.latitude && location.longitude && (
-            <div className="flex items-center gap-1 mt-1.5 text-xs text-muted">
-              <Navigation className="w-2.5 h-2.5" />
-              {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
-            </div>
-          )}
+
         </div>
       </div>
     </Link>

@@ -19,6 +19,7 @@ import {
   Crosshair,
   Trash2,
   Plus,
+  MessageSquare,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,6 +32,7 @@ import OwnerLocationMap from '../components/people/OwnerLocationMap';
 interface OwnerDetail {
   id: string;
   name: string;
+  nickname: string | null;
   phone_primary: string | null;
   phone_secondary: string | null;
   address: string | null;
@@ -97,10 +99,19 @@ export default function PersonProfilePage() {
   const [transferSearch, setTransferSearch] = useState('');
   const [transferResults, setTransferResults] = useState<{ id: string; name: string }[]>([]);
   const [transferTo, setTransferTo] = useState<{ id: string; name: string } | 'unlink' | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState('');
 
   useEffect(() => {
     if (id) loadOwner(id);
   }, [id]);
+
+  useEffect(() => {
+    if (owner) {
+      document.title = `${owner.name} | AAO Command Center`;
+    }
+    return () => { document.title = 'AAO Command Center'; };
+  }, [owner]);
 
   // Location search for edit modal
   useEffect(() => {
@@ -203,6 +214,7 @@ export default function PersonProfilePage() {
     if (!owner) return;
     setEditData({
       name: owner.name,
+      nickname: owner.nickname ?? '',
       phone_primary: owner.phone_primary ?? '',
       phone_secondary: owner.phone_secondary ?? '',
       address: owner.address ?? '',
@@ -224,6 +236,7 @@ export default function PersonProfilePage() {
     setEditError('');
     const { error } = await supabase.from('owners').update({
       name: editData.name || owner.name,
+      nickname: editData.nickname || null,
       phone_primary: editData.phone_primary || null,
       phone_secondary: editData.phone_secondary || null,
       address: editData.address || null,
@@ -286,7 +299,9 @@ export default function PersonProfilePage() {
               <User className="w-7 h-7 text-night/50" strokeWidth={1.5} />
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-heading font-bold text-night">{owner.name}</h1>
+              <h1 className="text-xl md:text-2xl font-heading font-bold text-night">
+                {owner.name}{owner.nickname && <span className="text-muted font-normal"> ({owner.nickname})</span>}
+              </h1>
               <div className="flex flex-wrap items-center gap-2 mt-1.5">
                 {owner.primary_location && (
                   <Link
@@ -326,22 +341,40 @@ export default function PersonProfilePage() {
         {/* Contact info */}
         <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-night/5">
           {owner.phone_primary && (
-            <a
-              href={`tel:${owner.phone_primary.replace(/\D/g, '')}`}
-              className="inline-flex items-center gap-1.5 text-sm text-night hover:text-primary transition-colors bg-sand rounded-xl px-3 py-2"
-            >
-              <Phone className="w-3.5 h-3.5 text-muted" strokeWidth={1.75} />
-              {formatPhone(owner.phone_primary)}
-            </a>
+            <div className="inline-flex items-center gap-1 bg-sand rounded-xl px-3 py-2">
+              <a
+                href={`tel:${owner.phone_primary.replace(/\D/g, '')}`}
+                className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline transition-colors"
+              >
+                <Phone className="w-3.5 h-3.5" strokeWidth={1.75} />
+                {formatPhone(owner.phone_primary)}
+              </a>
+              <a
+                href={`sms:${owner.phone_primary.replace(/\D/g, '')}`}
+                className="p-1 ml-1 rounded-lg text-muted hover:text-primary hover:bg-primary/10 transition-colors"
+                aria-label="Send text message"
+              >
+                <MessageSquare className="w-4 h-4" strokeWidth={1.75} />
+              </a>
+            </div>
           )}
           {owner.phone_secondary && (
-            <a
-              href={`tel:${owner.phone_secondary.replace(/\D/g, '')}`}
-              className="inline-flex items-center gap-1.5 text-sm text-night hover:text-primary transition-colors bg-sand rounded-xl px-3 py-2"
-            >
-              <Phone className="w-3.5 h-3.5 text-muted" strokeWidth={1.75} />
-              {formatPhone(owner.phone_secondary)}
-            </a>
+            <div className="inline-flex items-center gap-1 bg-sand rounded-xl px-3 py-2">
+              <a
+                href={`tel:${owner.phone_secondary.replace(/\D/g, '')}`}
+                className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline transition-colors"
+              >
+                <Phone className="w-3.5 h-3.5" strokeWidth={1.75} />
+                {formatPhone(owner.phone_secondary)}
+              </a>
+              <a
+                href={`sms:${owner.phone_secondary.replace(/\D/g, '')}`}
+                className="p-1 ml-1 rounded-lg text-muted hover:text-primary hover:bg-primary/10 transition-colors"
+                aria-label="Send text message"
+              >
+                <MessageSquare className="w-4 h-4" strokeWidth={1.75} />
+              </a>
+            </div>
           )}
           {owner.address && (
             <span className="inline-flex items-center gap-1.5 text-sm text-night bg-sand rounded-xl px-3 py-2">
@@ -497,6 +530,10 @@ export default function PersonProfilePage() {
                 <input type="text" value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
+                <label className="block text-sm text-muted font-medium mb-1">Nickname</label>
+                <input type="text" value={editData.nickname} onChange={(e) => setEditData({ ...editData, nickname: e.target.value })} placeholder="e.g. Angie" className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40" />
+              </div>
+              <div>
                 <label className="block text-sm text-muted font-medium mb-1">Phone (primary)</label>
                 <input type="tel" value={editData.phone_primary} onChange={(e) => setEditData({ ...editData, phone_primary: formatPhone(e.target.value) })} placeholder="(808) 555-1234" className={`w-full px-3 py-2.5 bg-sand/50 border rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 ${editData.phone_primary && !isValidPhone(editData.phone_primary) ? 'border-ember/40' : 'border-night/8'}`} />
                 {editData.phone_primary && !isValidPhone(editData.phone_primary) && (
@@ -648,26 +685,62 @@ export default function PersonProfilePage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      step="any"
-                      value={editData.precise_lat}
-                      onChange={(e) => setEditData({ ...editData, precise_lat: e.target.value })}
-                      placeholder="Latitude"
-                      className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
-                    />
-                    <input
-                      type="number"
-                      step="any"
-                      value={editData.precise_lng}
-                      onChange={(e) => setEditData({ ...editData, precise_lng: e.target.value })}
-                      placeholder="Longitude"
-                      className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
-                    />
-                  </div>
+                  <>
+                    {navigator.geolocation && (
+                      <div className="mb-2">
+                        <button
+                          type="button"
+                          disabled={geoLoading}
+                          onClick={() => {
+                            setGeoLoading(true);
+                            setGeoError('');
+                            navigator.geolocation.getCurrentPosition(
+                              (pos) => {
+                                setEditData((prev: any) => ({
+                                  ...prev,
+                                  precise_lat: pos.coords.latitude.toFixed(6),
+                                  precise_lng: pos.coords.longitude.toFixed(6),
+                                }));
+                                setGeoLoading(false);
+                              },
+                              () => {
+                                setGeoError('Could not get location — check browser permissions');
+                                setGeoLoading(false);
+                              },
+                              { enableHighAccuracy: true, timeout: 10000 }
+                            );
+                          }}
+                          className="inline-flex items-center gap-1.5 bg-primary/10 text-primary rounded-xl px-3 py-2 text-sm font-medium hover:bg-primary/15 transition-colors disabled:opacity-50"
+                        >
+                          <Navigation className="w-3.5 h-3.5" strokeWidth={2} />
+                          {geoLoading ? 'Getting location...' : 'Use My Location'}
+                        </button>
+                        {geoError && (
+                          <p className="text-xs text-ember mt-1">{geoError}</p>
+                        )}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        step="any"
+                        value={editData.precise_lat}
+                        onChange={(e) => setEditData({ ...editData, precise_lat: e.target.value })}
+                        placeholder="Latitude"
+                        className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                      />
+                      <input
+                        type="number"
+                        step="any"
+                        value={editData.precise_lng}
+                        onChange={(e) => setEditData({ ...editData, precise_lng: e.target.value })}
+                        placeholder="Longitude"
+                        className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                      />
+                    </div>
+                  </>
                 )}
-                <p className="text-xs text-muted mt-1">Optional — for exact GPS coordinates</p>
+                <p className="text-xs text-muted mt-1">Tap 'Use My Location' while standing near the person to set their precise spot.</p>
               </div>
             </div>
             <div className="p-5 border-t border-night/5 shrink-0 space-y-2">

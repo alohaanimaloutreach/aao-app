@@ -21,6 +21,11 @@ export default function ActivityPage() {
   const [filter, setFilter] = useState<'all' | 'care' | 'note'>('all');
 
   useEffect(() => {
+    document.title = 'Activity | AAO Command Center';
+    return () => { document.title = 'AAO Command Center'; };
+  }, []);
+
+  useEffect(() => {
     if (session) loadActivity();
   }, [session]);
 

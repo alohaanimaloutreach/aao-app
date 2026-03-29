@@ -71,6 +71,11 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
+    document.title = 'Dashboard | AAO Command Center';
+    return () => { document.title = 'AAO Command Center'; };
+  }, []);
+
+  useEffect(() => {
     if (session) loadDashboard();
   }, [session]);
 

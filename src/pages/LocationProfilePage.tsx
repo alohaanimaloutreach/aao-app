@@ -18,7 +18,7 @@ import {
   Search,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { formatDate, formatRelative } from '../lib/format';
+import { formatDate, formatRelative, looksLikeCoordinates } from '../lib/format';
 import { LOCATION_STATUS_CONFIG } from '../lib/constants';
 import { useAuth } from '../contexts/AuthContext';
 import StatusBadge from '../components/shared/StatusBadge';
@@ -29,6 +29,7 @@ import MapIframe from '../components/shared/MapIframe';
 interface LocationDetail {
   id: string;
   name: string;
+  alternate_name: string | null;
   address: string | null;
   precise_location: string | null;
   latitude: number | null;
@@ -91,10 +92,19 @@ export default function LocationProfilePage() {
   const [editData, setEditData] = useState<Record<string, any>>({});
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState('');
 
   useEffect(() => {
     if (id) loadLocation(id);
   }, [id]);
+
+  useEffect(() => {
+    if (location) {
+      document.title = `${location.name} | AAO Command Center`;
+    }
+    return () => { document.title = 'AAO Command Center'; };
+  }, [location]);
 
   async function loadLocation(locId: string) {
     setLoading(true);
@@ -149,7 +159,10 @@ export default function LocationProfilePage() {
       address: location.address ?? '',
       status: location.status,
       notes: location.notes ?? '',
+      latitude: location.latitude ?? '',
+      longitude: location.longitude ?? '',
     });
+    setGeoError('');
     setEditError('');
     setEditing(true);
   }
@@ -163,6 +176,8 @@ export default function LocationProfilePage() {
       address: editData.address || null,
       status: editData.status,
       notes: editData.notes || null,
+      latitude: editData.latitude ? Number(editData.latitude) : null,
+      longitude: editData.longitude ? Number(editData.longitude) : null,
     }).eq('id', location.id);
     setEditSaving(false);
     if (error) { setEditError(error.message); return; }
@@ -222,8 +237,9 @@ export default function LocationProfilePage() {
                   {statusConfig.label}
                 </span>
               </div>
-              {location.address && <p className="text-sm text-muted">{location.address}</p>}
-              {location.precise_location && <p className="text-sm text-muted/70 mt-0.5">{location.precise_location}</p>}
+              {location.alternate_name && <p className="text-sm text-muted">Also known as: {location.alternate_name}</p>}
+              {location.address && !looksLikeCoordinates(location.address) && <p className="text-sm text-muted">{location.address}</p>}
+              {location.precise_location && !looksLikeCoordinates(location.precise_location) && <p className="text-sm text-muted/70 mt-0.5">{location.precise_location}</p>}
             </div>
           </div>
           <button onClick={openEdit} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-all text-sm" aria-label="Edit location">
@@ -319,6 +335,64 @@ export default function LocationProfilePage() {
               <div>
                 <label className="block text-xs text-muted font-medium mb-1">Notes</label>
                 <textarea value={editData.notes} onChange={(e) => setEditData({ ...editData, notes: e.target.value })} rows={4} className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+              </div>
+
+              {/* GPS Coordinates */}
+              <div>
+                <label className="block text-xs text-muted font-medium mb-1">GPS Coordinates</label>
+                {navigator.geolocation && (
+                  <div className="mb-2">
+                    <button
+                      type="button"
+                      disabled={geoLoading}
+                      onClick={() => {
+                        setGeoLoading(true);
+                        setGeoError('');
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setEditData((prev: any) => ({
+                              ...prev,
+                              latitude: pos.coords.latitude.toFixed(6),
+                              longitude: pos.coords.longitude.toFixed(6),
+                            }));
+                            setGeoLoading(false);
+                          },
+                          () => {
+                            setGeoError('Could not get location — check browser permissions');
+                            setGeoLoading(false);
+                          },
+                          { enableHighAccuracy: true, timeout: 10000 }
+                        );
+                      }}
+                      className="inline-flex items-center gap-1.5 bg-primary/10 text-primary rounded-xl px-3 py-2 text-sm font-medium hover:bg-primary/15 transition-colors disabled:opacity-50"
+                    >
+                      <Navigation className="w-3.5 h-3.5" strokeWidth={2} />
+                      {geoLoading ? 'Getting location...' : 'Use My Location'}
+                    </button>
+                    {geoError && (
+                      <p className="text-xs text-ember mt-1">{geoError}</p>
+                    )}
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    step="any"
+                    value={editData.latitude}
+                    onChange={(e) => setEditData({ ...editData, latitude: e.target.value })}
+                    placeholder="Latitude"
+                    className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    value={editData.longitude}
+                    onChange={(e) => setEditData({ ...editData, longitude: e.target.value })}
+                    placeholder="Longitude"
+                    className="w-full px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                  />
+                </div>
+                <p className="text-xs text-muted mt-1">Tap 'Use My Location' while at the site to set GPS automatically.</p>
               </div>
             </div>
             <div className="p-5 border-t border-night/5 shrink-0 space-y-2">
