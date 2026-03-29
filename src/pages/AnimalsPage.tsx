@@ -345,6 +345,22 @@ export default function AnimalsPage() {
     });
   }, [archivedFiltered]);
 
+  // Detect duplicate names (names appearing more than once among active, non-archived animals)
+  const duplicateNameIds = useMemo(() => {
+    const nameCounts: Record<string, string[]> = {};
+    animals.forEach((a) => {
+      if (a.archived || !a.name) return;
+      const key = a.name.toLowerCase().trim();
+      if (!nameCounts[key]) nameCounts[key] = [];
+      nameCounts[key].push(a.id);
+    });
+    const ids = new Set<string>();
+    Object.values(nameCounts).forEach((group) => {
+      if (group.length > 1) group.forEach((id) => ids.add(id));
+    });
+    return ids;
+  }, [animals]);
+
   // Use active for visible/pagination, archived shown separately
   const activeVisible = activeFiltered.slice(page * pageSize, (page + 1) * pageSize);
 
@@ -492,7 +508,7 @@ export default function AnimalsPage() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-4">
             {cardData.map((animal) => (
-              <AnimalCard key={animal.id} animal={animal} onToggle={handleCardToggle} />
+              <AnimalCard key={animal.id} animal={animal} onToggle={handleCardToggle} isDuplicate={duplicateNameIds.has(animal.id)} />
             ))}
           </div>
 

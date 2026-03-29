@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { PawPrint, AlertTriangle, Scissors, Ruler, MapPin, User, Clock } from 'lucide-react';
+import { PawPrint, AlertTriangle, Scissors, Ruler, MapPin, User, Clock, GitMerge } from 'lucide-react';
 import StatusBadge from '../shared/StatusBadge';
 import { ANIMAL_TYPE_CONFIG, HAVENT_SEEN_DAYS } from '../../lib/constants';
 import { formatRelative, daysSince } from '../../lib/format';
@@ -27,9 +27,11 @@ export interface AnimalCardData {
 interface Props {
   animal: AnimalCardData;
   onToggle?: (id: string, field: 'urgent_medical' | 'interested_in_fixing', value: any) => void;
+  /** If true, shows a "Possible duplicate" badge */
+  isDuplicate?: boolean;
 }
 
-export default function AnimalCard({ animal, onToggle }: Props) {
+export default function AnimalCard({ animal, onToggle, isDuplicate }: Props) {
   const typeConfig = ANIMAL_TYPE_CONFIG[animal.animal_type] ?? ANIMAL_TYPE_CONFIG.other;
   const lastSeenDays = daysSince(animal.last_seen);
   const haventSeen = lastSeenDays > HAVENT_SEEN_DAYS && lastSeenDays !== Infinity && !animal.deceased;
@@ -106,6 +108,14 @@ export default function AnimalCard({ animal, onToggle }: Props) {
             {typeConfig.label}
           </span>
         </div>
+
+        {/* Possible duplicate badge */}
+        {isDuplicate && (
+          <div className="flex items-center gap-1 mb-2 px-2 py-1 rounded-lg bg-amber-50 border border-amber-200/50 text-amber-700 text-xs font-medium">
+            <GitMerge className="w-3 h-3 shrink-0" />
+            Possible duplicate
+          </div>
+        )}
 
         {/* Situation status */}
         {animal.current_situation && (

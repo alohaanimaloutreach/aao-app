@@ -31,6 +31,7 @@ import {
   Navigation,
   ExternalLink,
   Crosshair,
+  GitMerge,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatDate, daysSince } from '../lib/format';
@@ -48,6 +49,7 @@ import DogLocationMap from '../components/animals/DogLocationMap';
 import LogCareDrawer from '../components/animals/LogCareDrawer';
 import FlagResolver from '../components/admin/FlagResolver';
 import FileAttachments from '../components/shared/FileAttachments';
+import MergeDuplicateModal from '../components/animals/MergeDuplicateModal';
 
 interface AnimalDetail {
   id: string;
@@ -152,6 +154,8 @@ export default function AnimalProfilePage() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoResult, setGeoResult] = useState('');
   const [geoError, setGeoError] = useState('');
+  const [showMerge, setShowMerge] = useState(false);
+  const [mergeToast, setMergeToast] = useState<string | null>(null);
 
   // Close overflow menu on outside click
   useEffect(() => {
@@ -579,6 +583,16 @@ export default function AnimalProfilePage() {
               </button>
               {isAdmin && (
                 <button
+                  onClick={() => setShowMerge(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium transition-all text-sm"
+                  aria-label="Merge duplicate"
+                >
+                  <GitMerge className="w-4 h-4" strokeWidth={2} />
+                  <span>Merge Duplicate</span>
+                </button>
+              )}
+              {isAdmin && (
+                <button
                   onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); }}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ember/8 hover:bg-ember/15 text-ember font-medium transition-all text-sm"
                   aria-label="Delete animal"
@@ -615,6 +629,15 @@ export default function AnimalProfilePage() {
                     <Edit3 className="w-4 h-4" strokeWidth={1.75} />
                     Edit
                   </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => { setShowMerge(true); setShowOverflowMenu(false); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors"
+                    >
+                      <GitMerge className="w-4 h-4" strokeWidth={1.75} />
+                      Merge Duplicate
+                    </button>
+                  )}
                   {isAdmin && (
                     <button
                       onClick={() => { setShowDeleteConfirm(true); setDeleteText(''); setDeleteError(null); setShowOverflowMenu(false); }}
@@ -1292,6 +1315,44 @@ export default function AnimalProfilePage() {
         foodBagSize={animal.food_bag_size}
         onSaved={() => { if (id) loadAnimal(id); }}
       />
+
+      {/* Merge Duplicate Modal */}
+      {showMerge && animal && (
+        <MergeDuplicateModal
+          animal={{
+            id: animal.id,
+            aao_id: animal.aao_id,
+            name: animal.name,
+            breed: animal.breed,
+            sex: animal.sex,
+            size_category: animal.size_category,
+            fixed_status: animal.fixed_status,
+            owner: animal.owner ? { name: animal.owner.name } : null,
+            primary_location: animal.primary_location ? { name: animal.primary_location.name } : null,
+            profile_photo_url: photos.find(p => p.is_profile)?.storage_path ?? photos[0]?.storage_path ?? null,
+            care_events: 0,
+            field_notes: 0,
+            photos: photos.length,
+          }}
+          onClose={() => setShowMerge(false)}
+          onMerged={() => {
+            setShowMerge(false);
+            setMergeToast(`Records merged. ${animal.aao_id} updated.`);
+            setTimeout(() => setMergeToast(null), 4000);
+            if (id) loadAnimal(id);
+          }}
+        />
+      )}
+
+      {/* Merge success toast */}
+      {mergeToast && (
+        <div className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-2 px-4 py-3 bg-night text-white text-sm font-medium rounded-xl shadow-lg">
+            <Check className="w-4 h-4 text-primary" />
+            {mergeToast}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
