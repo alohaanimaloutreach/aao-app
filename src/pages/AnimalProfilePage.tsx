@@ -564,6 +564,20 @@ export default function AnimalProfilePage() {
                 <Stethoscope className="w-4 h-4" strokeWidth={2} />
                 <span>Log Care</span>
               </button>
+              {navigator.geolocation && (
+                <button
+                  onClick={handleImWithAnimal}
+                  disabled={geoLoading}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sand border border-night/10 text-night font-medium hover:bg-night/5 transition-all text-sm disabled:opacity-50"
+                  aria-label="I'm with this animal"
+                >
+                  {geoLoading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /><span>Getting location...</span></>
+                  ) : (
+                    <><MapPin className="w-4 h-4" strokeWidth={2} /><span>I'm With This Animal</span></>
+                  )}
+                </button>
+              )}
               <button
                 onClick={() => quickPhotoRef.current?.click()}
                 disabled={uploadingPhoto}
@@ -614,6 +628,16 @@ export default function AnimalProfilePage() {
               </button>
               {showOverflowMenu && (
                 <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-night/10 py-1 z-50">
+                  {navigator.geolocation && (
+                    <button
+                      onClick={() => { handleImWithAnimal(); setShowOverflowMenu(false); }}
+                      disabled={geoLoading}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-night hover:bg-sand/50 transition-colors disabled:opacity-50"
+                    >
+                      {geoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" strokeWidth={1.75} />}
+                      {geoLoading ? 'Getting location...' : "I'm With This Animal"}
+                    </button>
+                  )}
                   <button
                     onClick={() => { quickPhotoRef.current?.click(); setShowOverflowMenu(false); }}
                     disabled={uploadingPhoto}
@@ -651,6 +675,20 @@ export default function AnimalProfilePage() {
               )}
             </div>
           </div>
+
+          {/* Desktop GPS feedback */}
+          {(geoResult || geoError) && (
+            <div className="hidden md:block mt-2">
+              {geoResult && (
+                <p className="text-xs text-primary flex items-center gap-1">
+                  <Check className="w-3 h-3" />{geoResult}
+                </p>
+              )}
+              {geoError && (
+                <p className="text-xs text-ember">{geoError}</p>
+              )}
+            </div>
+          )}
 
           {/* Mobile full-width Log Care button */}
           <button
