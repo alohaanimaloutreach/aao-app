@@ -65,6 +65,7 @@ export default function LocationsPage() {
         .from('outreach_events')
         .select('location_id, event_date')
         .not('location_id', 'is', null)
+        .lte('event_date', new Date().toISOString().split('T')[0])
         .order('event_date', { ascending: false }),
     ]);
 

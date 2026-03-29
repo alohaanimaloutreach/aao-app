@@ -52,8 +52,8 @@ export default function AnimalCard({ animal, onToggle }: Props) {
           <PawPrint className="w-10 h-10 text-muted/40" strokeWidth={1} />
         </div>
 
-        {/* Urgent badge */}
-        {animal.urgent_medical && (
+        {/* Urgent badge — hide for deceased */}
+        {animal.urgent_medical && !animal.deceased && (
           <div className="absolute top-2 left-2 bg-ember text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" />
             Urgent
@@ -135,8 +135,8 @@ export default function AnimalCard({ animal, onToggle }: Props) {
           )}
         </div>
 
-        {/* Quick toggles */}
-        {onToggle && (
+        {/* Quick toggles — hide for deceased */}
+        {onToggle && !animal.deceased && (
           <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-night/5">
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(animal.id, 'urgent_medical', !animal.urgent_medical); }}

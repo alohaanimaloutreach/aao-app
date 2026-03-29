@@ -54,7 +54,7 @@ export default function DogTimeline({ animalId, highlightId }: Props) {
         .order('started_at', { ascending: false }),
       supabase
         .from('field_notes')
-        .select('id, content, is_flagged, created_at, created_by, users:created_by(name)')
+        .select('id, note, flagged, created_at, created_by, users:created_by(name)')
         .eq('animal_id', animalId)
         .order('created_at', { ascending: false }),
       supabase
@@ -108,8 +108,8 @@ export default function DogTimeline({ animalId, highlightId }: Props) {
         id: fn.id,
         type: 'field_note',
         date: fn.created_at,
-        title: fn.is_flagged ? 'Flagged note' : 'Field note',
-        description: fn.content,
+        title: fn.flagged ? 'Flagged note' : 'Field note',
+        description: fn.note,
         created_by_name: fn.users?.name,
       });
     });

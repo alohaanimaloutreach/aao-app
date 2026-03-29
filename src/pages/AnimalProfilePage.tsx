@@ -424,7 +424,7 @@ export default function AnimalProfilePage() {
 
           {/* Badges overlay */}
           <div className="absolute top-3 left-3 flex gap-2">
-            {animal.urgent_medical && (
+            {animal.urgent_medical && !animal.deceased && (
               <span className="bg-ember text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Urgent Medical
@@ -548,41 +548,43 @@ export default function AnimalProfilePage() {
             )}
           </div>
 
-          {/* Quick toggles */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            <button
-              onClick={async () => {
-                const newVal = !animal.urgent_medical;
-                await supabase.from('animals').update({ urgent_medical: newVal }).eq('id', animal.id);
-                if (id) loadAnimal(id);
-              }}
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
-                animal.urgent_medical
-                  ? 'bg-ember/10 border-ember/30 text-ember'
-                  : 'bg-white border-night/10 text-muted hover:border-ember/30 hover:text-ember'
-              }`}
-            >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              Urgent Medical
-              {animal.urgent_medical ? ' ON' : ''}
-            </button>
-            <button
-              onClick={async () => {
-                const newVal = animal.interested_in_fixing === 'interested' ? null : 'interested';
-                await supabase.from('animals').update({ interested_in_fixing: newVal }).eq('id', animal.id);
-                if (id) loadAnimal(id);
-              }}
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
-                animal.interested_in_fixing === 'interested'
-                  ? 'bg-primary/10 border-primary/30 text-primary'
-                  : 'bg-white border-night/10 text-muted hover:border-primary/30 hover:text-primary'
-              }`}
-            >
-              <Scissors className="w-3.5 h-3.5" />
-              Ready for S/N
-              {animal.interested_in_fixing === 'interested' ? ' ON' : ''}
-            </button>
-          </div>
+          {/* Quick toggles — hide for deceased */}
+          {!animal.deceased && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              <button
+                onClick={async () => {
+                  const newVal = !animal.urgent_medical;
+                  await supabase.from('animals').update({ urgent_medical: newVal }).eq('id', animal.id);
+                  if (id) loadAnimal(id);
+                }}
+                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+                  animal.urgent_medical
+                    ? 'bg-ember/10 border-ember/30 text-ember'
+                    : 'bg-white border-night/10 text-muted hover:border-ember/30 hover:text-ember'
+                }`}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Urgent Medical
+                {animal.urgent_medical ? ' ON' : ''}
+              </button>
+              <button
+                onClick={async () => {
+                  const newVal = animal.interested_in_fixing === 'interested' ? null : 'interested';
+                  await supabase.from('animals').update({ interested_in_fixing: newVal }).eq('id', animal.id);
+                  if (id) loadAnimal(id);
+                }}
+                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+                  animal.interested_in_fixing === 'interested'
+                    ? 'bg-primary/10 border-primary/30 text-primary'
+                    : 'bg-white border-night/10 text-muted hover:border-primary/30 hover:text-primary'
+                }`}
+              >
+                <Scissors className="w-3.5 h-3.5" />
+                Ready for S/N
+                {animal.interested_in_fixing === 'interested' ? ' ON' : ''}
+              </button>
+            </div>
+          )}
 
         </div>
       </div>
@@ -672,7 +674,7 @@ export default function AnimalProfilePage() {
           )}
 
           <div className="bg-white rounded-2xl border border-night/5 p-5">
-            <h2 className="font-heading font-bold text-night mb-4">Dog Timeline</h2>
+            <h2 className="font-heading font-bold text-night mb-4">{animal.animal_type === 'cat' ? 'Cat' : animal.animal_type === 'dog' ? 'Dog' : 'Animal'} Timeline</h2>
             <DogTimeline animalId={animal.id} highlightId={highlightId} />
           </div>
           </>

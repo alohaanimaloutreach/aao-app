@@ -30,7 +30,7 @@ export default function ActivityPage() {
     const [careRes, notesRes] = await Promise.all([
       supabase
         .from('care_events')
-        .select('id, animal_id, outreach_event_id, event_date, care_types, animal:animals(name, aao_id), author:users!created_by(name)')
+        .select('id, animal_id, outreach_event_id, event_date, care_types, animal:animals(name, aao_id), location:locations!location_id(name), author:users!created_by(name)')
         .order('created_at', { ascending: false })
         .limit(100),
       supabase
@@ -45,11 +45,19 @@ export default function ActivityPage() {
     (careRes.data ?? []).forEach((c: any) => {
       const types = (c.care_types ?? []).join(', ').replace(/_/g, ' ');
       const animal = Array.isArray(c.animal) ? c.animal[0] : c.animal;
-      const animalName = animal?.name ?? animal?.aao_id ?? 'Unknown';
+      const loc = Array.isArray(c.location) ? c.location[0] : c.location;
+      let subject: string;
+      if (animal?.name || animal?.aao_id) {
+        subject = `for ${animal.name ?? animal.aao_id}`;
+      } else if (loc?.name) {
+        subject = `at ${loc.name}`;
+      } else {
+        subject = '— bulk distribution';
+      }
       items.push({
         id: `care-${c.id}`,
         type: 'care',
-        description: `${types || 'Care'} for ${animalName}`,
+        description: `${types || 'Care'} ${subject}`,
         date: c.event_date,
         author: (Array.isArray(c.author) ? c.author[0] : c.author)?.name ?? null,
         link: c.animal_id ? `/animals/${c.animal_id}?highlight=care-${c.id}` : c.outreach_event_id ? `/outreach/summary/${c.outreach_event_id}` : '/outreach',

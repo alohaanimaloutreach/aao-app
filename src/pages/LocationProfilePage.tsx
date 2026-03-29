@@ -69,8 +69,8 @@ interface OutreachEvent {
 
 interface LocNote {
   id: string;
-  content: string;
-  is_flagged: boolean;
+  note: string;
+  flagged: boolean;
   created_at: string;
   created_by_name: string | null;
 }
@@ -107,7 +107,7 @@ export default function LocationProfilePage() {
       supabase.from('animals').select('owner_id').eq('archived', false).not('owner_id', 'is', null),
       supabase.from('outreach_events').select('id, event_date, event_type, notes').eq('location_id', locId).order('event_date', { ascending: false }),
       supabase.from('outreach_event_volunteers').select('outreach_event_id'),
-      supabase.from('field_notes').select('id, content, is_flagged, created_at, users:created_by(name)').eq('location_id', locId).order('created_at', { ascending: false }),
+      supabase.from('field_notes').select('id, note, flagged, created_at, users:created_by(name)').eq('location_id', locId).order('created_at', { ascending: false }),
       supabase.from('flags').select('id, reason, resolved').eq('table_name', 'locations').eq('record_id', locId),
     ]);
 
@@ -134,7 +134,7 @@ export default function LocationProfilePage() {
     setEvents((eventRes.data ?? []).map((e: any) => ({ ...e, volunteer_count: volCounts[e.id] ?? 0 })));
 
     setNotes((noteRes.data ?? []).map((n: any) => ({
-      id: n.id, content: n.content, is_flagged: n.is_flagged, created_at: n.created_at,
+      id: n.id, note: n.note, flagged: n.flagged, created_at: n.created_at,
       created_by_name: n.users?.name ?? null,
     })));
 
@@ -676,15 +676,15 @@ function NotesTab({ notes }: { notes: LocNote[] }) {
   return (
     <div className="space-y-2">
       {notes.map((n) => (
-        <div key={n.id} className={`bg-white rounded-2xl border p-4 ${n.is_flagged ? 'border-gold/30 bg-gold/4' : 'border-night/5'}`}>
+        <div key={n.id} className={`bg-white rounded-2xl border p-4 ${n.flagged ? 'border-gold/30 bg-gold/4' : 'border-night/5'}`}>
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="flex items-center gap-1.5">
-              {n.is_flagged && <Flag className="w-3 h-3 text-gold" />}
+              {n.flagged && <Flag className="w-3 h-3 text-gold" />}
               <span className="text-sm text-muted">{formatDate(n.created_at)}</span>
             </div>
             {n.created_by_name && <span className="text-sm text-muted">{n.created_by_name}</span>}
           </div>
-          <p className="text-sm text-night leading-relaxed">{n.content}</p>
+          <p className="text-sm text-night leading-relaxed">{n.note}</p>
         </div>
       ))}
     </div>

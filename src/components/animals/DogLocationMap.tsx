@@ -116,7 +116,7 @@ export default function DogLocationMap({ animalId, primaryLocationId, ownerId }:
       // 4. Field notes with locations
       const { data: notes } = await supabase
         .from('field_notes')
-        .select('id, content, created_at, location:locations!location_id(id, name, latitude, longitude)')
+        .select('id, note, created_at, location:locations!location_id(id, name, latitude, longitude)')
         .eq('animal_id', animalId)
         .not('location_id', 'is', null)
         .order('created_at', { ascending: false });
@@ -128,7 +128,7 @@ export default function DogLocationMap({ animalId, primaryLocationId, ownerId }:
           id: `note-${fn.id}`,
           type: 'note',
           label: loc.name,
-          detail: fn.content?.length > 60 ? fn.content.slice(0, 60) + '...' : fn.content,
+          detail: fn.note?.length > 60 ? fn.note.slice(0, 60) + '...' : fn.note,
           date: fn.created_at,
           lat: Number(loc.latitude),
           lng: Number(loc.longitude),

@@ -28,6 +28,7 @@ export function formatRelative(date: string | Date | null | undefined): string {
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
+  if (diffDays < 0) return 'Upcoming';
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Yesterday';
   if (diffDays < 7) return `${diffDays} days ago`;

@@ -62,11 +62,17 @@ export default function BottomNav() {
     setTimeout(() => { setShowPassword(false); setPwSuccess(false); setNewPassword(''); setConfirmPassword(''); }, 1500);
   }
 
+  // Only poll checkin_queue when on outreach routes
+  const isOutreachRoute = location.pathname.startsWith('/outreach') || location.pathname.startsWith('/event');
   useEffect(() => {
+    if (!isOutreachRoute) {
+      setHasActiveQueue(false);
+      return;
+    }
     checkActiveQueue();
     const interval = setInterval(checkActiveQueue, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isOutreachRoute]);
 
   // Close more menu on route change
   useEffect(() => {

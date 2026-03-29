@@ -21,3 +21,6 @@ Thumbs.db
 _archive/
 import-review.md
 scripts/
+
+# Local Netlify folder
+.netlify

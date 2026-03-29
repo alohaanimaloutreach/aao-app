@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Flag, Check, PawPrint, User, MapPin, X, MessageSquare, Loader2,
+  Flag, Check, PawPrint, User, MapPin, X, MessageSquare, Loader2, Trash2, CheckSquare, Square,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,6 +20,7 @@ interface FlagRow {
   resolution_action: string | null;
   resolution_note: string | null;
   created_at: string;
+  created_by: string | null;
   record_label: string | null;
 }
 
@@ -44,9 +45,22 @@ export default function FlagsPage() {
   const [tableFilter, setTableFilter] = useState<TableFilter>('');
   const [search, setSearch] = useState('');
 
+  // Bulk operations
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showBulkImportConfirm, setShowBulkImportConfirm] = useState(false);
+  const [bulkResolving, setBulkResolving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
   useEffect(() => {
     if (session) loadFlags();
   }, [session]);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   async function loadFlags() {
     setLoading(true);
@@ -94,6 +108,7 @@ export default function FlagsPage() {
       ...f,
       record_label: labelMap[f.record_id] ?? null,
     })));
+    setSelected(new Set());
     setLoading(false);
   }
 
@@ -149,6 +164,78 @@ export default function FlagsPage() {
     }
   }
 
+  // Bulk resolve import flags (created_by is null)
+  const importFlagCount = useMemo(
+    () => flags.filter(f => !f.resolved && !f.created_by).length,
+    [flags]
+  );
+
+  async function handleBulkResolveImport() {
+    if (!user) return;
+    setBulkResolving(true);
+
+    const importIds = flags.filter(f => !f.resolved && !f.created_by).map(f => f.id);
+
+    // Batch update in chunks of 100
+    for (let i = 0; i < importIds.length; i += 100) {
+      const batch = importIds.slice(i, i + 100);
+      await supabase.from('flags').update({
+        resolved: true,
+        resolved_by: user.id,
+        resolved_at: new Date().toISOString(),
+        resolution_action: 'bulk_resolve',
+        resolution_note: 'Bulk resolved — import flag',
+      }).in('id', batch);
+    }
+
+    setFlags(prev => prev.map(f =>
+      importIds.includes(f.id)
+        ? { ...f, resolved: true, resolved_at: new Date().toISOString(), resolution_action: 'bulk_resolve', resolution_note: 'Bulk resolved — import flag' }
+        : f
+    ));
+
+    setBulkResolving(false);
+    setShowBulkImportConfirm(false);
+    setToast(`${importIds.length} import flags resolved`);
+  }
+
+  // Bulk resolve selected flags
+  async function handleBulkResolveSelected() {
+    if (!user || selected.size === 0) return;
+    setBulkResolving(true);
+
+    const ids = Array.from(selected);
+    for (let i = 0; i < ids.length; i += 100) {
+      const batch = ids.slice(i, i + 100);
+      await supabase.from('flags').update({
+        resolved: true,
+        resolved_by: user.id,
+        resolved_at: new Date().toISOString(),
+        resolution_action: 'bulk_resolve',
+        resolution_note: 'Bulk resolved — selected',
+      }).in('id', batch);
+    }
+
+    setFlags(prev => prev.map(f =>
+      selected.has(f.id)
+        ? { ...f, resolved: true, resolved_at: new Date().toISOString(), resolution_action: 'bulk_resolve', resolution_note: 'Bulk resolved — selected' }
+        : f
+    ));
+
+    setBulkResolving(false);
+    setSelected(new Set());
+    setToast(`${ids.length} flags resolved`);
+  }
+
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   const filtered = useMemo(() => {
     return flags.filter(f => {
       if (tab === 'unresolved' && f.resolved) return false;
@@ -162,6 +249,25 @@ export default function FlagsPage() {
       return true;
     });
   }, [flags, tab, tableFilter, search]);
+
+  const unresolvedFiltered = filtered.filter(f => !f.resolved);
+  const allFilteredSelected = unresolvedFiltered.length > 0 && unresolvedFiltered.every(f => selected.has(f.id));
+
+  function toggleSelectAll() {
+    if (allFilteredSelected) {
+      setSelected(prev => {
+        const next = new Set(prev);
+        unresolvedFiltered.forEach(f => next.delete(f.id));
+        return next;
+      });
+    } else {
+      setSelected(prev => {
+        const next = new Set(prev);
+        unresolvedFiltered.forEach(f => next.add(f.id));
+        return next;
+      });
+    }
+  }
 
   const unresolvedCount = flags.filter(f => !f.resolved).length;
   const resolvedCount = flags.filter(f => f.resolved).length;
@@ -179,11 +285,22 @@ export default function FlagsPage() {
 
   return (
     <div>
-      <div className="mb-5">
-        <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">
-          Flagged Records
-        </h1>
-        <p className="text-muted mt-0.5">Review and resolve imported or volunteer flagged records</p>
+      <div className="flex items-start justify-between gap-3 mb-5">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">
+            Flagged Records
+          </h1>
+          <p className="text-muted mt-0.5">Review and resolve imported or volunteer flagged records</p>
+        </div>
+        {isAdmin && importFlagCount > 0 && (
+          <button
+            onClick={() => setShowBulkImportConfirm(true)}
+            className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-medium rounded-xl transition-all"
+          >
+            <Check className="w-4 h-4" strokeWidth={2} />
+            Resolve All Import Flags
+          </button>
+        )}
       </div>
 
       {/* Summary cards */}
@@ -242,6 +359,32 @@ export default function FlagsPage() {
         />
       </div>
 
+      {/* Bulk selection bar */}
+      {isAdmin && tab === 'unresolved' && unresolvedFiltered.length > 0 && (
+        <div className="flex items-center gap-3 mb-3 px-1">
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-night transition-colors"
+          >
+            {allFilteredSelected
+              ? <CheckSquare className="w-4 h-4 text-primary" strokeWidth={2} />
+              : <Square className="w-4 h-4" strokeWidth={1.5} />
+            }
+            {allFilteredSelected ? 'Deselect all' : 'Select all'}
+          </button>
+          {selected.size > 0 && (
+            <button
+              onClick={handleBulkResolveSelected}
+              disabled={bulkResolving}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-40"
+            >
+              {bulkResolving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" strokeWidth={2.5} />}
+              Resolve {selected.size} selected
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Flags list */}
       {loading ? (
         <div className="space-y-2">
@@ -268,6 +411,7 @@ export default function FlagsPage() {
             const config = TABLE_CONFIG[flag.table_name] ?? { label: flag.table_name, icon: Flag, path: '#', color: 'bg-muted/10 text-muted' };
             const profilePath = `${config.path}/${flag.record_id}`;
             const isResolving = resolvingId === flag.id;
+            const isSelected = selected.has(flag.id);
 
             return (
               <div
@@ -275,13 +419,29 @@ export default function FlagsPage() {
                 className={`bg-white rounded-2xl border transition-all ${
                   isResolving
                     ? 'border-primary/30 shadow-[0_2px_12px_rgba(110,168,50,0.1)]'
-                    : flag.resolved
-                      ? 'border-night/5'
-                      : 'border-gold/20'
+                    : isSelected
+                      ? 'border-primary/25 bg-primary/3'
+                      : flag.resolved
+                        ? 'border-night/5'
+                        : 'border-gold/20'
                 }`}
               >
                 {/* Flag row */}
                 <div className={`p-4 flex items-start gap-3 ${flag.resolved && !isResolving ? 'opacity-50' : ''}`}>
+                  {/* Checkbox for unresolved flags */}
+                  {isAdmin && !flag.resolved && (
+                    <button
+                      onClick={() => toggleSelect(flag.id)}
+                      className="mt-2.5 shrink-0 text-muted hover:text-primary transition-colors"
+                      aria-label={isSelected ? 'Deselect' : 'Select'}
+                    >
+                      {isSelected
+                        ? <CheckSquare className="w-4.5 h-4.5 text-primary" strokeWidth={2} />
+                        : <Square className="w-4.5 h-4.5" strokeWidth={1.5} />
+                      }
+                    </button>
+                  )}
+
                   {/* Icon */}
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                     flag.resolved ? 'bg-sand' : config.color
@@ -416,6 +576,49 @@ export default function FlagsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Bulk import resolve confirmation modal */}
+      {showBulkImportConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-xl">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Flag className="w-6 h-6 text-primary" />
+              </div>
+              <h2 className="text-lg font-bold text-night text-center mb-2">Resolve All Import Flags</h2>
+              <p className="text-sm text-muted text-center leading-relaxed">
+                This will resolve all <strong className="text-night">{importFlagCount}</strong> import flags at once.
+                Individual flags created by coordinators will not be affected.
+              </p>
+            </div>
+            <div className="flex gap-3 px-6 pb-6">
+              <button
+                onClick={() => setShowBulkImportConfirm(false)}
+                disabled={bulkResolving}
+                className="flex-1 py-2.5 text-sm font-medium text-muted hover:text-night border border-night/8 rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkResolveImport}
+                disabled={bulkResolving}
+                className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.25)] transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {bulkResolving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" strokeWidth={2.5} />}
+                {bulkResolving ? 'Resolving...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-night text-white text-sm font-medium px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 animate-[fadeIn_0.2s_ease]">
+          <Check className="w-4 h-4 text-primary" strokeWidth={2.5} />
+          {toast}
         </div>
       )}
     </div>
