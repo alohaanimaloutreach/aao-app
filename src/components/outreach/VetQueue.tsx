@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-
+import ScanInput from '../shared/ScanInput';
 import { trackVolunteer } from '../../lib/trackVolunteer';
 
 interface Props {
@@ -243,18 +243,48 @@ export default function VetQueue({ eventId, eventLocationId, eventDate }: Props)
 
               {/* Conditional detail fields */}
               {(animal.services.includes('vaccine_dapp') || animal.services.includes('vaccine_parvo')) && (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   {animal.services.includes('vaccine_dapp') && (
-                    <FieldInput label="DAPP lot #" value={animal.vaccine_lot_dapp} onChange={(v) => updateField(idx, 'vaccine_lot_dapp', v)} />
+                    <ScanInput
+                      label="DAPP lot #"
+                      value={animal.vaccine_lot_dapp}
+                      onChange={(v) => updateField(idx, 'vaccine_lot_dapp', v)}
+                      ocr
+                      attach
+                      fieldLabel="DAPP lot number"
+                      animalId={animal.animal_id}
+                      labelClassName="block text-xs text-muted font-medium mb-0.5"
+                      inputClassName="flex-1 min-w-0 px-2.5 py-2 bg-sand/50 border border-night/5 rounded-lg text-xs text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                    />
                   )}
                   {animal.services.includes('vaccine_parvo') && (
-                    <FieldInput label="Parvo lot #" value={animal.vaccine_lot_parvo} onChange={(v) => updateField(idx, 'vaccine_lot_parvo', v)} />
+                    <ScanInput
+                      label="Parvo lot #"
+                      value={animal.vaccine_lot_parvo}
+                      onChange={(v) => updateField(idx, 'vaccine_lot_parvo', v)}
+                      ocr
+                      attach
+                      fieldLabel="Parvo lot number"
+                      animalId={animal.animal_id}
+                      labelClassName="block text-xs text-muted font-medium mb-0.5"
+                      inputClassName="flex-1 min-w-0 px-2.5 py-2 bg-sand/50 border border-night/5 rounded-lg text-xs text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                    />
                   )}
                 </div>
               )}
               {(animal.services.includes('preventative_oral') || animal.services.includes('preventative_topical')) && (
-                <div className="grid grid-cols-2 gap-2">
-                  <FieldInput label="Product" value={animal.preventative_product} onChange={(v) => updateField(idx, 'preventative_product', v)} placeholder="e.g. NexGard Plus" />
+                <div className="grid grid-cols-1 gap-2">
+                  <ScanInput
+                    label="Product"
+                    value={animal.preventative_product}
+                    onChange={(v) => updateField(idx, 'preventative_product', v)}
+                    placeholder="e.g. NexGard Plus"
+                    ocr
+                    fieldLabel="Product name"
+                    animalId={animal.animal_id}
+                    labelClassName="block text-xs text-muted font-medium mb-0.5"
+                    inputClassName="flex-1 min-w-0 px-2.5 py-2 bg-sand/50 border border-night/5 rounded-lg text-xs text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                  />
                   <FieldInput label="Dosage" value={animal.preventative_dosage} onChange={(v) => updateField(idx, 'preventative_dosage', v)} />
                 </div>
               )}

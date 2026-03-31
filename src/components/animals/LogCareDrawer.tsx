@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import ScanInput from '../shared/ScanInput';
 
 interface Props {
   open: boolean;
@@ -142,19 +143,23 @@ export default function LogCareDrawer({ open, onClose, animalId, animalName, own
           {vaccines && (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted uppercase tracking-wide">Vaccine Details</p>
-              <input
-                type="text"
+              <ScanInput
                 value={vaccineLotDapp}
-                onChange={(e) => setVaccineLotDapp(e.target.value)}
+                onChange={setVaccineLotDapp}
                 placeholder="DAPP lot number"
-                className="w-full px-3 py-2 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                ocr
+                attach
+                fieldLabel="DAPP lot number"
+                animalId={animalId}
               />
-              <input
-                type="text"
+              <ScanInput
                 value={vaccineLotParvo}
-                onChange={(e) => setVaccineLotParvo(e.target.value)}
+                onChange={setVaccineLotParvo}
                 placeholder="Parvo lot number"
-                className="w-full px-3 py-2 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                ocr
+                attach
+                fieldLabel="Parvo lot number"
+                animalId={animalId}
               />
             </div>
           )}
@@ -162,12 +167,14 @@ export default function LogCareDrawer({ open, onClose, animalId, animalName, own
           {preventatives && (
             <div>
               <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Preventative Details</p>
-              <input
-                type="text"
+              <ScanInput
                 value={preventativeProduct}
-                onChange={(e) => setPreventativeProduct(e.target.value)}
+                onChange={setPreventativeProduct}
                 placeholder="Product name / dosage"
-                className="w-full px-3 py-2 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                ocr
+                attach
+                fieldLabel="Product name"
+                animalId={animalId}
               />
             </div>
           )}

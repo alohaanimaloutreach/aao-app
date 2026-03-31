@@ -50,6 +50,7 @@ import LogCareDrawer from '../components/animals/LogCareDrawer';
 import FlagResolver from '../components/admin/FlagResolver';
 import FileAttachments from '../components/shared/FileAttachments';
 import MergeDuplicateModal from '../components/animals/MergeDuplicateModal';
+import ScanInput from '../components/shared/ScanInput';
 
 interface AnimalDetail {
   id: string;
@@ -981,7 +982,17 @@ export default function AnimalProfilePage() {
                 <EditField label="Weight (lbs)" value={editData.weight_lbs} onChange={(v) => setEditData({ ...editData, weight_lbs: v })} type="number" />
               </div>
               <EditField label="Food bag size" value={editData.food_bag_size} onChange={(v) => setEditData({ ...editData, food_bag_size: v })} placeholder="e.g. 6lb, 15lb" />
-              <EditField label="Microchip #" value={editData.microchip_primary} onChange={(v) => setEditData({ ...editData, microchip_primary: v })} />
+              <ScanInput
+                label="Microchip #"
+                value={editData.microchip_primary}
+                onChange={(v) => setEditData({ ...editData, microchip_primary: v })}
+                barcode
+                ocr
+                fieldLabel="Microchip number"
+                animalId={animal?.id}
+                labelClassName="block text-sm text-muted font-medium mb-1"
+                inputClassName="flex-1 min-w-0 px-3 py-2.5 bg-sand/50 border border-night/8 rounded-xl text-sm text-night focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+              />
               <EditSelect label="Fixed status" value={editData.fixed_status} onChange={(v) => setEditData({ ...editData, fixed_status: v })} options={[['fixed', 'Fixed'], ['not_fixed', 'Not Fixed'], ['unknown', 'Unknown']]} />
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={editData.urgent_medical} onChange={(e) => setEditData({ ...editData, urgent_medical: e.target.checked })} className="w-4 h-4 rounded border-night/20 text-ember focus:ring-ember/30" />
