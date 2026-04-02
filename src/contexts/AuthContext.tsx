@@ -51,12 +51,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Auto-login on test environment
         if (!session && isTestEnv) {
-          const { error: signInErr } = await supabase.auth.signInWithPassword({
+          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
             email: TEST_EMAIL,
             password: TEST_PASSWORD,
           });
-          if (!signInErr) return; // onAuthStateChange will handle the rest
-          console.error('[AuthContext] test auto-login failed:', signInErr);
+          if (!signInErr && signInData?.session) {
+            setSession(signInData.session);
+            await fetchProfile(signInData.session.user.id);
+            return;
+          }
+          if (signInErr) console.error('[AuthContext] test auto-login failed:', signInErr);
         }
 
         setSession(session);
