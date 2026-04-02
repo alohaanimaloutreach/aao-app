@@ -473,7 +473,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="mb-5">
         <h1 className="text-xl md:text-3xl font-bold font-heading text-night tracking-tight mb-1">
-          Aloha, {profile?.name?.split(' ')[0] ?? 'friend'}
+          Aloha, {profile?.name ?? 'friend'}
         </h1>
         {isTestEnv ? (
           <p className="text-sm text-amber-600 font-medium mb-4">You are in the practice app. Tap around freely — nothing here is real.</p>
