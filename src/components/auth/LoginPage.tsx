@@ -3,9 +3,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { PawPrint, Eye, EyeOff, ArrowRight, Mail, Check } from 'lucide-react';
 
+const USERNAME_ALIASES: Record<string, string> = {
+  furangel: 'furangelfoundation@gmail.com',
+};
+
 function resolveEmail(input: string): string {
-  const trimmed = input.trim();
+  const trimmed = input.trim().toLowerCase();
   if (trimmed.includes('@')) return trimmed;
+  if (USERNAME_ALIASES[trimmed]) return USERNAME_ALIASES[trimmed];
   return `${trimmed}@alohaanimaloutreach.org`;
 }
 
@@ -147,7 +152,7 @@ export default function LoginPage() {
             />
             {username.trim() && !username.includes('@') && (
               <p className="text-xs text-muted mt-1">
-                Will sign in as {username.trim()}@alohaanimaloutreach.org
+                Will sign in as {resolveEmail(username)}
               </p>
             )}
           </div>
