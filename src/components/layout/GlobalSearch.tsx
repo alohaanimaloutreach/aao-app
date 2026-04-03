@@ -166,7 +166,7 @@ export default function GlobalSearch({ open, onClose }: Props) {
                     <PawPrint className="w-4 h-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-night block truncate">{a.name ?? 'Unnamed'}</span>
+                    <span className="text-sm font-medium text-night block truncate">{a.name ?? a.aao_id ?? 'Unnamed'}</span>
                     <span className="text-xs text-muted">
                       {a.aao_id} · {a.animal_type}
                       {a.owner_name && ` · ${a.owner_name}`}

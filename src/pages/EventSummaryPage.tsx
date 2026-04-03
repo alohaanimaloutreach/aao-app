@@ -85,6 +85,7 @@ export default function EventSummaryPage() {
   const navigate = useNavigate();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [careEvents, setCareEvents] = useState<CareEvent[]>([]);
+  const [sightingEntries, setSightingEntries] = useState<any[]>([]);
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailing, setEmailing] = useState(false);
@@ -108,7 +109,7 @@ export default function EventSummaryPage() {
 
   async function loadData() {
     setLoading(true);
-    const [eventRes, careRes, volRes] = await Promise.all([
+    const [eventRes, careRes, volRes, sightingRes] = await Promise.all([
       supabase
         .from('outreach_events')
         .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, animals_seen, vaccinations_given, microchips_given, preventatives_given, spay_neuter_count, grooming_count, nail_trim_count, location:locations(id, name, latitude, longitude)')
@@ -121,6 +122,10 @@ export default function EventSummaryPage() {
       supabase
         .from('outreach_event_volunteers')
         .select('user:users(name)')
+        .eq('outreach_event_id', id!),
+      supabase
+        .from('sighting_entries')
+        .select('animal_count, care_given')
         .eq('outreach_event_id', id!),
     ]);
 
@@ -136,6 +141,7 @@ export default function EventSummaryPage() {
     setVolunteers((volRes.data ?? []).map((v: any) => ({
       user: Array.isArray(v.user) ? v.user[0] ?? null : v.user,
     })));
+    setSightingEntries(sightingRes.data ?? []);
     setLoading(false);
   }
 
@@ -165,6 +171,7 @@ export default function EventSummaryPage() {
   // Compute stats
   const uniqueOwners = new Set(careEvents.map((c) => c.owner_id));
   const uniqueAnimals = new Set(careEvents.map((c) => c.animal_id));
+  const sightingAnimalTotal = sightingEntries.reduce((sum: number, s: any) => sum + (s.animal_count ?? 1), 0);
   const totalFoodBags = isHistorical ? (event.total_bags ?? 0) : careEvents.reduce((sum, c) => sum + (c.food_bags ?? 0), 0);
   const totalFoodLbs = isHistorical ? (event.total_food_lbs ?? 0) : careEvents.reduce((sum, c) => sum + (c.food_lbs ?? 0), 0);
 
@@ -207,7 +214,7 @@ export default function EventSummaryPage() {
     body += `Volunteers: ${volunteerNames.join(', ')}\n\n`;
     body += `Totals\n`;
     body += `Owners seen: ${uniqueOwners.size}\n`;
-    body += `Animals seen: ${uniqueAnimals.size}\n`;
+    body += `Animals seen: ${uniqueAnimals.size + sightingAnimalTotal}\n`;
     body += `Food: ${totalFoodBags} bags (${totalFoodLbs} lbs)\n`;
     Object.entries(typeCounts).filter(([k]) => k !== 'food' && k !== 'seen').forEach(([k, v]) => {
       body += `${CARE_LABELS[k] ?? k}: ${v}\n`;
@@ -236,7 +243,7 @@ export default function EventSummaryPage() {
   // Build stats items array
   const statItems: { icon: any; label: string; value: number; sub?: string }[] = [];
   if (!isHistorical) statItems.push({ icon: Users, label: 'Owners', value: uniqueOwners.size });
-  statItems.push({ icon: PawPrint, label: 'Animals', value: isHistorical ? (event.animals_seen ?? 0) : uniqueAnimals.size });
+  statItems.push({ icon: PawPrint, label: 'Animals', value: isHistorical ? (event.animals_seen ?? 0) : (uniqueAnimals.size + sightingAnimalTotal) });
   if (totalFoodBags > 0) {
     statItems.push({ icon: Package, label: 'Food bags', value: totalFoodBags, sub: totalFoodLbs > 0 ? `${totalFoodLbs} lbs` : undefined });
   } else if (isHistorical && totalFoodLbs > 0) {
@@ -300,7 +307,7 @@ export default function EventSummaryPage() {
           )}
           <div className="flex items-center gap-1.5">
             <PawPrint className="w-4 h-4 text-white/50" />
-            <span className="text-lg font-bold">{isHistorical ? (event.animals_seen ?? 0) : uniqueAnimals.size}</span>
+            <span className="text-lg font-bold">{isHistorical ? (event.animals_seen ?? 0) : (uniqueAnimals.size + sightingAnimalTotal)}</span>
             <span className="text-xs text-white/50">animals</span>
           </div>
           {totalFoodBags > 0 && (

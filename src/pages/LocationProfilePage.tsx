@@ -574,7 +574,7 @@ function AnimalsTab({ animals }: { animals: LinkedAnimal[] }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-heading font-bold text-sm text-night truncate">{a.name ?? 'Unnamed'}</span>
+                        <span className="font-heading font-bold text-sm text-night truncate">{a.name ?? a.aao_id ?? 'Unnamed'}</span>
                         <span className="text-xs text-muted font-mono">{a.aao_id}</span>
                         {a.urgent_medical && (
                           <span className="text-xs font-bold text-ember bg-ember/10 px-1.5 py-0.5 rounded-full">Urgent</span>

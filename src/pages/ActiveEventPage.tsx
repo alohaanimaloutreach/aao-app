@@ -6,7 +6,7 @@ import {
   MapPin,
   Calendar,
   CheckCircle2,
-
+  Eye,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,6 +15,7 @@ import { formatDate } from '../lib/format';
 import CheckInDesk from '../components/outreach/CheckInDesk';
 import VetQueue from '../components/outreach/VetQueue';
 import CompletedList from '../components/outreach/CompletedList';
+import LogSightingDrawer from '../components/outreach/LogSightingDrawer';
 
 interface EventInfo {
   id: string;
@@ -38,6 +39,7 @@ export default function ActiveEventPage() {
   const [completeCount, setCompleteCount] = useState(0);
   const [endingEvent, setEndingEvent] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [showSighting, setShowSighting] = useState(false);
 
   useEffect(() => {
     if (session && id) loadEvent();
@@ -71,15 +73,17 @@ export default function ActiveEventPage() {
   async function confirmEndEvent() {
     setEndingEvent(true);
 
-    const { data: care } = await supabase
-      .from('care_events')
-      .select('food_bags, food_lbs, care_types, animal_id')
-      .eq('outreach_event_id', id!);
+    const [{ data: care }, { data: sightings }] = await Promise.all([
+      supabase.from('care_events').select('food_bags, food_lbs, care_types, animal_id').eq('outreach_event_id', id!),
+      supabase.from('sighting_entries').select('animal_count, care_given').eq('outreach_event_id', id!),
+    ]);
 
     const rows = care ?? [];
+    const sRows = sightings ?? [];
     const totalBags = rows.reduce((sum, c) => sum + ((c as any).food_bags ?? 0), 0);
     const totalLbs = rows.reduce((sum, c) => sum + ((c as any).food_lbs ?? 0), 0);
     const uniqueAnimals = new Set(rows.map((c: any) => c.animal_id).filter(Boolean));
+    const sightingAnimalCount = sRows.reduce((sum, s: any) => sum + (s.animal_count ?? 1), 0);
     let vaxCount = 0, mcCount = 0, prevCount = 0, snCount = 0, groomCount = 0, nailCount = 0;
     rows.forEach((c: any) => {
       const types: string[] = c.care_types ?? [];
@@ -90,12 +94,19 @@ export default function ActiveEventPage() {
       if (types.includes('grooming')) groomCount++;
       if (types.includes('nail_trim')) nailCount++;
     });
+    // Add sighting counts
+    sRows.forEach((s: any) => {
+      const cg: string[] = s.care_given ?? [];
+      if (cg.includes('vaccine')) vaxCount += (s.animal_count ?? 1);
+      if (cg.includes('microchip')) mcCount += (s.animal_count ?? 1);
+      if (cg.includes('preventative')) prevCount += (s.animal_count ?? 1);
+    });
 
     await supabase.from('outreach_events').update({
       status: 'completed',
       total_bags: totalBags || null,
       total_food_lbs: totalLbs || null,
-      animals_seen: uniqueAnimals.size || null,
+      animals_seen: (uniqueAnimals.size + sightingAnimalCount) || null,
       vaccinations_given: vaxCount || null,
       microchips_given: mcCount || null,
       preventatives_given: prevCount || null,
@@ -159,6 +170,15 @@ export default function ActiveEventPage() {
         </button>
       </div>
 
+      {/* Log Sighting button */}
+      <button
+        onClick={() => setShowSighting(true)}
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 mb-4 rounded-xl bg-primary/10 border border-primary/20 text-primary font-semibold text-sm hover:bg-primary/15 transition-all"
+      >
+        <Eye className="w-4 h-4" strokeWidth={2} />
+        Log Sighting
+      </button>
+
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl p-1 mb-4 bg-night/5">
         <button
@@ -210,6 +230,16 @@ export default function ActiveEventPage() {
       ) : (
         <CompletedList eventId={event.id} />
       )}
+
+      {/* Log Sighting Drawer */}
+      <LogSightingDrawer
+        open={showSighting}
+        onClose={() => setShowSighting(false)}
+        eventId={event.id}
+        eventLocationId={event.location?.id ?? ''}
+        eventDate={event.event_date}
+        onSaved={() => loadCounts()}
+      />
 
       {/* End Event Confirmation */}
       {showEndConfirm && (

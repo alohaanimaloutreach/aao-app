@@ -100,7 +100,7 @@ export default function AnimalCard({ animal, onToggle, isDuplicate }: Props) {
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <div className="min-w-0">
             <h3 className="font-heading font-bold text-night text-sm leading-tight truncate">
-              {animal.name ?? 'Unnamed'}
+              {animal.name ?? animal.aao_id}
             </h3>
             <p className="text-xs text-muted font-mono">{animal.aao_id}</p>
           </div>

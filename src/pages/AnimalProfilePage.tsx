@@ -191,7 +191,7 @@ export default function AnimalProfilePage() {
   useEffect(() => {
     if (animal) {
       const typeLabel = animal.animal_type === 'cat' ? 'Cat' : animal.animal_type === 'dog' ? 'Dog' : 'Animal';
-      document.title = `${animal.name ?? 'Unnamed'} (${typeLabel}) | AAO`;
+      document.title = `${animal.name ?? animal.aao_id} (${typeLabel}) | AAO`;
     }
     return () => { document.title = 'AAO Command Center'; };
   }, [animal]);
@@ -560,7 +560,7 @@ export default function AnimalProfilePage() {
             <div>
               <div className="flex items-center gap-2.5 mb-1">
                 <h1 className="text-xl md:text-2xl font-heading font-bold text-night">
-                  {animal.name ?? 'Unnamed'}
+                  {animal.name ?? animal.aao_id}
                 </h1>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${typeConfig.bg} ${typeConfig.text}`}>
                   {typeConfig.label}

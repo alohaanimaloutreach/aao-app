@@ -288,13 +288,13 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
 
   // Quick add animal
   async function handleAddAnimal() {
-    if (!newAnimalName.trim() || !owner || !user) return;
+    if (!owner || !user) return;
     setSubmitting(true);
     const noteParts = [newAnimalNotes.trim()].filter(Boolean);
     const { data } = await supabase
       .from('animals')
       .insert({
-        name: newAnimalName.trim(),
+        name: newAnimalName.trim() || null,
         animal_type: newAnimalType,
         size_category: newAnimalSize,
         sex: newAnimalSex,
@@ -415,7 +415,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
       if (services.length === 0) services.push('seen');
       return {
       animal_id: a.id,
-      animal_name: a.name ?? 'Unnamed',
+      animal_name: a.name ?? a.aao_id ?? 'Unnamed',
       aao_id: a.aao_id,
       food_bag_size: a.food_bag_size,
       services,
@@ -477,7 +477,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
       if (a.needsSN) services.push('spay_neuter');
       return {
         animal_id: a.id,
-        animal_name: a.name ?? 'Unnamed',
+        animal_name: a.name ?? a.aao_id ?? 'Unnamed',
         aao_id: a.aao_id,
         food_bag_size: a.food_bag_size,
         services,
@@ -650,12 +650,12 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
         <p className="text-xs text-muted">Adding for {owner?.name}</p>
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-muted mb-1">Name *</label>
+            <label className="block text-sm font-medium text-muted mb-1">Name (optional)</label>
             <input
               type="text"
               value={newAnimalName}
               onChange={(e) => setNewAnimalName(e.target.value)}
-              placeholder="Animal name"
+              placeholder="Leave blank for unnamed animal"
               className="w-full px-3 py-2.5 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               autoFocus
             />
@@ -743,7 +743,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
           </div>
           <button
             onClick={handleAddAnimal}
-            disabled={!newAnimalName.trim() || submitting}
+            disabled={submitting}
             className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl shadow-[0_2px_8px_rgba(110,168,50,0.25)] disabled:opacity-30 transition-all text-sm"
           >
             {submitting ? 'Saving...' : 'Add Animal'}
@@ -805,7 +805,7 @@ export default function CheckInDesk({ eventId, eventLocationId, eventDate, onChe
                         {isChecked && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
                       </button>
                       <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium text-night">{animal.name ?? 'Unnamed'}</span>
+                        <span className="text-sm font-medium text-night">{animal.name ?? animal.aao_id}</span>
                         <span className="text-xs text-muted ml-2 font-mono">{animal.aao_id}</span>
                       </div>
                       {animal.food_bag_size && (

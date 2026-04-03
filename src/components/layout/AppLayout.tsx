@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Pencil } from 'lucide-react';
+import { Pencil, WifiOff } from 'lucide-react';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 import TopBar from './TopBar';
 import FieldNotesDrawer from './FieldNotesDrawer';
+import { syncPending, getPendingCount } from '../../lib/offlineQueue';
 
 const isTestEnv = import.meta.env.VITE_SUPABASE_URL?.includes('ybswvwbqweywhfjgdwro');
 
 export default function AppLayout() {
   const [notesOpen, setNotesOpen] = useState(false);
+  const [pendingOffline, setPendingOffline] = useState(0);
   const location = useLocation();
 
   // Override theme colors for test environment
@@ -18,6 +20,17 @@ export default function AppLayout() {
       document.documentElement.style.setProperty('--color-primary', '#d97706');
       document.documentElement.style.setProperty('--color-primary-hover', '#b45309');
     }
+  }, []);
+
+  // Offline queue sync
+  useEffect(() => {
+    async function trySync() {
+      await syncPending();
+      setPendingOffline(await getPendingCount());
+    }
+    trySync();
+    window.addEventListener('online', trySync);
+    return () => window.removeEventListener('online', trySync);
   }, []);
   return (
     <div className={`min-h-screen ${isTestEnv ? 'bg-amber-50/60' : 'bg-sand'}`}>
@@ -36,6 +49,12 @@ export default function AppLayout() {
           </div>
         )}
         <TopBar />
+        {pendingOffline > 0 && (
+          <div className="flex items-center justify-center gap-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs font-medium py-1.5 px-4">
+            <WifiOff className="w-3 h-3" />
+            {pendingOffline} sighting{pendingOffline !== 1 ? 's' : ''} pending sync
+          </div>
+        )}
 
         <main
           id="main-content"

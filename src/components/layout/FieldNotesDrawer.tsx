@@ -97,7 +97,7 @@ export default function FieldNotesDrawer({ open, onClose }: Props) {
     const timer = setTimeout(async () => {
       if (linking === 'animal') {
         const { data } = await supabase.from('animals').select('id, name, aao_id').or(`name.ilike.%${q}%,aao_id.ilike.%${q}%`).eq('archived', false).limit(10);
-        setLinkResults((data ?? []).map((a: any) => ({ id: a.id, label: a.name ?? 'Unnamed', sub: a.aao_id })));
+        setLinkResults((data ?? []).map((a: any) => ({ id: a.id, label: a.name ?? a.aao_id ?? 'Unnamed', sub: a.aao_id })));
       } else if (linking === 'owner') {
         const { data } = await supabase.from('owners').select('id, name').ilike('name', `%${q}%`).eq('archived', false).limit(10);
         setLinkResults((data ?? []).map((o: any) => ({ id: o.id, label: o.name })));
