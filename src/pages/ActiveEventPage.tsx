@@ -115,6 +115,45 @@ export default function ActiveEventPage() {
       nail_trim_count: nailCount || null,
     }).eq('id', id!);
 
+    // Auto-timeline: for each owner seen in sightings, create care_events
+    // for their animals that don't already have one for this event
+    const { data: ownerSightings } = await supabase
+      .from('sighting_entries')
+      .select('owner_id')
+      .eq('outreach_event_id', id!)
+      .not('owner_id', 'is', null);
+
+    const ownerIds = [...new Set((ownerSightings ?? []).map((s: any) => s.owner_id))];
+    if (ownerIds.length > 0 && session?.user) {
+      const { data: existingCare } = await supabase
+        .from('care_events')
+        .select('animal_id')
+        .eq('outreach_event_id', id!);
+      const coveredAnimals = new Set((existingCare ?? []).map((c: any) => c.animal_id));
+
+      for (const ownerId of ownerIds) {
+        const { data: ownerAnimals } = await supabase
+          .from('animals')
+          .select('id')
+          .eq('owner_id', ownerId)
+          .eq('archived', false);
+        const uncovered = (ownerAnimals ?? []).filter((a: any) => !coveredAnimals.has(a.id));
+        if (uncovered.length > 0) {
+          await supabase.from('care_events').insert(
+            uncovered.map((a: any) => ({
+              outreach_event_id: id!,
+              animal_id: a.id,
+              owner_id: ownerId,
+              event_date: event!.event_date,
+              care_types: ['food'],
+              other_notes: 'Auto-recorded: owner attended this outreach',
+              created_by: session.user.id,
+            }))
+          );
+        }
+      }
+    }
+
     setEndingEvent(false);
     setShowEndConfirm(false);
     navigate(`/outreach/summary/${id}`);

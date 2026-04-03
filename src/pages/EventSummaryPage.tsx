@@ -32,6 +32,8 @@ import { formatDate } from '../lib/format';
 import { EVENT_TYPE_CONFIG } from '../lib/constants';
 import FileAttachments from '../components/shared/FileAttachments';
 import MapIframe from '../components/shared/MapIframe';
+import ReviewSightingsDrawer from '../components/outreach/ReviewSightingsDrawer';
+import { Eye } from 'lucide-react';
 
 interface EventDetail {
   id: string;
@@ -125,6 +127,10 @@ export default function EventSummaryPage() {
   const [volSearching, setVolSearching] = useState(false);
   const [addingFreeText, setAddingFreeText] = useState(false);
 
+  // Review sightings
+  const [unreviewedCount, setUnreviewedCount] = useState(0);
+  const [showReview, setShowReview] = useState(false);
+
   // Task management
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTaskText, setNewTaskText] = useState('');
@@ -146,7 +152,7 @@ export default function EventSummaryPage() {
 
   async function loadData() {
     setLoading(true);
-    const [eventRes, careRes, volRes, sightingRes, taskRes] = await Promise.all([
+    const [eventRes, careRes, volRes, sightingRes, taskRes, unreviewedRes] = await Promise.all([
       supabase
         .from('outreach_events')
         .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, animals_seen, vaccinations_given, microchips_given, preventatives_given, spay_neuter_count, grooming_count, nail_trim_count, drive_folder_url, location:locations(id, name, latitude, longitude)')
@@ -169,7 +175,15 @@ export default function EventSummaryPage() {
         .select('id, task, assigned_to, assigned_name, due_date, completed, completed_by, completed_at')
         .eq('outreach_event_id', id!)
         .order('created_at', { ascending: true }),
+      supabase
+        .from('sighting_entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('outreach_event_id', id!)
+        .is('animal_id', null)
+        .eq('reviewed', false),
     ]);
+
+    setUnreviewedCount(unreviewedRes.count ?? 0);
 
     if (eventRes.data) {
       const e = eventRes.data as any;
@@ -566,6 +580,26 @@ export default function EventSummaryPage() {
         </a>
       )}
 
+      {/* Review Sightings */}
+      {!isHistorical && (
+        <button
+          onClick={() => unreviewedCount > 0 && setShowReview(true)}
+          disabled={unreviewedCount === 0}
+          className={`flex items-center justify-center gap-2 w-full py-2.5 mb-3 rounded-2xl text-sm font-medium shadow-sm transition-all ${
+            unreviewedCount > 0
+              ? 'bg-amber-50 border border-amber-200/50 text-amber-800 hover:bg-amber-100'
+              : 'bg-primary/5 border border-primary/10 text-primary'
+          }`}
+        >
+          <Eye className="w-4 h-4" />
+          {unreviewedCount > 0 ? (
+            <>Review Sightings <span className="bg-amber-200 text-amber-900 text-xs font-bold rounded-full px-1.5 py-0.5">{unreviewedCount}</span></>
+          ) : (
+            <>All reviewed <Check className="w-3.5 h-3.5" /></>
+          )}
+        </button>
+      )}
+
       {/* Follow-up Tasks */}
       <div className="bg-white rounded-2xl border border-night/5 overflow-hidden shadow-sm mb-3">
         <div className="flex items-center justify-between px-4 py-3 border-b border-night/5">
@@ -678,6 +712,16 @@ export default function EventSummaryPage() {
         emailing={emailing}
         emailSent={emailSent}
         isHistorical={isHistorical}
+      />
+
+      {/* Review Sightings Drawer */}
+      <ReviewSightingsDrawer
+        open={showReview}
+        onClose={() => { setShowReview(false); loadData(); }}
+        eventId={event.id}
+        eventLocationId={event.location?.id ?? ''}
+        eventDate={event.event_date}
+        onUpdated={() => { setShowReview(false); loadData(); }}
       />
 
       {/* Delete confirmation modal */}

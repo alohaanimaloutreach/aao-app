@@ -7,6 +7,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { queueSighting } from '../../lib/offlineQueue';
+import { formatRelative } from '../../lib/format';
 
 interface Props {
   open: boolean;
@@ -29,6 +30,7 @@ interface AnimalMatch {
   name: string;
   aao_id: string;
   owner: { name: string } | null;
+  last_seen?: string | null;
 }
 
 const COLORS = ['Black', 'Brown', 'Tan', 'White', 'Brindle', 'Grey', 'Mixed'];
@@ -76,6 +78,11 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
   // Notes
   const [notes, setNotes] = useState('');
 
+  // Duplicate detection
+  const [nameSuggestion, setNameSuggestion] = useState<AnimalMatch | null>(null);
+  const [selectedAnimalId, setSelectedAnimalId] = useState<string | null>(null);
+  const [nameSuggestionDismissed, setNameSuggestionDismissed] = useState(false);
+
   // Submit state
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -104,6 +111,34 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
     return () => clearTimeout(timeout);
   }, [ownerQuery]);
 
+  // Duplicate detection: debounced search on animal name
+  useEffect(() => {
+    if (nameSuggestionDismissed || selectedAnimalId) return;
+    if (animalName.trim().length < 2) { setNameSuggestion(null); return; }
+    const timer = setTimeout(async () => {
+      const query = supabase
+        .from('animals')
+        .select('id, name, aao_id, last_seen, owner:owners(name)')
+        .eq('archived', false)
+        .ilike('name', animalName.trim());
+
+      // Narrow by owner or location
+      if (selectedOwner) {
+        query.eq('owner_id', selectedOwner.id);
+      } else {
+        query.eq('primary_location_id', eventLocationId);
+      }
+
+      const { data } = await query.limit(3);
+      const matches = (data ?? []).map((m: any) => ({
+        ...m,
+        owner: Array.isArray(m.owner) ? m.owner[0] ?? null : m.owner,
+      }));
+      setNameSuggestion(matches.length > 0 ? matches[0] : null);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [animalName, selectedOwner, eventLocationId, nameSuggestionDismissed, selectedAnimalId]);
+
   function toggleCare(type: CareType) {
     setCareGiven((prev) => {
       const next = new Set(prev);
@@ -127,6 +162,7 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
     setVaccineLot(''); setMicrochipNumber(''); setOtherCareNotes('');
     setNotes(''); setError(''); setSavedOffline(false);
     setShowMatchConfirm(false); setMatchedAnimal(null);
+    setNameSuggestion(null); setSelectedAnimalId(null); setNameSuggestionDismissed(false);
   }
 
   function handleClose() {
@@ -176,9 +212,10 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
 
     const hasName = animalName.trim().length > 0;
     const forceNew = useExistingAnimal === '__new__';
-    let animalId: string | null = (useExistingAnimal && !forceNew) ? useExistingAnimal : null;
+    let animalId: string | null = (useExistingAnimal && !forceNew) ? useExistingAnimal : selectedAnimalId;
 
     // If named: check for matches or create a new profile
+    // Skip match search if user already accepted a suggestion via duplicate detection
     if (hasName && !animalId && !multiple) {
       if (!forceNew) {
         // Search for existing animal with same name + owner
@@ -522,7 +559,44 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
                 placeholder="Leave blank for unnamed sighting"
                 className="w-full px-3 py-2.5 bg-white border border-night/8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
               />
-              {animalName.trim() && (
+              {selectedAnimalId && nameSuggestion && (
+                <div className="mt-1.5 bg-primary/5 border border-primary/15 rounded-lg px-3 py-2 flex items-center justify-between">
+                  <p className="text-xs text-primary font-medium">
+                    Logging to {nameSuggestion.name}'s existing record
+                  </p>
+                  <button
+                    onClick={() => { setSelectedAnimalId(null); setNameSuggestion(null); setNameSuggestionDismissed(true); }}
+                    className="text-xs text-muted hover:text-night ml-2"
+                  >
+                    Undo
+                  </button>
+                </div>
+              )}
+              {!selectedAnimalId && nameSuggestion && !nameSuggestionDismissed && (
+                <div className="mt-1.5 bg-amber-50 border border-amber-200/50 rounded-lg px-3 py-2.5">
+                  <p className="text-xs text-amber-800">
+                    We have a <span className="font-bold">{nameSuggestion.name}</span> at this location
+                    {nameSuggestion.owner?.name && <> — {nameSuggestion.owner.name}</>}
+                    {nameSuggestion.last_seen && <>, last seen {formatRelative(nameSuggestion.last_seen)}</>}.
+                    Same dog?
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => setSelectedAnimalId(nameSuggestion.id)}
+                      className="flex-1 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-hover transition-all"
+                    >
+                      Yes, log to their record
+                    </button>
+                    <button
+                      onClick={() => { setNameSuggestion(null); setNameSuggestionDismissed(true); }}
+                      className="flex-1 py-1.5 bg-white border border-night/8 text-night text-xs font-medium rounded-lg hover:bg-sand transition-all"
+                    >
+                      No, different dog
+                    </button>
+                  </div>
+                </div>
+              )}
+              {animalName.trim() && !selectedAnimalId && (
                 <p className="text-xs text-primary mt-1">A profile will be created for this animal</p>
               )}
             </div>
