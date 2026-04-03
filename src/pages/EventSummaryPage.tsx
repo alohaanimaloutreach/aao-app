@@ -33,7 +33,8 @@ import { EVENT_TYPE_CONFIG } from '../lib/constants';
 import FileAttachments from '../components/shared/FileAttachments';
 import MapIframe from '../components/shared/MapIframe';
 import ReviewSightingsDrawer from '../components/outreach/ReviewSightingsDrawer';
-import { Eye } from 'lucide-react';
+import PrintableEventReport from '../components/outreach/PrintableEventReport';
+import { Eye, Printer } from 'lucide-react';
 
 interface EventDetail {
   id: string;
@@ -345,7 +346,7 @@ export default function EventSummaryPage() {
     let body = `Event Summary\n\n`;
     body += `Date: ${formatDate(event!.event_date)}\n`;
     body += `Location: ${event!.location?.name ?? 'Unknown'}\n`;
-    body += `Volunteers: ${volunteerNames.join(', ')}\n\n`;
+    body += `Volunteers: ${volunteerNames.length > 0 ? volunteerNames.join(', ') : 'None recorded'}\n\n`;
     body += `Totals\n`;
     body += `Owners seen: ${uniqueOwners.size}\n`;
     body += `Animals seen: ${uniqueAnimals.size + sightingAnimalTotal}\n`;
@@ -362,6 +363,15 @@ export default function EventSummaryPage() {
         body += `  ${name} (${c.animal?.aao_id}): ${services}\n`;
       });
     });
+    if (tasks.length > 0) {
+      body += `\nFollow-up Tasks\n`;
+      tasks.forEach((t) => {
+        body += `${t.completed ? '✓' : '☐'} ${t.task}${t.assigned_name ? ` (${t.assigned_name})` : ''}\n`;
+      });
+    }
+    if (event!.drive_folder_url) {
+      body += `\nEvent Photos: ${event!.drive_folder_url}\n`;
+    }
     return body;
   }
 
@@ -724,6 +734,23 @@ export default function EventSummaryPage() {
         onUpdated={() => { setShowReview(false); loadData(); }}
       />
 
+      {/* Printable report (hidden on screen, visible on print) */}
+      <div className="print-only">
+        <PrintableEventReport
+          event={event}
+          careEvents={careEvents}
+          sightingAnimalTotal={sightingAnimalTotal}
+          volunteerNames={volunteerNames}
+          tasks={tasks}
+          statItems={statItems}
+          byOwner={byOwner}
+          uniqueOwners={uniqueOwners.size}
+          totalFoodBags={totalFoodBags}
+          totalFoodLbs={totalFoodLbs}
+          isHistorical={isHistorical}
+        />
+      </div>
+
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true">
@@ -860,15 +887,24 @@ function EventTabs({
               </div>
             )}
 
-            {/* Email action */}
-            <button
-              onClick={sendEmailSummary}
-              disabled={emailing || emailSent}
-              className="w-full py-2.5 bg-sand/50 border border-night/5 rounded-xl text-sm font-medium text-night hover:bg-sand flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-            >
-              <Mail className="w-4 h-4" />
-              {emailSent ? 'Email opened' : 'Email Summary'}
-            </button>
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button
+                onClick={sendEmailSummary}
+                disabled={emailing || emailSent}
+                className="flex-1 py-2.5 bg-sand/50 border border-night/5 rounded-xl text-sm font-medium text-night hover:bg-sand flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              >
+                <Mail className="w-4 h-4" />
+                {emailSent ? 'Email opened' : 'Email Summary'}
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="py-2.5 px-4 bg-sand/50 border border-night/5 rounded-xl text-sm font-medium text-night hover:bg-sand flex items-center justify-center gap-2 transition-all"
+              >
+                <Printer className="w-4 h-4" />
+                Export PDF
+              </button>
+            </div>
           </div>
         )}
 

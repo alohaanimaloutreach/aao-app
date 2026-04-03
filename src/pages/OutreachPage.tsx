@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CalendarHeart, Plus, MapPin, Users, PawPrint, Package, Play, Search, ArrowUpDown, X } from 'lucide-react';
+import { CalendarHeart, Plus, MapPin, Users, PawPrint, Package, Play, Search, ArrowUpDown, X, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,6 +8,7 @@ import { formatDate } from '../lib/format';
 import { EVENT_TYPE_CONFIG } from '../lib/constants';
 import EmptyState from '../components/shared/EmptyState';
 import EventSetup from '../components/outreach/EventSetup';
+import DayReportModal from '../components/outreach/DayReportModal';
 
 interface OutreachEventRow {
   id: string;
@@ -38,6 +39,7 @@ export default function OutreachPage() {
   const [locationFilter, setLocationFilter] = useState<string[]>([]);
   const [sortNewest, setSortNewest] = useState(true);
   const [locDropdownOpen, setLocDropdownOpen] = useState(false);
+  const [dayReportGroup, setDayReportGroup] = useState<{ id: string; label: string; date: string } | null>(null);
 
   useEffect(() => {
     document.title = 'Outreach | AAO Command Center';
@@ -326,6 +328,12 @@ export default function OutreachPage() {
                                 {totalFood > 0 && (
                                   <span className="flex items-center gap-1"><Package className="w-3 h-3" /> {totalFood} lbs</span>
                                 )}
+                                <button
+                                  onClick={(ev) => { ev.preventDefault(); setDayReportGroup({ id: e.day_group_id!, label: e.day_group_label ?? 'Multi-Stop Day', date: e.event_date }); }}
+                                  className="flex items-center gap-1 text-primary hover:text-primary-hover font-medium transition-colors"
+                                >
+                                  <FileText className="w-3 h-3" /> Day Report
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -351,6 +359,14 @@ export default function OutreachPage() {
       )}
 
       {showSetup && <EventSetup onCreated={handleEventCreated} onCancel={() => setShowSetup(false)} />}
+      {dayReportGroup && (
+        <DayReportModal
+          dayGroupId={dayReportGroup.id}
+          dayGroupLabel={dayReportGroup.label}
+          eventDate={dayReportGroup.date}
+          onClose={() => setDayReportGroup(null)}
+        />
+      )}
     </div>
   );
 }

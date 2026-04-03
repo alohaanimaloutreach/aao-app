@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BarChart3, Download, ChevronDown, ChevronUp, CalendarHeart, Scissors, Package } from 'lucide-react';
+import { BarChart3, Download, ChevronDown, ChevronUp, CalendarHeart, Scissors, Package, FileText, Copy, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { downloadCsv } from '../lib/csv-export';
 import { formatDate, daysSince } from '../lib/format';
@@ -100,6 +100,13 @@ export default function ReportsPage() {
           />
         ))}
       </div>
+
+      {/* Grant Report Export */}
+      {selectedYear !== 'all' && (
+        <div className="mt-6">
+          <GrantReportExport year={selectedYear} impactStats={impactStats} />
+        </div>
+      )}
     </div>
   );
 }
@@ -126,6 +133,135 @@ function ReportSection({ reportKey, label, description, expanded, onToggle, sele
           <ReportContent reportKey={reportKey} selectedYear={selectedYear} />
         </div>
       )}
+    </div>
+  );
+}
+
+function GrantReportExport({ year, impactStats }: { year: number; impactStats: { events: number; sn: number; food: number } | null }) {
+  const [loading, setLoading] = useState(true);
+  const [reportText, setReportText] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    buildReport();
+  }, [year, impactStats]);
+
+  async function buildReport() {
+    setLoading(true);
+    const yearStart = `${year}-01-01`;
+    const yearEnd = `${year + 1}-01-01`;
+
+    const [vaxRes, mcRes, prevRes, animalsRes, locRes] = await Promise.all([
+      supabase.from('outreach_events').select('vaccinations_given').gte('event_date', yearStart).lt('event_date', yearEnd),
+      supabase.from('outreach_events').select('microchips_given').gte('event_date', yearStart).lt('event_date', yearEnd),
+      supabase.from('outreach_events').select('preventatives_given').gte('event_date', yearStart).lt('event_date', yearEnd),
+      supabase.from('outreach_events').select('animals_seen').gte('event_date', yearStart).lt('event_date', yearEnd),
+      supabase.from('outreach_events').select('location:locations(name)').gte('event_date', yearStart).lt('event_date', yearEnd),
+    ]);
+
+    const totalVax = (vaxRes.data ?? []).reduce((s: number, e: any) => s + (e.vaccinations_given ?? 0), 0);
+    const totalMc = (mcRes.data ?? []).reduce((s: number, e: any) => s + (e.microchips_given ?? 0), 0);
+    const totalPrev = (prevRes.data ?? []).reduce((s: number, e: any) => s + (e.preventatives_given ?? 0), 0);
+    const totalAnimals = (animalsRes.data ?? []).reduce((s: number, e: any) => s + (e.animals_seen ?? 0), 0);
+    const locationNames = [...new Set((locRes.data ?? []).map((e: any) => {
+      const loc = Array.isArray(e.location) ? e.location[0] : e.location;
+      return loc?.name;
+    }).filter(Boolean))];
+
+    const events = impactStats?.events ?? 0;
+    const sn = impactStats?.sn ?? 0;
+    const food = impactStats?.food ?? 0;
+
+    let text = `ALOHA ANIMAL OUTREACH — ${year} IMPACT REPORT\n\n`;
+    text += `In ${year}, Aloha Animal Outreach conducted ${events} outreach event${events !== 1 ? 's' : ''}`;
+    if (locationNames.length > 0) {
+      text += ` across ${locationNames.length} location${locationNames.length !== 1 ? 's' : ''} including ${locationNames.slice(0, 5).join(', ')}${locationNames.length > 5 ? `, and ${locationNames.length - 5} more` : ''}`;
+    }
+    text += `.\n\n`;
+
+    text += `ANIMALS SERVED\n`;
+    text += `Total animals seen: ${totalAnimals.toLocaleString()}\n`;
+    if (sn > 0) text += `Spay/neuter surgeries: ${sn.toLocaleString()}\n`;
+    if (totalVax > 0) text += `Vaccinations administered: ${totalVax.toLocaleString()}\n`;
+    if (totalMc > 0) text += `Microchips implanted: ${totalMc.toLocaleString()}\n`;
+    if (totalPrev > 0) text += `Preventative treatments: ${totalPrev.toLocaleString()}\n`;
+    text += `\n`;
+
+    text += `FOOD DISTRIBUTION\n`;
+    text += `Total food distributed: ${food.toLocaleString()} lbs\n\n`;
+
+    text += `COMMUNITY IMPACT\n`;
+    text += `Through ${events} community outreach events, AAO provided free veterinary care, food, and supplies to underserved pet owners in Honolulu. `;
+    text += `Our program helps keep pets with their families by removing barriers to care.\n\n`;
+
+    if (locationNames.length > 0) {
+      text += `LOCATIONS SERVED\n`;
+      locationNames.forEach((name) => { text += `• ${name}\n`; });
+      text += `\n`;
+    }
+
+    text += `---\nGenerated from AAO Command Center · ${new Date().toLocaleDateString()}`;
+
+    setReportText(text);
+    setLoading(false);
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(reportText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleDownload() {
+    const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aao-grant-report-${year}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-night/5 overflow-hidden">
+      <div className="flex items-center justify-between p-4 border-b border-night/5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <FileText className="w-4 h-4 text-primary" strokeWidth={1.75} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-night">Grant Report Export</p>
+            <p className="text-xs text-muted">Formatted impact summary for grant applications</p>
+          </div>
+        </div>
+      </div>
+      <div className="p-4">
+        {loading ? (
+          <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="skeleton h-4 w-full" />)}</div>
+        ) : (
+          <>
+            <pre className="text-xs text-night bg-sand/50 rounded-xl p-4 whitespace-pre-wrap font-body leading-relaxed max-h-80 overflow-y-auto mb-3">
+              {reportText}
+            </pre>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-sand border border-night/8 rounded-lg text-xs font-medium text-night hover:bg-night/5 transition-all"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+              <button
+                onClick={handleDownload}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg transition-all"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download .txt
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

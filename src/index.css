@@ -175,6 +175,59 @@ a:active {
   }
 }
 
+/* Print styles */
+.print-only {
+  display: none;
+}
+
+@media print {
+  /* Hide everything except the printable report */
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide nav, sidebar, buttons, etc */
+  nav, header, .sidebar, [role="navigation"],
+  button:not(.print-keep), a:not(.print-keep),
+  .fixed:not(.print-only) {
+    display: none !important;
+  }
+
+  /* Hide the main app content */
+  .print-hide, .no-print {
+    display: none !important;
+  }
+
+  /* Show the printable report */
+  .print-only {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 20px;
+    z-index: 9999;
+    background: white;
+  }
+
+  .print-report {
+    max-width: 700px;
+    margin: 0 auto;
+    font-family: var(--font-body);
+    color: #1a1a1a;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  /* Day report modal print */
+  .day-report-content {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+
 /* Screen reader only utility */
 .sr-only {
   position: absolute;
