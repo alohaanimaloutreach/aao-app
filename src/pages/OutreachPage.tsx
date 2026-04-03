@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { CalendarHeart, Plus, MapPin, Users, PawPrint, Package, Play, Search, ArrowUpDown, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -22,6 +22,8 @@ interface OutreachEventRow {
   location: { name: string } | null;
   volunteer_count: number;
   animal_count: number;
+  day_group_id: string | null;
+  day_group_label: string | null;
 }
 
 export default function OutreachPage() {
@@ -51,7 +53,7 @@ export default function OutreachPage() {
 
     let eventsQuery = supabase
       .from('outreach_events')
-      .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, location_id, animals_seen, location:locations(name)')
+      .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, location_id, animals_seen, day_group_id, day_group_label, location:locations(name)')
       .neq('status', 'planned')
       .order('event_date', { ascending: false });
 
@@ -292,51 +294,56 @@ export default function OutreachPage() {
                 <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Past Events</p>
               )}
               <div className="space-y-3">
-                {pastEvents.map((e) => (
-                  <Link
-                    key={e.id}
-                    to={`/outreach/summary/${e.id}`}
-                    className="block bg-white rounded-2xl border border-night/5 p-4 card-hover"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                        <CalendarHeart className="w-5 h-5 text-primary" strokeWidth={1.5} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${(EVENT_TYPE_CONFIG[e.event_type] ?? EVENT_TYPE_CONFIG.other).bg} ${(EVENT_TYPE_CONFIG[e.event_type] ?? EVENT_TYPE_CONFIG.other).text}`}>
-                          {(EVENT_TYPE_CONFIG[e.event_type] ?? EVENT_TYPE_CONFIG.other).label}
-                        </span>
-                        <p className="text-xs text-muted mt-0.5">{formatDate(e.event_date)}</p>
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          {e.location?.name && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted bg-sand rounded-full px-2 py-0.5">
-                              <MapPin className="w-3 h-3" /> {e.location.name}
-                            </span>
-                          )}
-                          {e.volunteer_count > 0 && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted bg-sand rounded-full px-2 py-0.5">
-                              <Users className="w-3 h-3" /> {e.volunteer_count}
-                            </span>
-                          )}
-                          {e.animal_count > 0 && (
-                            <span className="inline-flex items-center gap-1 text-xs text-primary font-medium bg-primary/8 rounded-full px-2 py-0.5">
-                              <PawPrint className="w-3 h-3" /> {e.animal_count} animal{e.animal_count !== 1 ? 's' : ''}
-                            </span>
-                          )}
-                          {(e.total_bags || e.total_food_lbs) && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted bg-sand rounded-full px-2 py-0.5">
-                              <Package className="w-3 h-3" />
-                              {e.total_bags ? `${e.total_bags} bags` : ''}{e.total_bags && e.total_food_lbs ? ', ' : ''}{e.total_food_lbs ? `${e.total_food_lbs} lbs` : ''}
-                            </span>
-                          )}
+                {(() => {
+                  // Group events by day_group_id
+                  const rendered = new Set<string>();
+                  const items: React.ReactNode[] = [];
+
+                  pastEvents.forEach((e) => {
+                    if (rendered.has(e.id)) return;
+
+                    // If part of a day group, render group header + nested events
+                    if (e.day_group_id) {
+                      if (rendered.has(e.day_group_id)) return;
+                      rendered.add(e.day_group_id);
+                      const groupEvents = pastEvents.filter((ev) => ev.day_group_id === e.day_group_id);
+                      groupEvents.forEach((ge) => rendered.add(ge.id));
+                      const totalAnimals = groupEvents.reduce((s, ge) => s + ge.animal_count, 0);
+                      const totalFood = groupEvents.reduce((s, ge) => s + (ge.total_food_lbs ?? 0), 0);
+
+                      items.push(
+                        <div key={`group-${e.day_group_id}`} className="rounded-2xl border-2 border-primary/15 bg-primary/3 overflow-hidden">
+                          <div className="px-4 py-2.5 bg-primary/5 border-b border-primary/10">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-bold text-night">{e.day_group_label ?? 'Multi-Stop Day'}</p>
+                                <p className="text-xs text-muted">{formatDate(e.event_date)}</p>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted">
+                                {totalAnimals > 0 && (
+                                  <span className="flex items-center gap-1"><PawPrint className="w-3 h-3" /> {totalAnimals}</span>
+                                )}
+                                {totalFood > 0 && (
+                                  <span className="flex items-center gap-1"><Package className="w-3 h-3" /> {totalFood} lbs</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="divide-y divide-night/5">
+                            {groupEvents.map((ge) => (
+                              <EventCard key={ge.id} event={ge} />
+                            ))}
+                          </div>
                         </div>
-                        {e.notes && (
-                          <p className="text-xs text-muted mt-2 line-clamp-2">{e.notes.replace(/^Historical:\s*/i, '')}</p>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+                      );
+                    } else {
+                      rendered.add(e.id);
+                      items.push(<EventCard key={e.id} event={e} />);
+                    }
+                  });
+
+                  return items;
+                })()}
               </div>
             </div>
           )}
@@ -345,5 +352,52 @@ export default function OutreachPage() {
 
       {showSetup && <EventSetup onCreated={handleEventCreated} onCancel={() => setShowSetup(false)} />}
     </div>
+  );
+}
+
+function EventCard({ event: e }: { event: OutreachEventRow }) {
+  return (
+    <Link
+      to={`/outreach/summary/${e.id}`}
+      className="block bg-white rounded-2xl border border-night/5 p-4 card-hover"
+    >
+      <div className="flex items-start gap-3">
+        <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <CalendarHeart className="w-5 h-5 text-primary" strokeWidth={1.5} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${(EVENT_TYPE_CONFIG[e.event_type] ?? EVENT_TYPE_CONFIG.other).bg} ${(EVENT_TYPE_CONFIG[e.event_type] ?? EVENT_TYPE_CONFIG.other).text}`}>
+            {(EVENT_TYPE_CONFIG[e.event_type] ?? EVENT_TYPE_CONFIG.other).label}
+          </span>
+          <p className="text-xs text-muted mt-0.5">{formatDate(e.event_date)}</p>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            {e.location?.name && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted bg-sand rounded-full px-2 py-0.5">
+                <MapPin className="w-3 h-3" /> {e.location.name}
+              </span>
+            )}
+            {e.volunteer_count > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted bg-sand rounded-full px-2 py-0.5">
+                <Users className="w-3 h-3" /> {e.volunteer_count}
+              </span>
+            )}
+            {e.animal_count > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs text-primary font-medium bg-primary/8 rounded-full px-2 py-0.5">
+                <PawPrint className="w-3 h-3" /> {e.animal_count} animal{e.animal_count !== 1 ? 's' : ''}
+              </span>
+            )}
+            {(e.total_bags || e.total_food_lbs) && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted bg-sand rounded-full px-2 py-0.5">
+                <Package className="w-3 h-3" />
+                {e.total_bags ? `${e.total_bags} bags` : ''}{e.total_bags && e.total_food_lbs ? ', ' : ''}{e.total_food_lbs ? `${e.total_food_lbs} lbs` : ''}
+              </span>
+            )}
+          </div>
+          {e.notes && (
+            <p className="text-xs text-muted mt-2 line-clamp-2">{e.notes.replace(/^Historical:\s*/i, '')}</p>
+          )}
+        </div>
+      </div>
+    </Link>
   );
 }

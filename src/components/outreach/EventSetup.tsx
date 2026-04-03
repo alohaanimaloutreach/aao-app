@@ -120,6 +120,22 @@ export default function EventSetup({ onCreated, onCancel }: Props) {
       { onConflict: 'outreach_event_id,user_id' }
     );
 
+    // Auto-link Google Drive folder for this month
+    const eventDateObj = new Date(eventDate + 'T00:00:00');
+    const eventYear = eventDateObj.getFullYear();
+    const eventMonth = eventDateObj.getMonth() + 1;
+    const { data: folder } = await supabase
+      .from('drive_folders')
+      .select('folder_id')
+      .eq('year', eventYear)
+      .eq('month', eventMonth)
+      .single();
+    if (folder?.folder_id) {
+      await supabase.from('outreach_events').update({
+        drive_folder_url: `https://drive.google.com/drive/folders/${folder.folder_id}`,
+      }).eq('id', event.id);
+    }
+
     setSubmitting(false);
     onCreated(event.id);
   }

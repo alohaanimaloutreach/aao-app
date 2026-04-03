@@ -18,6 +18,13 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  Plus,
+  X,
+  Check,
+  ClipboardList,
+  Camera,
+  Search,
+  Calendar,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -42,6 +49,7 @@ interface EventDetail {
   nail_trim_count: number | null;
   total_food_lbs: number | null;
   total_bags: number | null;
+  drive_folder_url: string | null;
 }
 
 interface CareEvent {
@@ -60,8 +68,22 @@ interface CareEvent {
   owner: { name: string } | null;
 }
 
-interface Volunteer {
-  user: { name: string } | null;
+interface VolunteerRow {
+  id: string;
+  user_id: string | null;
+  name_override: string | null;
+  user: { id: string; name: string } | null;
+}
+
+interface TaskRow {
+  id: string;
+  task: string;
+  assigned_to: string | null;
+  assigned_name: string | null;
+  due_date: string | null;
+  completed: boolean;
+  completed_by: string | null;
+  completed_at: string | null;
 }
 
 const CARE_LABELS: Record<string, string> = {
@@ -86,7 +108,8 @@ export default function EventSummaryPage() {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [careEvents, setCareEvents] = useState<CareEvent[]>([]);
   const [sightingEntries, setSightingEntries] = useState<any[]>([]);
-  const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
+  const [volunteers, setVolunteers] = useState<VolunteerRow[]>([]);
+  const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailing, setEmailing] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -94,6 +117,20 @@ export default function EventSummaryPage() {
   const [deleteText, setDeleteText] = useState('');
   const [deleteProcessing, setDeleteProcessing] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Volunteer management
+  const [showAddVolunteer, setShowAddVolunteer] = useState(false);
+  const [volSearch, setVolSearch] = useState('');
+  const [volSearchResults, setVolSearchResults] = useState<{ id: string; name: string }[]>([]);
+  const [volSearching, setVolSearching] = useState(false);
+  const [addingFreeText, setAddingFreeText] = useState(false);
+
+  // Task management
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [newTaskText, setNewTaskText] = useState('');
+  const [newTaskAssignee, setNewTaskAssignee] = useState('');
+  const [newTaskDue, setNewTaskDue] = useState('');
+  const [savingTask, setSavingTask] = useState(false);
 
   useEffect(() => {
     if (session && id) loadData();
@@ -109,10 +146,10 @@ export default function EventSummaryPage() {
 
   async function loadData() {
     setLoading(true);
-    const [eventRes, careRes, volRes, sightingRes] = await Promise.all([
+    const [eventRes, careRes, volRes, sightingRes, taskRes] = await Promise.all([
       supabase
         .from('outreach_events')
-        .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, animals_seen, vaccinations_given, microchips_given, preventatives_given, spay_neuter_count, grooming_count, nail_trim_count, location:locations(id, name, latitude, longitude)')
+        .select('id, event_type, event_date, status, notes, total_food_lbs, total_bags, animals_seen, vaccinations_given, microchips_given, preventatives_given, spay_neuter_count, grooming_count, nail_trim_count, drive_folder_url, location:locations(id, name, latitude, longitude)')
         .eq('id', id!)
         .single(),
       supabase
@@ -121,12 +158,17 @@ export default function EventSummaryPage() {
         .eq('outreach_event_id', id!),
       supabase
         .from('outreach_event_volunteers')
-        .select('user:users(name)')
+        .select('id, user_id, name_override, user:users(id, name)')
         .eq('outreach_event_id', id!),
       supabase
         .from('sighting_entries')
         .select('animal_count, care_given')
         .eq('outreach_event_id', id!),
+      supabase
+        .from('outreach_tasks')
+        .select('id, task, assigned_to, assigned_name, due_date, completed, completed_by, completed_at')
+        .eq('outreach_event_id', id!)
+        .order('created_at', { ascending: true }),
     ]);
 
     if (eventRes.data) {
@@ -139,10 +181,88 @@ export default function EventSummaryPage() {
       owner: Array.isArray(c.owner) ? c.owner[0] ?? null : c.owner,
     })));
     setVolunteers((volRes.data ?? []).map((v: any) => ({
+      ...v,
       user: Array.isArray(v.user) ? v.user[0] ?? null : v.user,
     })));
+    setTasks(taskRes.data ?? []);
     setSightingEntries(sightingRes.data ?? []);
     setLoading(false);
+  }
+
+  // Volunteer search with debounce
+  useEffect(() => {
+    if (volSearch.trim().length < 2) { setVolSearchResults([]); return; }
+    const timer = setTimeout(async () => {
+      setVolSearching(true);
+      const { data } = await supabase
+        .from('users')
+        .select('id, name')
+        .ilike('name', `%${volSearch.trim()}%`)
+        .eq('is_active', true)
+        .limit(8);
+      setVolSearchResults(data ?? []);
+      setVolSearching(false);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [volSearch]);
+
+  async function addVolunteerUser(userId: string) {
+    if (!id) return;
+    await supabase.from('outreach_event_volunteers').upsert(
+      { outreach_event_id: id, user_id: userId },
+      { onConflict: 'outreach_event_id,user_id' }
+    );
+    setShowAddVolunteer(false);
+    setVolSearch('');
+    setVolSearchResults([]);
+    loadData();
+  }
+
+  async function addVolunteerFreeText(name: string) {
+    if (!id || !name.trim()) return;
+    await supabase.from('outreach_event_volunteers').insert({
+      outreach_event_id: id,
+      name_override: name.trim(),
+    });
+    setShowAddVolunteer(false);
+    setVolSearch('');
+    setAddingFreeText(false);
+    loadData();
+  }
+
+  async function removeVolunteer(volId: string) {
+    await supabase.from('outreach_event_volunteers').delete().eq('id', volId);
+    setVolunteers((prev) => prev.filter((v) => v.id !== volId));
+  }
+
+  async function addTask() {
+    if (!id || !newTaskText.trim() || !user) return;
+    setSavingTask(true);
+    await supabase.from('outreach_tasks').insert({
+      outreach_event_id: id,
+      task: newTaskText.trim(),
+      assigned_name: newTaskAssignee.trim() || null,
+      due_date: newTaskDue || null,
+      created_by: user.id,
+    });
+    setSavingTask(false);
+    setShowAddTask(false);
+    setNewTaskText('');
+    setNewTaskAssignee('');
+    setNewTaskDue('');
+    loadData();
+  }
+
+  async function toggleTask(taskId: string, completed: boolean) {
+    if (!user) return;
+    await supabase.from('outreach_tasks').update({
+      completed,
+      completed_by: completed ? user.id : null,
+      completed_at: completed ? new Date().toISOString() : null,
+    }).eq('id', taskId);
+    setTasks((prev) => prev.map((t) =>
+      t.id === taskId ? { ...t, completed, completed_by: completed ? user.id : null, completed_at: completed ? new Date().toISOString() : null } : t
+    ));
   }
 
   if (loading) {
@@ -202,7 +322,7 @@ export default function EventSummaryPage() {
     byOwner[key].animals.push(c);
   });
 
-  const volunteerNames = volunteers.map((v) => v.user?.name ?? 'Unknown');
+  const volunteerNames = volunteers.map((v) => v.name_override || v.user?.name || 'Unknown');
 
   const eventTypeConfig = EVENT_TYPE_CONFIG[event.event_type] ?? EVENT_TYPE_CONFIG.other;
   const eventTypeLabel = eventTypeConfig.label;
@@ -326,12 +446,85 @@ export default function EventSummaryPage() {
           )}
         </div>
 
-        {volunteerNames.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-white/10">
-            <p className="text-xs text-white/40 mb-1">Volunteers</p>
-            <p className="text-sm text-white/80">{volunteerNames.join(', ')}</p>
+        {/* Volunteers section */}
+        <div className="mt-3 pt-3 border-t border-white/10">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-xs text-white/40">Volunteers</p>
+            {isAdmin && (
+              <button
+                onClick={() => setShowAddVolunteer(!showAddVolunteer)}
+                className="text-xs text-white/50 hover:text-white flex items-center gap-1 transition-colors"
+              >
+                <Plus className="w-3 h-3" /> Add
+              </button>
+            )}
           </div>
-        )}
+          {volunteers.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {volunteers.map((v) => (
+                <span key={v.id} className="inline-flex items-center gap-1 bg-white/10 rounded-full px-2.5 py-1 text-xs text-white/80">
+                  {v.name_override || v.user?.name || 'Unknown'}
+                  {isAdmin && (
+                    <button
+                      onClick={() => removeVolunteer(v.id)}
+                      className="p-0.5 hover:bg-white/10 rounded-full transition-colors"
+                      aria-label={`Remove ${v.name_override || v.user?.name}`}
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-white/40 italic">No volunteers recorded</p>
+          )}
+
+          {/* Add volunteer form */}
+          {showAddVolunteer && (
+            <div className="mt-2 bg-white/10 rounded-xl p-3">
+              <input
+                type="text"
+                value={volSearch}
+                onChange={(e) => { setVolSearch(e.target.value); setAddingFreeText(false); }}
+                placeholder="Search users or type a name..."
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                autoFocus
+              />
+              {volSearching && <p className="text-xs text-white/40 mt-1.5">Searching...</p>}
+              {volSearchResults.length > 0 && (
+                <div className="mt-1.5 space-y-0.5">
+                  {volSearchResults
+                    .filter((u) => !volunteers.some((v) => v.user_id === u.id))
+                    .map((u) => (
+                      <button
+                        key={u.id}
+                        onClick={() => addVolunteerUser(u.id)}
+                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-sm text-white/80 hover:bg-white/10 transition-colors"
+                      >
+                        {u.name}
+                      </button>
+                    ))}
+                </div>
+              )}
+              {volSearch.trim().length >= 2 && !volSearching && (
+                <button
+                  onClick={() => {
+                    if (addingFreeText) {
+                      addVolunteerFreeText(volSearch);
+                    } else {
+                      setAddingFreeText(true);
+                    }
+                  }}
+                  className="mt-1.5 text-xs text-primary hover:text-primary/80 flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  {addingFreeText ? `Add "${volSearch.trim()}" as walk-up volunteer` : `Add "${volSearch.trim()}" without account`}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Location map */}
@@ -358,6 +551,122 @@ export default function EventSummaryPage() {
           </div>
         </div>
       )}
+
+      {/* Drive folder link */}
+      {event.drive_folder_url && (
+        <a
+          href={event.drive_folder_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-2.5 mb-3 bg-white border border-night/5 rounded-2xl text-sm font-medium text-night hover:bg-sand shadow-sm transition-all"
+        >
+          <Camera className="w-4 h-4 text-primary" />
+          View Event Photos
+          <ExternalLink className="w-3 h-3 text-muted" />
+        </a>
+      )}
+
+      {/* Follow-up Tasks */}
+      <div className="bg-white rounded-2xl border border-night/5 overflow-hidden shadow-sm mb-3">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-night/5">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-muted" />
+            <span className="text-sm font-semibold text-night">Follow-up Tasks</span>
+            {tasks.length > 0 && (
+              <span className="text-xs bg-sand rounded-full px-1.5 py-0.5 text-muted">{tasks.filter((t) => !t.completed).length} open</span>
+            )}
+          </div>
+          {isAdmin && (
+            <button
+              onClick={() => setShowAddTask(!showAddTask)}
+              className="text-xs text-primary font-medium flex items-center gap-1 hover:underline"
+            >
+              <Plus className="w-3 h-3" /> Add Task
+            </button>
+          )}
+        </div>
+
+        <div className="p-4">
+          {/* Add task form */}
+          {showAddTask && (
+            <div className="mb-4 p-3 bg-sand/30 rounded-xl space-y-2.5">
+              <input
+                type="text"
+                value={newTaskText}
+                onChange={(e) => setNewTaskText(e.target.value)}
+                placeholder="What needs to be done?"
+                className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTaskAssignee}
+                  onChange={(e) => setNewTaskAssignee(e.target.value)}
+                  placeholder="Assign to (optional)"
+                  className="flex-1 px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+                />
+                <input
+                  type="date"
+                  value={newTaskDue}
+                  onChange={(e) => setNewTaskDue(e.target.value)}
+                  className="px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 w-36"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowAddTask(false)}
+                  className="px-3 py-1.5 text-xs text-muted hover:text-night transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={addTask}
+                  disabled={!newTaskText.trim() || savingTask}
+                  className="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-hover disabled:opacity-30 transition-all"
+                >
+                  {savingTask ? 'Adding...' : 'Add Task'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {tasks.length === 0 && !showAddTask ? (
+            <p className="text-sm text-muted text-center py-2">No follow-up tasks yet</p>
+          ) : (
+            <div className="space-y-1">
+              {tasks.map((t) => (
+                <div
+                  key={t.id}
+                  className={`flex items-start gap-2.5 px-2 py-2 rounded-lg transition-colors ${t.completed ? 'opacity-60' : 'hover:bg-sand/30'}`}
+                >
+                  <button
+                    onClick={() => toggleTask(t.id, !t.completed)}
+                    className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                      t.completed ? 'bg-primary border-primary' : 'border-night/20 hover:border-primary/50'
+                    }`}
+                  >
+                    {t.completed && <Check className="w-3 h-3 text-white" />}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm ${t.completed ? 'line-through text-muted' : 'text-night'}`}>{t.task}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {t.assigned_name && (
+                        <span className="text-xs text-muted">{t.assigned_name}</span>
+                      )}
+                      {t.due_date && (
+                        <span className="text-xs text-muted flex items-center gap-0.5">
+                          <Calendar className="w-2.5 h-2.5" /> {formatDate(t.due_date)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Tabbed content area */}
       <EventTabs

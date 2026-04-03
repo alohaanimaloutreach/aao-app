@@ -64,6 +64,7 @@ export default function DashboardPage() {
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('aao-welcome-dismissed'));
   const [notesOpen, setNotesOpen] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<{ id: string; event_date: string; event_type: string; location_name: string | null }[]>([]);
+  const [showDriveReminder, setShowDriveReminder] = useState(false);
 
   function dismissWelcome() {
     localStorage.setItem('aao-welcome-dismissed', '1');
@@ -268,6 +269,22 @@ export default function DashboardPage() {
     });
     actItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setActivity(actItems.slice(0, 30));
+
+    // Year-end Drive folder reminder (December, admin only)
+    const now = new Date();
+    if (now.getMonth() === 11 && profile?.role === 'admin') {
+      const nextYear = now.getFullYear() + 1;
+      const dismissKey = `aao_drive_reminder_${nextYear}`;
+      if (!localStorage.getItem(dismissKey)) {
+        const { count } = await supabase
+          .from('drive_folders')
+          .select('id', { count: 'exact', head: true })
+          .eq('year', nextYear);
+        if ((count ?? 0) === 0) {
+          setShowDriveReminder(true);
+        }
+      }
+    }
 
     setLoading(false);
   }
@@ -479,6 +496,26 @@ export default function DashboardPage() {
           <p className="text-sm text-amber-600 font-medium mb-4">You are in the practice app. Tap around freely — nothing here is real.</p>
         ) : (
           <p className="text-sm text-muted mb-4">What do you want to do today?</p>
+        )}
+
+        {/* Year-end Drive folder reminder */}
+        {showDriveReminder && (
+          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200/50 rounded-xl px-4 py-3 mb-4">
+            <span className="text-lg shrink-0">📁</span>
+            <p className="flex-1 text-sm text-night">
+              Set up {new Date().getFullYear() + 1} Drive folders before January outreach — add them in Settings
+            </p>
+            <button
+              onClick={() => {
+                localStorage.setItem(`aao_drive_reminder_${new Date().getFullYear() + 1}`, '1');
+                setShowDriveReminder(false);
+              }}
+              className="p-1 rounded-lg hover:bg-night/5 transition-colors shrink-0"
+              aria-label="Dismiss"
+            >
+              <X className="w-4 h-4 text-muted" />
+            </button>
+          </div>
         )}
 
         {/* New user guide link */}
