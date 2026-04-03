@@ -17,9 +17,13 @@ const REPORTS: { key: ReportKey; label: string; description: string }[] = [
   { key: 'full_export', label: 'Full Animal Export', description: 'Complete animal records with all fields' },
 ];
 
+const currentYear = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: currentYear - 2021 + 1 }, (_, i) => 2021 + i).reverse();
+
 export default function ReportsPage() {
   const [expanded, setExpanded] = useState<ReportKey | null>(null);
   const [impactStats, setImpactStats] = useState<{ events: number; sn: number; food: number } | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>(currentYear);
 
   useEffect(() => {
     document.title = 'Reports | AAO Command Center';
@@ -28,17 +32,21 @@ export default function ReportsPage() {
 
   useEffect(() => {
     async function loadStats() {
-      const [eventsRes, snRes, foodRes] = await Promise.all([
-        supabase.from('outreach_events').select('id', { count: 'exact', head: true }),
-        supabase.from('outreach_events').select('spay_neuter_count'),
-        supabase.from('outreach_events').select('total_food_lbs'),
-      ]);
+      let eventsQ = supabase.from('outreach_events').select('id', { count: 'exact', head: true });
+      let snQ = supabase.from('outreach_events').select('spay_neuter_count');
+      let foodQ = supabase.from('outreach_events').select('total_food_lbs');
+      if (selectedYear !== 'all') {
+        eventsQ = eventsQ.gte('event_date', `${selectedYear}-01-01`).lt('event_date', `${selectedYear + 1}-01-01`);
+        snQ = snQ.gte('event_date', `${selectedYear}-01-01`).lt('event_date', `${selectedYear + 1}-01-01`);
+        foodQ = foodQ.gte('event_date', `${selectedYear}-01-01`).lt('event_date', `${selectedYear + 1}-01-01`);
+      }
+      const [eventsRes, snRes, foodRes] = await Promise.all([eventsQ, snQ, foodQ]);
       const totalFood = (foodRes.data ?? []).reduce((sum: number, e: any) => sum + (e.total_food_lbs ?? 0), 0);
       const totalSN = (snRes.data ?? []).reduce((sum: number, e: any) => sum + (e.spay_neuter_count ?? 0), 0);
       setImpactStats({ events: eventsRes.count ?? 0, sn: totalSN, food: Math.round(totalFood) });
     }
     loadStats();
-  }, []);
+  }, [selectedYear]);
 
   return (
     <div>
@@ -47,6 +55,14 @@ export default function ReportsPage() {
           <h1 className="text-2xl md:text-3xl font-bold font-heading text-night tracking-tight">Reports</h1>
           <p className="text-muted mt-0.5">Admin analytics and data exports</p>
         </div>
+        <select
+          value={selectedYear}
+          onChange={(e) => { setExpanded(null); setSelectedYear(e.target.value === 'all' ? 'all' : Number(e.target.value)); }}
+          className="px-3 py-2 bg-white border border-night/10 rounded-xl text-sm font-medium text-night focus:outline-none focus:ring-2 focus:ring-primary/30"
+        >
+          {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+          <option value="all">All time</option>
+        </select>
       </div>
 
       {/* Impact stats */}
@@ -80,6 +96,7 @@ export default function ReportsPage() {
             description={r.description}
             expanded={expanded === r.key}
             onToggle={() => setExpanded(expanded === r.key ? null : r.key)}
+            selectedYear={selectedYear}
           />
         ))}
       </div>
@@ -87,8 +104,8 @@ export default function ReportsPage() {
   );
 }
 
-function ReportSection({ reportKey, label, description, expanded, onToggle }: {
-  reportKey: ReportKey; label: string; description: string; expanded: boolean; onToggle: () => void;
+function ReportSection({ reportKey, label, description, expanded, onToggle, selectedYear }: {
+  reportKey: ReportKey; label: string; description: string; expanded: boolean; onToggle: () => void; selectedYear: number | 'all';
 }) {
   return (
     <div className="bg-white rounded-2xl border border-night/5 overflow-hidden">
@@ -106,18 +123,21 @@ function ReportSection({ reportKey, label, description, expanded, onToggle }: {
       </button>
       {expanded && (
         <div className="border-t border-night/5 p-4">
-          <ReportContent reportKey={reportKey} />
+          <ReportContent reportKey={reportKey} selectedYear={selectedYear} />
         </div>
       )}
     </div>
   );
 }
 
-function ReportContent({ reportKey }: { reportKey: ReportKey }) {
+function ReportContent({ reportKey, selectedYear }: { reportKey: ReportKey; selectedYear: number | 'all' }) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<{ headers: string[]; rows: any[][] }>({ headers: [], rows: [] });
 
-  useEffect(() => { loadReport(); }, [reportKey]);
+  useEffect(() => { loadReport(); }, [reportKey, selectedYear]);
+
+  const yearStart = selectedYear !== 'all' ? `${selectedYear}-01-01` : null;
+  const yearEnd = selectedYear !== 'all' ? `${selectedYear + 1}-01-01` : null;
 
   async function loadReport() {
     setLoading(true);
@@ -161,19 +181,23 @@ function ReportContent({ reportKey }: { reportKey: ReportKey }) {
         break;
       }
       case 'food': {
-        const { data: events } = await supabase.from('outreach_events')
+        let q = supabase.from('outreach_events')
           .select('event_date, total_food_lbs, total_bags, location:locations(name)')
           .not('total_food_lbs', 'is', null)
           .order('event_date', { ascending: false });
+        if (yearStart) q = q.gte('event_date', yearStart).lt('event_date', yearEnd!);
+        const { data: events } = await q;
         headers = ['Date', 'Location', 'Bags', 'Lbs'];
         rows = (events ?? []).map((e: any) => [formatDate(e.event_date), e.location?.name ?? '', e.total_bags ?? 0, e.total_food_lbs ?? 0]);
         break;
       }
       case 'vaccines': {
-        const { data: care } = await supabase.from('care_events')
+        let q = supabase.from('care_events')
           .select('event_date, care_types, vaccine_lot_dapp, vaccine_lot_parvo, vaccine_expiry, animal:animals(name, aao_id)')
           .or('care_types.cs.{vaccine_dapp},care_types.cs.{vaccine_parvo}')
           .order('event_date', { ascending: false });
+        if (yearStart) q = q.gte('event_date', yearStart).lt('event_date', yearEnd!);
+        const { data: care } = await q;
         headers = ['Date', 'Animal', 'AAO ID', 'Type', 'DAPP Lot', 'Parvo Lot', 'Expiry'];
         rows = (care ?? []).map((c: any) => {
           const types = (c.care_types ?? []).filter((t: string) => t.startsWith('vaccine')).join(', ').replace(/_/g, ' ');

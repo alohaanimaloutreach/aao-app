@@ -107,9 +107,9 @@ export default function DashboardPage() {
       recentCareQ,
       recentNotesQ,
       supabase.from('outreach_events').select('id, location:locations(name)').eq('status', 'active').limit(1).single(),
-      supabase.from('outreach_events').select('id', { count: 'exact', head: true }),
-      supabase.from('outreach_events').select('spay_neuter_count'),
-      supabase.from('outreach_events').select('total_food_lbs'),
+      supabase.from('outreach_events').select('id', { count: 'exact', head: true }).gte('event_date', `${new Date().getFullYear()}-01-01`),
+      supabase.from('outreach_events').select('spay_neuter_count').gte('event_date', `${new Date().getFullYear()}-01-01`),
+      supabase.from('outreach_events').select('total_food_lbs').gte('event_date', `${new Date().getFullYear()}-01-01`),
       supabase.from('outreach_events').select('event_date').order('event_date', { ascending: true }).limit(1).single(),
       supabase.from('outreach_events').select('id, event_date, event_type, location:locations(name)').eq('status', 'planned').gte('event_date', new Date().toISOString().split('T')[0]).order('event_date', { ascending: true }).limit(10),
     ]);
@@ -515,9 +515,7 @@ export default function DashboardPage() {
         {/* Impact stats card */}
         {stats.outreachEvents !== null && (
           <div className="mt-3 bg-white rounded-2xl p-4 border border-night/5 border-l-3 border-l-primary shadow-[0_2px_12px_rgba(28,23,8,0.06)]">
-            {stats.sinceDate && (
-              <p className="text-xs text-muted mb-2">Since {formatDate(stats.sinceDate)}</p>
-            )}
+            <p className="text-xs text-muted mb-2">{new Date().getFullYear()} Impact</p>
             <div className="flex items-center justify-center gap-5 flex-wrap text-sm">
               {[
                 { icon: PawPrint, value: stats.animals, label: 'animals', color: 'text-primary' },
