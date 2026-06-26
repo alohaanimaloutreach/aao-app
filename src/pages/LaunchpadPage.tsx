@@ -541,6 +541,7 @@ function ExpandedEvent({ event, onDeleted, onUpdated }: { event: EventRecord; on
   const [notes, setNotes] = useState<NoteRow[]>([]);
   const [files, setFiles] = useState<FileRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
 
   // Edit details
   const [editingDetails, setEditingDetails] = useState(false);
@@ -1047,7 +1048,7 @@ function ExpandedEvent({ event, onDeleted, onUpdated }: { event: EventRecord; on
           <div className="flex flex-wrap gap-2 mb-2">
             {files.filter((f) => isImage(f.file_type)).map((f) => (
               <div key={f.id} className="relative group">
-                <button onClick={() => window.open(f.storage_path, '_blank')} className="cursor-pointer">
+                <button onClick={() => setViewingPhoto(f.storage_path)} className="cursor-pointer">
                   <img src={f.storage_path} alt={f.file_name} className="w-28 h-28 object-cover rounded-xl border border-night/5" />
                 </button>
                 <button onClick={() => removeFile(f)}
@@ -1100,6 +1101,16 @@ function ExpandedEvent({ event, onDeleted, onUpdated }: { event: EventRecord; on
               <button onClick={() => setShowDelete(false)} className="px-3 py-1 text-xs text-muted hover:text-night">Cancel</button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Photo lightbox */}
+      {viewingPhoto && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setViewingPhoto(null)}>
+          <button className="absolute top-4 right-4 p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors" aria-label="Close">
+            <X className="w-6 h-6" />
+          </button>
+          <img src={viewingPhoto} alt="Photo" className="max-w-full max-h-full object-contain rounded-lg" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
     </div>
