@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import {
   MapPin, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   Loader2, Plus, X, Check, Trash2, Upload, Download,
-  Image, FileText, Clock, UserPlus, Package, StickyNote,
+  Image, FileText, Clock, Users, UserPlus, Package, StickyNote,
 } from 'lucide-react';
 import { formatDate, formatDateTime } from '../lib/format';
 
@@ -79,6 +79,16 @@ interface FileRow {
   file_type: string | null;
   file_size: number | null;
   created_at: string;
+}
+
+interface CheckInRow {
+  id: string;
+  contact_name: string;
+  dogs: number;
+  cats: number;
+  puppies: number;
+  given: string | null;
+  notes: string | null;
 }
 
 // ── Helpers ─────────────────────────────────────────────────
@@ -192,7 +202,7 @@ export default function LaunchpadPage() {
   const toLabel = Math.min((page + 1) * PAGE_SIZE, totalCount);
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl md:text-2xl font-bold font-heading text-night tracking-tight">Launchpad</h1>
         <button
@@ -540,6 +550,7 @@ function ExpandedEvent({ event, onDeleted, onUpdated }: { event: EventRecord; on
   const [attendees, setAttendees] = useState<AttendeeRow[]>([]);
   const [notes, setNotes] = useState<NoteRow[]>([]);
   const [files, setFiles] = useState<FileRow[]>([]);
+  const [checkIns, setCheckIns] = useState<CheckInRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
 
@@ -574,6 +585,16 @@ function ExpandedEvent({ event, onDeleted, onUpdated }: { event: EventRecord; on
   const [showAddAttendee, setShowAddAttendee] = useState(false);
   const [aName, setAName] = useState('');
 
+  // Check-in form
+  const [showAddCheckIn, setShowAddCheckIn] = useState(false);
+  const [ciName, setCiName] = useState('');
+  const [ciDogs, setCiDogs] = useState('0');
+  const [ciCats, setCiCats] = useState('0');
+  const [ciPups, setCiPups] = useState('0');
+  const [ciGiven, setCiGiven] = useState('');
+  const [ciNotes, setCiNotes] = useState('');
+  const [editingCheckInId, setEditingCheckInId] = useState<string | null>(null);
+
   // Note form
   const [showAddNote, setShowAddNote] = useState(false);
   const [nText, setNText] = useState('');
@@ -592,16 +613,18 @@ function ExpandedEvent({ event, onDeleted, onUpdated }: { event: EventRecord; on
 
   async function loadDetail() {
     setLoading(true);
-    const [prodRes, attRes, noteRes, fileRes] = await Promise.all([
+    const [prodRes, attRes, noteRes, fileRes, ciRes] = await Promise.all([
       supabase.from('event_products').select('id, item, quantity, unit, weight_per_unit, source').eq('event_id', event.id).order('created_at'),
       supabase.from('event_attendees').select('id, name').eq('event_id', event.id).order('created_at'),
       supabase.from('event_notes').select('id, note, is_task, completed, completed_at, created_by, created_at').eq('event_id', event.id).order('created_at', { ascending: false }),
       supabase.from('event_files').select('id, file_name, storage_path, file_type, file_size, created_at').eq('event_id', event.id).order('created_at', { ascending: false }),
+      supabase.from('event_check_ins').select('id, contact_name, dogs, cats, puppies, given, notes').eq('event_id', event.id).order('created_at'),
     ]);
     setProducts(prodRes.data ?? []);
     setAttendees(attRes.data ?? []);
     setNotes(noteRes.data ?? []);
     setFiles(fileRes.data ?? []);
+    setCheckIns(ciRes.data ?? []);
     setLoading(false);
   }
 
@@ -690,6 +713,45 @@ function ExpandedEvent({ event, onDeleted, onUpdated }: { event: EventRecord; on
   async function removeNote(id: string) {
     await supabase.from('event_notes').delete().eq('id', id);
     setNotes(notes.filter((n) => n.id !== id));
+  }
+
+  // ── Check-ins ──
+  function resetCheckInForm() {
+    setCiName(''); setCiDogs('0'); setCiCats('0'); setCiPups('0'); setCiGiven(''); setCiNotes('');
+    setShowAddCheckIn(false); setEditingCheckInId(null);
+  }
+
+  async function addCheckIn() {
+    if (!ciName.trim() || !user) return;
+    const { data } = await supabase.from('event_check_ins').insert({
+      event_id: event.id, contact_name: ciName.trim(),
+      dogs: parseInt(ciDogs) || 0, cats: parseInt(ciCats) || 0, puppies: parseInt(ciPups) || 0,
+      given: ciGiven.trim() || null, notes: ciNotes.trim() || null, created_by: user.id,
+    }).select('id, contact_name, dogs, cats, puppies, given, notes').single();
+    if (data) { setCheckIns([...checkIns, data]); resetCheckInForm(); }
+  }
+
+  function startEditCheckIn(ci: CheckInRow) {
+    setEditingCheckInId(ci.id);
+    setCiName(ci.contact_name); setCiDogs(ci.dogs.toString()); setCiCats(ci.cats.toString());
+    setCiPups(ci.puppies.toString()); setCiGiven(ci.given ?? ''); setCiNotes(ci.notes ?? '');
+    setShowAddCheckIn(true);
+  }
+
+  async function saveEditCheckIn() {
+    if (!editingCheckInId || !ciName.trim()) return;
+    const updates = {
+      contact_name: ciName.trim(), dogs: parseInt(ciDogs) || 0, cats: parseInt(ciCats) || 0,
+      puppies: parseInt(ciPups) || 0, given: ciGiven.trim() || null, notes: ciNotes.trim() || null,
+    };
+    await supabase.from('event_check_ins').update(updates).eq('id', editingCheckInId);
+    setCheckIns(checkIns.map((ci) => ci.id === editingCheckInId ? { ...ci, ...updates } : ci));
+    resetCheckInForm();
+  }
+
+  async function removeCheckIn(id: string) {
+    await supabase.from('event_check_ins').delete().eq('id', id);
+    setCheckIns(checkIns.filter((ci) => ci.id !== id));
   }
 
   // ── Files ──
@@ -966,6 +1028,86 @@ function ExpandedEvent({ event, onDeleted, onUpdated }: { event: EventRecord; on
                   <X className="w-3 h-3" />
                 </button>
               </span>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Check-ins ── */}
+      <section>
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <Users className="w-4 h-4 text-muted" />
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Check-ins</span>
+            {checkIns.length > 0 && (
+              <span className="text-xs text-muted bg-sand rounded-full px-1.5 py-0.5">
+                {checkIns.length} · {checkIns.reduce((s, c) => s + c.dogs + c.puppies, 0)} dogs · {checkIns.reduce((s, c) => s + c.cats, 0)} cats
+              </span>
+            )}
+          </div>
+          <button onClick={() => { resetCheckInForm(); setShowAddCheckIn(true); }} className="text-xs text-primary font-medium flex items-center gap-1 hover:underline">
+            <Plus className="w-3 h-3" /> Add
+          </button>
+        </div>
+
+        {showAddCheckIn && (
+          <div className="p-3 bg-sand/30 rounded-xl space-y-2 mb-2">
+            <input type="text" value={ciName} onChange={(e) => setCiName(e.target.value)} placeholder="Contact name"
+              className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40" autoFocus />
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-xs text-muted mb-0.5">Dogs</label>
+                <input type="text" inputMode="numeric" value={ciDogs} onChange={(e) => { if (/^\d*$/.test(e.target.value)) setCiDogs(e.target.value); }}
+                  className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-muted mb-0.5">Cats</label>
+                <input type="text" inputMode="numeric" value={ciCats} onChange={(e) => { if (/^\d*$/.test(e.target.value)) setCiCats(e.target.value); }}
+                  className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-muted mb-0.5">Puppies</label>
+                <input type="text" inputMode="numeric" value={ciPups} onChange={(e) => { if (/^\d*$/.test(e.target.value)) setCiPups(e.target.value); }}
+                  className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+            </div>
+            <input type="text" value={ciGiven} onChange={(e) => setCiGiven(e.target.value)} placeholder="What was given (e.g. 2 bags food, flea meds)"
+              className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40" />
+            <input type="text" value={ciNotes} onChange={(e) => setCiNotes(e.target.value)} placeholder="Notes (dog names, weights, etc.)"
+              className="w-full px-3 py-2 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40" />
+            <div className="flex gap-2">
+              <button onClick={resetCheckInForm} className="px-3 py-1.5 text-xs text-muted hover:text-night">Cancel</button>
+              <button onClick={editingCheckInId ? saveEditCheckIn : addCheckIn} disabled={!ciName.trim()}
+                className="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-hover disabled:opacity-30 transition-all">
+                {editingCheckInId ? 'Save' : 'Add'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {checkIns.length === 0 && !showAddCheckIn ? (
+          <p className="text-sm text-muted/60 italic">No check-ins recorded</p>
+        ) : (
+          <div className="space-y-1">
+            {checkIns.map((ci) => (
+              <div key={ci.id} className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-night/5 group cursor-pointer hover:bg-sand/20"
+                onClick={() => startEditCheckIn(ci)}>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-night">{ci.contact_name}</span>
+                  <span className="text-xs text-muted ml-2">
+                    {[ci.dogs > 0 && `${ci.dogs} dog${ci.dogs > 1 ? 's' : ''}`,
+                      ci.puppies > 0 && `${ci.puppies} pup${ci.puppies > 1 ? 's' : ''}`,
+                      ci.cats > 0 && `${ci.cats} cat${ci.cats > 1 ? 's' : ''}`
+                    ].filter(Boolean).join(', ')}
+                  </span>
+                  {ci.given && <span className="text-xs text-muted ml-2">· {ci.given}</span>}
+                  {ci.notes && <p className="text-xs text-muted/70 mt-0.5">{ci.notes}</p>}
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); removeCheckIn(ci.id); }}
+                  className="p-1 text-muted hover:text-ember opacity-0 group-hover:opacity-100 transition-all" aria-label="Remove">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         )}

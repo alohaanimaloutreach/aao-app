@@ -54,6 +54,19 @@ CREATE TABLE event_files (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE event_check_ins (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  contact_name text NOT NULL,
+  dogs integer NOT NULL DEFAULT 0,
+  cats integer NOT NULL DEFAULT 0,
+  puppies integer NOT NULL DEFAULT 0,
+  given text,
+  notes text,
+  created_by uuid REFERENCES users(id),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Indexes
 CREATE INDEX idx_events_date ON events(event_date DESC);
 CREATE INDEX idx_events_location ON events(location_id);
@@ -61,6 +74,7 @@ CREATE INDEX idx_event_products_event ON event_products(event_id);
 CREATE INDEX idx_event_attendees_event ON event_attendees(event_id);
 CREATE INDEX idx_event_notes_event ON event_notes(event_id);
 CREATE INDEX idx_event_files_event ON event_files(event_id);
+CREATE INDEX idx_event_check_ins_event ON event_check_ins(event_id);
 
 -- RLS
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
