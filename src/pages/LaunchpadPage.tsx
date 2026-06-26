@@ -320,26 +320,22 @@ function CreateEventForm({ onCreated, onCancel }: { onCreated: (eventType: strin
 
     if (!evt) { setCreating(false); return; }
 
-    // Insert products and attendees in parallel
-    const inserts: Promise<any>[] = [];
-
+    // Insert products and attendees
     if (products.length > 0) {
-      inserts.push(supabase.from('event_products').insert(
+      await supabase.from('event_products').insert(
         products.map((p) => ({
           event_id: evt.id, item: p.item, quantity: p.quantity ? parseFloat(p.quantity) : null,
           unit: p.unit || null, weight_per_unit: p.weightPerUnit ? parseFloat(p.weightPerUnit) : null,
           source: p.source || null,
         }))
-      ));
+      );
     }
 
     if (attendees.length > 0) {
-      inserts.push(supabase.from('event_attendees').insert(
+      await supabase.from('event_attendees').insert(
         attendees.map((a) => ({ event_id: evt.id, name: a.name }))
-      ));
+      );
     }
-
-    await Promise.all(inserts);
     setCreating(false);
     onCreated(eventType, date, time, selectedLoc?.id ?? null);
   }
