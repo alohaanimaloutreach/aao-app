@@ -19,6 +19,7 @@ import ReportsPage from './pages/ReportsPage';
 import ActivityPage from './pages/ActivityPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import GuidePage from './pages/GuidePage';
+import LaunchpadPage from './pages/LaunchpadPage';
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="/flags" element={<FlagsPage />} />
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/guide" element={<GuidePage />} />
+            <Route path="/launchpad" element={<LaunchpadPage />} />
             <Route
               path="/reports"
               element={

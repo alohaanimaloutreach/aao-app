@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  X, Search, UserPlus, ChevronDown, ChevronUp,
+  X, Search, UserPlus, Plus, ChevronDown, ChevronUp,
   Camera, Package, Pill, Syringe, Stethoscope,
   Heart, Loader2, Check, WifiOff, MapPin,
 } from 'lucide-react';
@@ -66,6 +66,8 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
   // Multiple
   const [multiple, setMultiple] = useState(false);
   const [animalCount, setAnimalCount] = useState(1);
+  const [namingMode, setNamingMode] = useState<'some' | 'none' | null>(null);
+  const [namedAnimals, setNamedAnimals] = useState<{ name: string; sex: string; size: string; color: string; matchedAnimalId: string | null }[]>([]);
 
   // Care
   const [careGiven, setCareGiven] = useState<Set<CareType>>(new Set());
@@ -150,14 +152,14 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
 
   // Validation
   const needsName = careGiven.has('vaccine') || careGiven.has('microchip');
-  const nameError = needsName && !animalName.trim();
+  const nameError = needsName && !animalName.trim() && !(multiple && namingMode === 'some' && namedAnimals.some(r => r.name.trim()));
 
   function resetForm() {
     setOwnerQuery(''); setOwnerResults([]); setSelectedOwner(null);
     setShowAddOwner(false); setNewOwnerName(''); setNewOwnerPhone('');
     setSex(''); setSize(''); setColor(''); setCoat('');
     setAnimalName(''); setIdentifyingMarks('');
-    setMultiple(false); setAnimalCount(1);
+    setMultiple(false); setAnimalCount(1); setNamingMode(null); setNamedAnimals([]);
     setCareGiven(new Set()); setPreventativeProduct(''); setPreventativeSize('');
     setVaccineLot(''); setMicrochipNumber(''); setOtherCareNotes('');
     setNotes(''); setError(''); setSavedOffline(false);
@@ -209,6 +211,120 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
       lat = pos.coords.latitude;
       lng = pos.coords.longitude;
     } catch { /* GPS optional */ }
+
+    // Multi-animal with named entries: process each named row + remainder
+    if (multiple && namingMode === 'some' && namedAnimals.some(r => r.name.trim())) {
+      const validNamed = namedAnimals.filter(r => r.name.trim());
+
+      for (const row of validNamed) {
+        let rowAnimalId = row.matchedAnimalId;
+
+        if (!rowAnimalId) {
+          const { data: newAnimal } = await supabase
+            .from('animals')
+            .insert({
+              name: row.name.trim(),
+              animal_type: 'dog',
+              sex: row.sex || 'unknown',
+              size_category: row.size || 'medium',
+              color: row.color || null,
+              owner_id: selectedOwner?.id ?? null,
+              primary_location_id: eventLocationId,
+              created_by: user.id,
+            })
+            .select('id')
+            .single();
+          if (newAnimal) rowAnimalId = newAnimal.id;
+        }
+
+        if (rowAnimalId) {
+          const ct: string[] = [];
+          if (careGiven.has('food')) ct.push('food');
+          if (careGiven.has('vaccine')) ct.push('vaccine_dapp');
+          if (careGiven.has('preventative')) ct.push('preventative_oral');
+          if (careGiven.has('microchip')) ct.push('microchip');
+          if (careGiven.has('wellness')) ct.push('seen');
+          if (ct.length === 0) ct.push('seen');
+
+          await supabase.from('care_events').insert({
+            outreach_event_id: eventId,
+            animal_id: rowAnimalId,
+            owner_id: selectedOwner?.id ?? null,
+            location_id: eventLocationId,
+            event_date: eventDate,
+            care_types: ct,
+            food_bags: careGiven.has('food') ? 1 : 0,
+            vaccine_lot_dapp: vaccineLot || null,
+            preventative_product: preventativeProduct || null,
+            other_notes: notes.trim() || null,
+            created_by: user.id,
+          });
+        }
+
+        const { error: sErr } = await supabase.from('sighting_entries').insert({
+          outreach_event_id: eventId,
+          owner_id: selectedOwner?.id ?? null,
+          animal_id: rowAnimalId,
+          animal_name: row.name.trim(),
+          sex: row.sex || null,
+          size_category: row.size || null,
+          color: row.color || null,
+          animal_count: 1,
+          care_given: [...careGiven],
+          preventative_product: preventativeProduct || null,
+          preventative_size: preventativeSize || null,
+          vaccine_lot_number: vaccineLot || null,
+          microchip_number: microchipNumber || null,
+          other_care_notes: otherCareNotes || null,
+          notes: notes.trim() || null,
+          precise_lat: lat,
+          precise_lng: lng,
+          created_by: user.id,
+        });
+
+        if (sErr) {
+          if (sErr.message?.includes('fetch') || sErr.message?.includes('network') || !navigator.onLine) {
+            setSavedOffline(true);
+          } else {
+            setError(sErr.message);
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
+
+      // Remainder entry for unnamed animals
+      const remainder = animalCount - validNamed.length;
+      if (remainder > 0) {
+        await supabase.from('sighting_entries').insert({
+          outreach_event_id: eventId,
+          owner_id: selectedOwner?.id ?? null,
+          animal_count: remainder,
+          sex: sex || null,
+          size_category: size || null,
+          color: color || null,
+          coat_length: coat || null,
+          identifying_marks: identifyingMarks.trim() || null,
+          care_given: [...careGiven],
+          preventative_product: preventativeProduct || null,
+          preventative_size: preventativeSize || null,
+          vaccine_lot_number: vaccineLot || null,
+          notes: notes.trim() || null,
+          precise_lat: lat,
+          precise_lng: lng,
+          created_by: user.id,
+        });
+      }
+
+      setSubmitting(false);
+      if (savedOffline) {
+        setTimeout(() => { handleClose(); onSaved(); }, 2000);
+      } else {
+        handleClose();
+        onSaved();
+      }
+      return;
+    }
 
     const hasName = animalName.trim().length > 0;
     const forceNew = useExistingAnimal === '__new__';
@@ -549,7 +665,8 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
               </div>
             </div>
 
-            {/* Name */}
+            {/* Name — hidden when naming individual animals in multi-mode */}
+            {!(multiple && namingMode === 'some') && (
             <div className="mb-3">
               <label className="block text-xs text-muted mb-1">Name (optional)</label>
               <input
@@ -600,6 +717,7 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
                 <p className="text-xs text-primary mt-1">A profile will be created for this animal</p>
               )}
             </div>
+            )}
 
             {/* Identifying marks */}
             <div>
@@ -621,7 +739,11 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
               <label className="flex items-center gap-2 cursor-pointer">
                 <span className="text-xs text-muted">Multiple animals</span>
                 <button
-                  onClick={() => { setMultiple(!multiple); if (!multiple) setAnimalCount(2); else setAnimalCount(1); }}
+                  onClick={() => {
+                    const next = !multiple;
+                    setMultiple(next);
+                    if (next) { setAnimalCount(2); } else { setAnimalCount(1); setNamingMode(null); setNamedAnimals([]); }
+                  }}
                   className={`relative w-9 h-5 rounded-full transition-colors ${multiple ? 'bg-primary' : 'bg-night/15'}`}
                 >
                   <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${multiple ? 'translate-x-4' : 'translate-x-0.5'}`} />
@@ -629,17 +751,84 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
               </label>
             </div>
             {multiple && (
-              <div className="mt-2 flex items-center gap-3">
-                <label className="text-sm text-muted">Count:</label>
-                <input
-                  type="number"
-                  min={2}
-                  max={50}
-                  value={animalCount}
-                  onChange={(e) => setAnimalCount(Math.max(2, parseInt(e.target.value) || 2))}
-                  className="w-20 px-3 py-2 bg-white border border-night/8 rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
+              <>
+                <div className="mt-2 flex items-center gap-3">
+                  <label className="text-sm text-muted">Count:</label>
+                  <input
+                    type="number"
+                    min={2}
+                    max={50}
+                    value={animalCount}
+                    onChange={(e) => {
+                      const val = Math.max(2, parseInt(e.target.value) || 2);
+                      setAnimalCount(val);
+                      if (namedAnimals.length > val) setNamedAnimals(prev => prev.slice(0, val));
+                    }}
+                    className="w-20 px-3 py-2 bg-white border border-night/8 rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+
+                {/* Do any have names? */}
+                {animalCount > 1 && (
+                  <div className="mt-3">
+                    <p className="text-sm text-night font-medium mb-2">Do any of these animals have names?</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setNamingMode('some');
+                          if (namedAnimals.length === 0) setNamedAnimals([{ name: '', sex: '', size: '', color: '', matchedAnimalId: null }]);
+                        }}
+                        className={`flex-1 py-2 rounded-xl border text-sm font-medium transition-all ${
+                          namingMode === 'some' ? 'border-primary bg-primary/8 text-primary' : 'border-night/8 bg-white text-night'
+                        }`}
+                      >
+                        Some do
+                      </button>
+                      <button
+                        onClick={() => { setNamingMode('none'); setNamedAnimals([]); }}
+                        className={`flex-1 py-2 rounded-xl border text-sm font-medium transition-all ${
+                          namingMode === 'none' ? 'border-primary bg-primary/8 text-primary' : 'border-night/8 bg-white text-night'
+                        }`}
+                      >
+                        None — log as group
+                      </button>
+                    </div>
+
+                    {namingMode === 'some' && (
+                      <div className="mt-3 space-y-2">
+                        {namedAnimals.map((row, i) => (
+                          <NamedAnimalInput
+                            key={i}
+                            index={i}
+                            row={row}
+                            onUpdate={(idx, updates) => setNamedAnimals(prev => prev.map((r, ri) => ri === idx ? { ...r, ...updates } : r))}
+                            onRemove={(idx) => setNamedAnimals(prev => prev.filter((_, ri) => ri !== idx))}
+                            selectedOwnerId={selectedOwner?.id ?? null}
+                            eventLocationId={eventLocationId}
+                          />
+                        ))}
+                        {namedAnimals.length < animalCount && (
+                          <button
+                            onClick={() => setNamedAnimals(prev => [...prev, { name: '', sex: '', size: '', color: '', matchedAnimalId: null }])}
+                            className="flex items-center gap-1 text-xs text-primary font-medium hover:underline mt-1"
+                          >
+                            <Plus className="w-3 h-3" /> Add named animal
+                          </button>
+                        )}
+                        {(() => {
+                          const named = namedAnimals.filter(r => r.name.trim()).length;
+                          const remainder = animalCount - named;
+                          return remainder > 0 ? (
+                            <p className="text-xs text-muted mt-1">
+                              Remaining {remainder} animal{remainder !== 1 ? 's' : ''} will be logged as a group
+                            </p>
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -807,6 +996,132 @@ export default function LogSightingDrawer({ open, onClose, eventId, eventLocatio
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function NamedAnimalInput({
+  index, row, onUpdate, onRemove, selectedOwnerId, eventLocationId,
+}: {
+  index: number;
+  row: { name: string; sex: string; size: string; color: string; matchedAnimalId: string | null };
+  onUpdate: (i: number, updates: Partial<{ name: string; sex: string; size: string; color: string; matchedAnimalId: string | null }>) => void;
+  onRemove: (i: number) => void;
+  selectedOwnerId: string | null;
+  eventLocationId: string;
+}) {
+  const [suggestion, setSuggestion] = useState<{ id: string; name: string; aao_id: string; ownerName?: string } | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
+  function handleNameChange(value: string) {
+    onUpdate(index, { name: value, matchedAnimalId: null });
+    setDismissed(false);
+    setSuggestion(null);
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (value.trim().length < 2) return;
+
+    timerRef.current = setTimeout(async () => {
+      const query = supabase
+        .from('animals')
+        .select('id, name, aao_id, owner:owners(name)')
+        .eq('archived', false)
+        .ilike('name', value.trim());
+      if (selectedOwnerId) query.eq('owner_id', selectedOwnerId);
+      else query.eq('primary_location_id', eventLocationId);
+      const { data } = await query.limit(1);
+      const m = (data ?? []).map((a: any) => ({
+        id: a.id, name: a.name, aao_id: a.aao_id,
+        ownerName: (Array.isArray(a.owner) ? a.owner[0]?.name : a.owner?.name) ?? undefined,
+      }));
+      setSuggestion(m[0] || null);
+    }, 300);
+  }
+
+  return (
+    <div className="bg-sand/30 rounded-xl p-2.5">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted font-bold w-5 text-center shrink-0">{index + 1}</span>
+        <input
+          type="text"
+          value={row.name}
+          onChange={(e) => handleNameChange(e.target.value)}
+          placeholder="Name"
+          className="flex-1 px-2.5 py-1.5 bg-white border border-night/8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted/40"
+        />
+        <button onClick={() => onRemove(index)} className="p-1 rounded-md text-muted hover:text-ember hover:bg-ember/8 transition-colors">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      {/* Compact sex / size / color quick-tap row */}
+      <div className="flex flex-wrap items-center gap-1 mt-1.5 pl-7">
+        {[{ v: 'male', l: 'M' }, { v: 'female', l: 'F' }].map((s) => (
+          <button
+            key={s.v}
+            onClick={() => onUpdate(index, { sex: row.sex === s.v ? '' : s.v })}
+            className={`px-2 py-1 rounded-md border text-xs font-medium transition-all ${
+              row.sex === s.v ? 'border-primary bg-primary/8 text-primary' : 'border-night/8 bg-white text-muted'
+            }`}
+          >
+            {s.l}
+          </button>
+        ))}
+        <span className="w-px h-4 bg-night/10 mx-0.5" />
+        {SIZES.map((s) => (
+          <button
+            key={s.value}
+            onClick={() => onUpdate(index, { size: row.size === s.value ? '' : s.value })}
+            className={`px-2 py-1 rounded-md border text-xs font-medium transition-all ${
+              row.size === s.value ? 'border-primary bg-primary/8 text-primary' : 'border-night/8 bg-white text-muted'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+        <span className="w-px h-4 bg-night/10 mx-0.5" />
+        <select
+          value={row.color}
+          onChange={(e) => onUpdate(index, { color: e.target.value })}
+          className="px-2 py-1 bg-white border border-night/8 rounded-md text-xs text-muted focus:outline-none"
+        >
+          <option value="">Color</option>
+          {COLORS.map((c) => <option key={c} value={c.toLowerCase()}>{c}</option>)}
+        </select>
+      </div>
+      {/* Inline match suggestion */}
+      {suggestion && !dismissed && !row.matchedAnimalId && (
+        <div className="mt-1.5 ml-7 bg-amber-50 border border-amber-200/50 rounded-lg px-2.5 py-2">
+          <p className="text-xs text-amber-800">
+            Match: <span className="font-bold">{suggestion.name}</span>
+            {suggestion.ownerName && <> — {suggestion.ownerName}</>}
+            <span className="text-amber-600 ml-1">({suggestion.aao_id})</span>
+          </p>
+          <div className="flex gap-1.5 mt-1.5">
+            <button
+              onClick={() => onUpdate(index, { matchedAnimalId: suggestion.id })}
+              className="px-2.5 py-1 bg-primary text-white text-xs font-semibold rounded-md hover:bg-primary-hover transition-all"
+            >
+              Yes, same dog
+            </button>
+            <button
+              onClick={() => { setSuggestion(null); setDismissed(true); }}
+              className="px-2.5 py-1 bg-white border border-night/8 text-xs font-medium rounded-md hover:bg-sand transition-all"
+            >
+              No, different
+            </button>
+          </div>
+        </div>
+      )}
+      {row.matchedAnimalId && (
+        <p className="mt-1 ml-7 text-xs text-primary font-medium flex items-center gap-1">
+          <Check className="w-3 h-3" /> Linked to existing record
+        </p>
+      )}
     </div>
   );
 }
