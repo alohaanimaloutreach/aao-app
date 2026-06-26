@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard,
+  Rocket,
   PawPrint,
   Users,
   MapPin,
@@ -20,6 +21,7 @@ import {
 import { supabase } from '../../lib/supabase';
 
 const NAV_ITEMS = [
+  { to: '/launchpad', icon: Rocket, label: 'Launchpad' },
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/animals', icon: PawPrint, label: 'Animals' },
   { to: '/people', icon: Users, label: 'People' },

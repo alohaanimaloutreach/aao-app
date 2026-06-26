@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
+  Rocket,
   PawPrint,
   Users,
   CalendarHeart,
@@ -30,6 +31,7 @@ const TABS = [
 ];
 
 const MORE_ITEMS = [
+  { to: '/launchpad', icon: Rocket, label: 'Launchpad', color: 'text-primary' },
   { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-ember' },
   { to: '/notes', icon: StickyNote, label: 'Notes', color: 'text-sky-600' },
   { to: '/flags', icon: Flag, label: 'Flags', color: 'text-gold' },
@@ -107,7 +109,7 @@ export default function BottomNav() {
     setHasActiveQueue((count ?? 0) > 0);
   }
 
-  const isMoreActive = ['/locations', '/notes', '/flags', '/activity', '/reports', '/admin'].some(
+  const isMoreActive = ['/launchpad', '/locations', '/notes', '/flags', '/activity', '/reports', '/admin'].some(
     (p) => location.pathname.startsWith(p)
   );
 
